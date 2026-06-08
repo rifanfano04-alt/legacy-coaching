@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rifanfano04-alt.github.io/legacy-coaching/sitemap.xml

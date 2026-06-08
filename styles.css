@@ -226,6 +226,7 @@ h3 { font-size: 1.3rem; }
 .price-card h3 { font-size: 1.4rem; }
 .price { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; margin: 12px 0 20px; color: var(--text); }
 .price span { font-size: 1rem; color: var(--muted); font-family: 'Inter', sans-serif; }
+.price-sub { color: var(--muted); font-size: .98rem; margin: 6px 0 22px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
 .feature-list { display: flex; flex-direction: column; gap: 11px; margin-bottom: 26px; flex: 1; }
 .feature-list li { padding-left: 26px; position: relative; color: var(--muted); font-size: .95rem; }
 .feature-list li::before {

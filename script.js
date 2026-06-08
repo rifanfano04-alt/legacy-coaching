@@ -96,43 +96,43 @@ form.addEventListener('submit', e => {
   feedback.textContent = '';
 
   const name = document.getElementById('name');
-  const email = document.getElementById('email');
+  const contact = document.getElementById('joindre');
   let valid = true;
 
-  [name, email].forEach(input => {
+  // Nom + moyen de contact (Instagram ou téléphone) obligatoires
+  [name, contact].forEach(input => {
     const field = input.closest('.field');
-    const ok = input.value.trim() !== '' &&
-      (input.type !== 'email' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value));
+    const ok = input.value.trim() !== '';
     field.classList.toggle('invalid', !ok);
     if (!ok) valid = false;
   });
 
   if (!valid) {
     feedback.classList.add('err');
-    feedback.textContent = 'Merci de renseigner un nom et un email valide.';
+    feedback.textContent = 'Indique ton nom et un moyen de te contacter (Instagram ou téléphone).';
     return;
   }
 
   // Récap des données (démo front — à brancher sur un backend/email service)
   const data = {
     name: name.value.trim(),
-    email: email.value.trim(),
+    contact: contact.value.trim(),
     discipline: document.getElementById('discipline').value,
     offre: document.getElementById('offre').value,
     message: document.getElementById('message').value.trim(),
   };
 
   // Ouvre le client mail pré-rempli (solution sans backend)
-  const subject = encodeURIComponent(`Demande de coaching — ${data.offre} (${data.discipline})`);
+  const subject = encodeURIComponent(`Demande d'appel découverte — ${data.offre} (${data.discipline})`);
   const body = encodeURIComponent(
-    `Bonjour Richard,\n\nJe souhaite démarrer un suivi.\n\n` +
-    `Nom : ${data.name}\nEmail : ${data.email}\n` +
-    `Discipline : ${data.discipline}\nOffre : ${data.offre}\n\n` +
-    `Objectif :\n${data.message || '(non précisé)'}\n`
+    `Bonjour Richard,\n\nJe souhaite réserver un appel découverte.\n\n` +
+    `Nom : ${data.name}\nMe contacter (Instagram ou téléphone) : ${data.contact}\n` +
+    `Discipline : ${data.discipline}\nFormule : ${data.offre}\n\n` +
+    `Mon objectif :\n${data.message || '(non précisé)'}\n`
   );
   window.location.href = `mailto:rifanfano04@gmail.com?subject=${subject}&body=${body}`;
 
   feedback.classList.add('ok');
-  feedback.textContent = 'Demande prête ! Ton client mail s\'ouvre — il ne reste qu\'à envoyer.';
+  feedback.textContent = 'Demande prête ! Ton client mail s\'ouvre, il ne reste qu\'à envoyer.';
   form.reset();
 });
