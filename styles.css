@@ -11,6 +11,7 @@
   --accent: oklch(78% 0.11 240);       /* bleu électrique / cyan */
   --accent-hover: oklch(83% 0.105 240);
   --accent-2: oklch(68% 0.19 33);       /* orange punch */
+  --accent-red: oklch(52% 0.18 25);     /* rouge sang (touche subtile) */
   --border: oklch(31% 0.02 264);
   --border-strong: oklch(40% 0.025 264);
   --accent-soft: oklch(78% 0.11 240 / 0.10);
@@ -85,11 +86,13 @@ h3 { font-size: 1.3rem; }
   display: inline-flex; align-items: center; gap: 11px;
 }
 .eyebrow::before {
-  content: ""; width: 30px; height: 2px; background: var(--accent); flex: none;
+  content: ""; width: 30px; height: 2px; flex: none;
+  background: linear-gradient(90deg, var(--accent-red), var(--accent));
 }
 .eyebrow.center { display: flex; justify-content: center; }
 .eyebrow.center::after {
-  content: ""; width: 30px; height: 2px; background: var(--accent); flex: none;
+  content: ""; width: 30px; height: 2px; flex: none;
+  background: linear-gradient(90deg, var(--accent), var(--accent-red));
 }
 
 /* ===== BUTTONS ===== */
@@ -144,7 +147,7 @@ h3 { font-size: 1.3rem; }
   position: absolute; inset: 0; z-index: 0;
   background:
     radial-gradient(60% 60% at 75% 10%, rgba(96,168,232,.14), transparent 70%),
-    radial-gradient(48% 52% at 12% 82%, rgba(150,22,30,.14), transparent 72%);
+    radial-gradient(52% 56% at 10% 84%, rgba(150,22,30,.22), transparent 72%);
 }
 .hero-bg::before {
   content: ""; position: absolute; inset: -2% 0;
@@ -365,6 +368,14 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
 .header { transition: background .3s var(--ease-out), box-shadow .3s var(--ease-out); }
 .header.scrolled { background: oklch(12% .012 264 / .9); box-shadow: 0 10px 34px oklch(0% 0 0 / .3); }
 
+/* ===== Halo rouge sang subtil (section Disciplines) ===== */
+#disciplines { position: relative; }
+#disciplines::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(42% 38% at 92% 14%, rgba(150,22,30,.16), transparent 70%);
+}
+#disciplines > .container { position: relative; z-index: 1; }
+
 /* ===== FOND FIGURE (section Méthode) ===== */
 #methode { position: relative; overflow: hidden; }
 #methode::before {
@@ -404,8 +415,8 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
 #contact::before {
   content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background:
-    radial-gradient(55% 45% at 82% 88%, rgba(150,22,30,.12), transparent 70%),
-    radial-gradient(50% 40% at 12% 8%, rgba(96,168,232,.08), transparent 72%);
+    radial-gradient(55% 45% at 82% 88%, rgba(150,22,30,.18), transparent 70%),
+    radial-gradient(50% 40% at 12% 8%, rgba(96,168,232,.09), transparent 72%);
 }
 #contact > .container { position: relative; z-index: 1; }
 
