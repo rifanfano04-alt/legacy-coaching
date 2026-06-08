@@ -92,7 +92,7 @@ const form = document.getElementById('contactForm');
 const feedback = document.getElementById('formFeedback');
 // Endpoint Formspree : colle ici l'URL du type https://formspree.io/f/xxxxxxx
 // Tant que c'est vide, le formulaire ouvre le client mail (repli).
-const FORMSPREE_ENDPOINT = '';
+const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xkoarvdg';
 
 form.addEventListener('submit', async e => {
   e.preventDefault();
