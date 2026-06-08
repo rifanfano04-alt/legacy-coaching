@@ -22,6 +22,10 @@
   --glow: 0 8px 28px oklch(92% 0.205 116 / .22);
   --radius: 16px;
   --maxw: 1140px;
+  /* Courbes d'easing custom (plus de caractère que les easings natifs) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 html { scroll-behavior: smooth; }
 body {
@@ -66,7 +70,7 @@ section[id], main[id] { scroll-margin-top: 88px; }
 .small { font-size: .85rem; }
 .hl { color: var(--accent); }
 
-h1, h2, h3 { line-height: 1.08; font-weight: 800; letter-spacing: -.02em; }
+h1, h2, h3 { font-family: 'Space Grotesk', 'Inter', sans-serif; line-height: 1.06; font-weight: 700; letter-spacing: -.025em; }
 h1 { font-size: clamp(2.4rem, 6vw, 4.6rem); }
 h2 { font-size: clamp(1.7rem, 3.6vw, 2.8rem); margin-bottom: 14px; }
 h3 { font-size: 1.3rem; }
@@ -97,9 +101,11 @@ h3 { font-size: 1.3rem; }
   padding: 13px 24px; border: 2px solid var(--accent);
   border-radius: 50px; cursor: pointer;
   box-shadow: var(--glow);
-  transition: transform .15s ease, background .2s ease, color .2s ease, box-shadow .2s ease;
+  transition: transform .22s var(--ease-out), background .2s ease, color .2s ease, box-shadow .25s var(--ease-out);
 }
-.btn:hover { transform: translateY(-2px); background: var(--accent-hover); box-shadow: 0 12px 36px oklch(92% .205 116 / .34); }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { transform: translateY(-3px); background: var(--accent-hover); box-shadow: 0 16px 40px oklch(92% .205 116 / .38); }
+}
 .btn-lg { padding: 16px 32px; font-size: 1.05rem; }
 .btn-sm { padding: 9px 18px; font-size: .9rem; }
 .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); box-shadow: none; }
@@ -141,11 +147,13 @@ h3 { font-size: 1.3rem; }
     radial-gradient(50% 50% at 15% 80%, rgba(255,90,54,.10), transparent 70%);
 }
 .hero-bg::before {
-  content: ""; position: absolute; inset: 0;
+  content: ""; position: absolute; inset: -2% 0;
   background: url('images/richard-dips.jpg') no-repeat center right / cover;
   opacity: .38; filter: grayscale(.2) contrast(1.05);
   -webkit-mask-image: linear-gradient(90deg, transparent 16%, #000 78%);
   mask-image: linear-gradient(90deg, transparent 16%, #000 78%);
+  transform: translateY(var(--py, 0px)) scale(1.08);
+  will-change: transform;
 }
 .hero-inner { position: relative; z-index: 1; max-width: 880px; }
 .hero h1 { margin: 8px 0 20px; }
@@ -178,16 +186,18 @@ h3 { font-size: 1.3rem; }
   position: relative;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 32px 30px;
-  box-shadow: var(--shadow-1);
-  transition: transform .25s cubic-bezier(.22,1,.36,1), border-color .25s ease, box-shadow .25s ease;
+  box-shadow: var(--shadow-1), inset 0 1px 0 oklch(100% 0 0 / .05);
+  transition: transform .35s var(--ease-out), border-color .3s var(--ease-out), box-shadow .35s var(--ease-out);
 }
 .card::before {
   content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
   background: var(--accent); border-radius: var(--radius) var(--radius) 0 0;
   transform: scaleX(0); transform-origin: left; transition: transform .3s ease;
 }
-.card:hover { transform: translateY(-6px); border-color: var(--border-strong); box-shadow: var(--shadow-2); }
-.card:hover::before { transform: scaleX(1); }
+@media (hover: hover) and (pointer: fine) {
+  .card:hover { transform: translateY(-6px); border-color: var(--border-strong); box-shadow: var(--shadow-2), inset 0 1px 0 oklch(100% 0 0 / .07); }
+  .card:hover::before { transform: scaleX(1); }
+}
 .card-feature { border-color: var(--accent-line); box-shadow: var(--shadow-1), 0 0 0 1px var(--accent-line); }
 .card-feature::before { transform: scaleX(1); }
 .card-icon { font-size: 2.2rem; margin-bottom: 14px; }
@@ -318,20 +328,42 @@ html.js .step,
 html.js .about-media,
 html.js .about-text,
 html.js .tool-form {
-  opacity: 0; transform: translateY(22px);
-  transition: opacity .6s ease, transform .7s cubic-bezier(.22, 1, .36, 1);
+  opacity: 0; transform: translateY(26px); filter: blur(8px);
+  transition: opacity .7s var(--ease-out), transform .8s var(--ease-out), filter .7s var(--ease-out);
 }
 html.js .card.in,
 html.js .step.in,
 html.js .about-media.in,
 html.js .about-text.in,
-html.js .tool-form.in { opacity: 1; transform: none; }
+html.js .tool-form.in { opacity: 1; transform: none; filter: none; }
 /* Décalage en cascade dans les grilles */
 html.js .cards .card:nth-child(2) { transition-delay: .08s; }
 html.js .cards .card:nth-child(3) { transition-delay: .16s; }
 html.js .steps .step:nth-child(2) { transition-delay: .06s; }
 html.js .steps .step:nth-child(3) { transition-delay: .12s; }
 html.js .steps .step:nth-child(4) { transition-delay: .18s; }
+
+/* ===== ENTRÉE DU HERO (au chargement) ===== */
+@keyframes heroIn {
+  from { opacity: 0; transform: translateY(28px); filter: blur(10px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+html.js .hero-inner > * { opacity: 0; animation: heroIn .9s var(--ease-out) forwards; }
+html.js .hero-inner > .eyebrow   { animation-delay: .05s; }
+html.js .hero-inner > h1         { animation-delay: .15s; }
+html.js .hero-inner > .hero-sub  { animation-delay: .32s; }
+html.js .hero-inner > .hero-cta  { animation-delay: .46s; }
+html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
+
+/* ===== GRAIN (texture premium subtile) ===== */
+.grain {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: .04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ===== HEADER : état au scroll ===== */
+.header { transition: background .3s var(--ease-out), box-shadow .3s var(--ease-out); }
+.header.scrolled { background: oklch(12% .012 264 / .9); box-shadow: 0 10px 34px oklch(0% 0 0 / .3); }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
@@ -369,10 +401,11 @@ html.js .steps .step:nth-child(4) { transition-delay: .18s; }
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
-  /* Contenu toujours visible, jamais masqué par la révélation */
+  /* Contenu toujours visible, jamais masqué par la révélation ni le flou */
   html.js .card,
   html.js .step,
   html.js .about-media,
   html.js .about-text,
-  html.js .tool-form { opacity: 1 !important; transform: none !important; }
+  html.js .tool-form,
+  html.js .hero-inner > * { opacity: 1 !important; transform: none !important; filter: none !important; animation: none !important; }
 }

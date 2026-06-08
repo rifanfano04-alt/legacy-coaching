@@ -52,6 +52,27 @@ if (prefersReducedMotion || !('IntersectionObserver' in window)) {
   revealEls.forEach(el => revealIO.observe(el));
 }
 
+// ===== Effets au scroll : header collant + parallax du hero (1 seul handler, rAF) =====
+(() => {
+  const header = document.querySelector('.header');
+  const heroBg = document.querySelector('.hero-bg');
+  const canParallax = !prefersReducedMotion && window.matchMedia('(pointer: fine)').matches;
+  let ticking = false, scrolled = false;
+  const update = () => {
+    const y = window.scrollY;
+    const isScrolled = y > 12;
+    if (header && isScrolled !== scrolled) { header.classList.toggle('scrolled', isScrolled); scrolled = isScrolled; }
+    if (canParallax && heroBg && y < window.innerHeight) {
+      heroBg.style.setProperty('--py', (y * 0.16).toFixed(1) + 'px');
+    }
+    ticking = false;
+  };
+  window.addEventListener('scroll', () => {
+    if (!ticking) { requestAnimationFrame(update); ticking = true; }
+  }, { passive: true });
+  update();
+})();
+
 // ===== Calculateur 1RM (Epley) =====
 const rmForm = document.getElementById('rmForm');
 const rmResult = document.getElementById('rmResult');
