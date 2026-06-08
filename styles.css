@@ -364,6 +364,17 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
 .header { transition: background .3s var(--ease-out), box-shadow .3s var(--ease-out); }
 .header.scrolled { background: oklch(12% .012 264 / .9); box-shadow: 0 10px 34px oklch(0% 0 0 / .3); }
 
+/* ===== FOND FIGURE (section Méthode) ===== */
+#methode { position: relative; overflow: hidden; }
+#methode::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: url('images/planche-render.jpg') no-repeat center center / cover;
+  opacity: .22; filter: grayscale(1) contrast(1.08);
+  -webkit-mask-image: radial-gradient(120% 95% at 50% 42%, #000 22%, transparent 72%);
+  mask-image: radial-gradient(120% 95% at 50% 42%, #000 22%, transparent 72%);
+}
+#methode > .container { position: relative; z-index: 1; }
+
 /* ===== BOUTON FLOTTANT « Réserver un appel » ===== */
 .fab {
   position: fixed; right: 22px; z-index: 70;
