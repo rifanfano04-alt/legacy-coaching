@@ -376,10 +376,10 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
 }
 #methode > .container { position: relative; z-index: 1; }
 
-/* ===== FONDS PHOTO : Formules & Résultats ===== */
-#offres, #resultats { position: relative; overflow: hidden; }
-#offres > .container, #resultats > .container { position: relative; z-index: 1; }
-#offres::before, #resultats::before {
+/* ===== FONDS PHOTO : Formules, Résultats & Calculateur ===== */
+#offres, #resultats, #outil { position: relative; overflow: hidden; }
+#offres > .container, #resultats > .container, #outil > .container { position: relative; z-index: 1; }
+#offres::before, #resultats::before, #outil::before {
   content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   opacity: .3; filter: grayscale(1) contrast(1.05);
   -webkit-mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 84%, transparent);
@@ -387,11 +387,14 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
 }
 #offres::before { background: url('images/formules-bg.jpg') no-repeat center / cover; }
 #resultats::before { background: url('images/resultats-bg.jpg') no-repeat center 22% / cover; }
+#outil::before { background: url('images/outil-bg.jpg') no-repeat center / cover; }
 /* Lisibilité des titres sur les fonds photo */
 #offres .eyebrow, #offres h2, #offres > .container > .muted,
-#resultats .eyebrow, #resultats h2 { text-shadow: 0 2px 16px oklch(0% 0 0 / .82); }
+#resultats .eyebrow, #resultats h2,
+#outil .eyebrow, #outil h2, #outil > .container > .muted { text-shadow: 0 2px 16px oklch(0% 0 0 / .82); }
 /* Cadres translucides au-dessus des fonds photo (gardent leur rôle de guide visuel) */
-#offres .card, #resultats .card {
+#offres .card, #resultats .card,
+#outil .tool-form, #outil .tool-result {
   background: oklch(13% 0.012 264 / .34);
   text-shadow: 0 1px 10px oklch(0% 0 0 / .78);
 }
