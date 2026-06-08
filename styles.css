@@ -8,18 +8,18 @@
   --surface-2: oklch(27% 0.018 264);
   --text: oklch(96% 0.006 264);
   --muted: oklch(73% 0.022 264);
-  --accent: oklch(92% 0.205 116);       /* jaune-vert énergique */
-  --accent-hover: oklch(95% 0.20 116);
+  --accent: oklch(78% 0.11 240);       /* bleu électrique / cyan */
+  --accent-hover: oklch(83% 0.105 240);
   --accent-2: oklch(68% 0.19 33);       /* orange punch */
   --border: oklch(31% 0.02 264);
   --border-strong: oklch(40% 0.025 264);
-  --accent-soft: oklch(92% 0.205 116 / 0.10);
-  --accent-line: oklch(92% 0.205 116 / 0.28);
+  --accent-soft: oklch(78% 0.11 240 / 0.10);
+  --accent-line: oklch(78% 0.11 240 / 0.30);
   --ink: oklch(14.5% 0.012 264);        /* texte foncé sur fond accent */
   /* Échelle d'élévation */
   --shadow-1: 0 1px 2px oklch(0% 0 0 / .30), 0 6px 18px oklch(0% 0 0 / .22);
   --shadow-2: 0 10px 28px oklch(0% 0 0 / .38), 0 28px 64px oklch(0% 0 0 / .42);
-  --glow: 0 8px 28px oklch(92% 0.205 116 / .22);
+  --glow: 0 8px 28px oklch(78% 0.11 240 / .26);
   --radius: 16px;
   --maxw: 1140px;
   /* Courbes d'easing custom (plus de caractère que les easings natifs) */
@@ -104,7 +104,7 @@ h3 { font-size: 1.3rem; }
   transition: transform .22s var(--ease-out), background .2s ease, color .2s ease, box-shadow .25s var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
-  .btn:hover { transform: translateY(-3px); background: var(--accent-hover); box-shadow: 0 16px 40px oklch(92% .205 116 / .38); }
+  .btn:hover { transform: translateY(-3px); background: var(--accent-hover); box-shadow: 0 16px 40px oklch(78% .11 240 / .38); }
 }
 .btn-lg { padding: 16px 32px; font-size: 1.05rem; }
 .btn-sm { padding: 9px 18px; font-size: .9rem; }
@@ -143,8 +143,8 @@ h3 { font-size: 1.3rem; }
 .hero-bg {
   position: absolute; inset: 0; z-index: 0;
   background:
-    radial-gradient(60% 60% at 75% 10%, rgba(232,255,58,.12), transparent 70%),
-    radial-gradient(50% 50% at 15% 80%, rgba(255,90,54,.10), transparent 70%);
+    radial-gradient(60% 60% at 75% 10%, rgba(96,168,232,.14), transparent 70%),
+    radial-gradient(48% 52% at 12% 82%, rgba(150,22,30,.14), transparent 72%);
 }
 .hero-bg::before {
   content: ""; position: absolute; inset: -2% 0;
@@ -242,7 +242,7 @@ h3 { font-size: 1.3rem; }
 .feature-list li::before {
   content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 800;
 }
-.price-popular { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-line), 0 24px 60px -24px oklch(92% .205 116 / .35); }
+.price-popular { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-line), 0 24px 60px -24px oklch(78% .11 240 / .35); }
 .badge {
   position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
   background: var(--accent); color: var(--ink); font-size: .75rem; font-weight: 800;
@@ -399,6 +399,16 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
   text-shadow: 0 1px 10px oklch(0% 0 0 / .78);
 }
 
+/* ===== Halo rouge sang subtil (section Réserver) ===== */
+#contact { position: relative; }
+#contact::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(55% 45% at 82% 88%, rgba(150,22,30,.12), transparent 70%),
+    radial-gradient(50% 40% at 12% 8%, rgba(96,168,232,.08), transparent 72%);
+}
+#contact > .container { position: relative; z-index: 1; }
+
 /* ===== BOUTON FLOTTANT « Réserver un appel » ===== */
 .fab {
   position: fixed; right: 22px; z-index: 70;
@@ -415,7 +425,7 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
 .fab svg { width: 20px; height: 20px; flex: none; }
 .fab.show { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
 @media (hover: hover) and (pointer: fine) {
-  .fab.show:hover { transform: translateY(-3px) scale(1); box-shadow: 0 18px 44px oklch(92% .205 116 / .42), var(--shadow-1); }
+  .fab.show:hover { transform: translateY(-3px) scale(1); box-shadow: 0 18px 44px oklch(78% .11 240 / .42), var(--shadow-1); }
 }
 .fab.show:active { transform: scale(.96); }
 
