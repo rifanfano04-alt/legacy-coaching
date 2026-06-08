@@ -56,14 +56,29 @@ if (prefersReducedMotion || !('IntersectionObserver' in window)) {
 (() => {
   const header = document.querySelector('.header');
   const heroBg = document.querySelector('.hero-bg');
+  const fab = document.querySelector('.fab');
   const canParallax = !prefersReducedMotion && window.matchMedia('(pointer: fine)').matches;
-  let ticking = false, scrolled = false;
+  let ticking = false, scrolled = false, contactInView = false;
+
+  // Masquer le bouton flottant quand le formulaire de contact est visible
+  const contactSection = document.getElementById('contact');
+  if (fab && contactSection && 'IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      contactInView = entries[0].isIntersecting;
+      update();
+    }, { threshold: 0.06 }).observe(contactSection);
+  }
+
   const update = () => {
     const y = window.scrollY;
     const isScrolled = y > 12;
     if (header && isScrolled !== scrolled) { header.classList.toggle('scrolled', isScrolled); scrolled = isScrolled; }
     if (canParallax && heroBg && y < window.innerHeight) {
       heroBg.style.setProperty('--py', (y * 0.16).toFixed(1) + 'px');
+    }
+    if (fab) {
+      const pastHero = y > window.innerHeight * 0.55;
+      fab.classList.toggle('show', pastHero && !contactInView);
     }
     ticking = false;
   };
