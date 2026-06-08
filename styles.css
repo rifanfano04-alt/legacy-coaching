@@ -218,10 +218,11 @@ h3 { font-size: 1.3rem; }
 
 /* ===== STEPS ===== */
 .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
-.step {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 28px 24px; position: relative;
-}
+.step { padding: 6px 4px; position: relative; }
+/* Section Méthode : texte directement sur l'image, lisibilité assurée par l'ombre */
+#methode .eyebrow,
+#methode h2,
+#methode .step { text-shadow: 0 2px 18px oklch(0% 0 0 / .85), 0 1px 3px oklch(0% 0 0 / .9); }
 .step-num {
   font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem;
   color: var(--accent); display: block; margin-bottom: 8px;
@@ -368,10 +369,10 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
 #methode { position: relative; overflow: hidden; }
 #methode::before {
   content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: url('images/planche-render.jpg') no-repeat 28% 38% / cover;
-  opacity: .22; filter: grayscale(1) contrast(1.08);
-  -webkit-mask-image: radial-gradient(120% 95% at 42% 42%, #000 24%, transparent 74%);
-  mask-image: radial-gradient(120% 95% at 42% 42%, #000 24%, transparent 74%);
+  background: url('images/planche-render.jpg') no-repeat 14% 34% / cover;
+  opacity: .5; filter: grayscale(1) contrast(1.05);
+  -webkit-mask-image: radial-gradient(140% 115% at 36% 42%, #000 32%, transparent 82%);
+  mask-image: radial-gradient(140% 115% at 36% 42%, #000 32%, transparent 82%);
 }
 #methode > .container { position: relative; z-index: 1; }
 
