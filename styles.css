@@ -368,10 +368,10 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
 #methode { position: relative; overflow: hidden; }
 #methode::before {
   content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: url('images/planche-render.jpg') no-repeat center center / cover;
+  background: url('images/planche-render.jpg') no-repeat 28% 38% / cover;
   opacity: .22; filter: grayscale(1) contrast(1.08);
-  -webkit-mask-image: radial-gradient(120% 95% at 50% 42%, #000 22%, transparent 72%);
-  mask-image: radial-gradient(120% 95% at 50% 42%, #000 22%, transparent 72%);
+  -webkit-mask-image: radial-gradient(120% 95% at 42% 42%, #000 24%, transparent 74%);
+  mask-image: radial-gradient(120% 95% at 42% 42%, #000 24%, transparent 74%);
 }
 #methode > .container { position: relative; z-index: 1; }
 
