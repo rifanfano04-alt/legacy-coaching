@@ -39,6 +39,19 @@ const io = new IntersectionObserver((entries, obs) => {
 }, { threshold: 0.5 });
 counters.forEach(c => io.observe(c));
 
+// ===== Révélation au scroll =====
+const revealEls = document.querySelectorAll('.card, .step, .about-media, .about-text, .tool-form');
+if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+  revealEls.forEach(el => el.classList.add('in'));
+} else {
+  const revealIO = new IntersectionObserver((entries, obs) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('in'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+  revealEls.forEach(el => revealIO.observe(el));
+}
+
 // ===== Calculateur 1RM (Epley) =====
 const rmForm = document.getElementById('rmForm');
 const rmResult = document.getElementById('rmResult');
@@ -117,7 +130,7 @@ form.addEventListener('submit', e => {
     `Discipline : ${data.discipline}\nOffre : ${data.offre}\n\n` +
     `Objectif :\n${data.message || '(non précisé)'}\n`
   );
-  window.location.href = `mailto:contact@legacy-coaching.fr?subject=${subject}&body=${body}`;
+  window.location.href = `mailto:rifanfano04@gmail.com?subject=${subject}&body=${body}`;
 
   feedback.classList.add('ok');
   feedback.textContent = 'Demande prête ! Ton client mail s\'ouvre — il ne reste qu\'à envoyer.';

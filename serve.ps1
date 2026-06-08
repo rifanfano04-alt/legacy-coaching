@@ -25,6 +25,8 @@ while ($listener.IsListening) {
     $rel = [System.Uri]::UnescapeDataString($req.Url.AbsolutePath.TrimStart('/'))
     if ([string]::IsNullOrEmpty($rel)) { $rel = 'index.html' }
     $path = Join-Path $root $rel
+    $res.KeepAlive = $false
+    $res.Headers.Add('Connection', 'close')
     if (Test-Path $path -PathType Leaf) {
       $ext = [System.IO.Path]::GetExtension($path).ToLower()
       $ct = $mime[$ext]
