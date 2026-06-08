@@ -90,7 +90,11 @@ document.querySelectorAll('[data-offre]').forEach(btn => {
 // ===== Validation + envoi formulaire de contact =====
 const form = document.getElementById('contactForm');
 const feedback = document.getElementById('formFeedback');
-form.addEventListener('submit', e => {
+// Endpoint Formspree : colle ici l'URL du type https://formspree.io/f/xxxxxxx
+// Tant que c'est vide, le formulaire ouvre le client mail (repli).
+const FORMSPREE_ENDPOINT = '';
+
+form.addEventListener('submit', async e => {
   e.preventDefault();
   feedback.className = 'form-feedback';
   feedback.textContent = '';
@@ -113,7 +117,39 @@ form.addEventListener('submit', e => {
     return;
   }
 
-  // Récap des données (démo front — à brancher sur un backend/email service)
+  const submitBtn = form.querySelector('button[type="submit"]');
+
+  // 1) Envoi direct dans la boîte mail (Formspree, sans ouvrir le client mail)
+  if (FORMSPREE_ENDPOINT) {
+    const label = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Envoi…';
+    try {
+      const res = await fetch(FORMSPREE_ENDPOINT, {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        body: new FormData(form)
+      });
+      if (res.ok) {
+        feedback.classList.add('ok');
+        feedback.textContent = 'Merci ! Ta demande est envoyée, je te recontacte sous 48h.';
+        form.reset();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        feedback.classList.add('err');
+        feedback.textContent = (d.errors && d.errors[0] && d.errors[0].message) || 'Envoi impossible pour le moment. Réessaie ou écris-moi en DM Instagram.';
+      }
+    } catch {
+      feedback.classList.add('err');
+      feedback.textContent = 'Connexion impossible. Réessaie ou écris-moi en DM Instagram.';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = label;
+    }
+    return;
+  }
+
+  // 2) Repli sans backend : ouvre le client mail pré-rempli
   const data = {
     name: name.value.trim(),
     contact: contact.value.trim(),
@@ -121,9 +157,7 @@ form.addEventListener('submit', e => {
     offre: document.getElementById('offre').value,
     message: document.getElementById('message').value.trim(),
   };
-
-  // Ouvre le client mail pré-rempli (solution sans backend)
-  const subject = encodeURIComponent(`Demande d'appel découverte — ${data.offre} (${data.discipline})`);
+  const subject = encodeURIComponent(`Demande d'appel découverte : ${data.offre} (${data.discipline})`);
   const body = encodeURIComponent(
     `Bonjour Richard,\n\nJe souhaite réserver un appel découverte.\n\n` +
     `Nom : ${data.name}\nMe contacter (Instagram ou téléphone) : ${data.contact}\n` +
@@ -131,7 +165,6 @@ form.addEventListener('submit', e => {
     `Mon objectif :\n${data.message || '(non précisé)'}\n`
   );
   window.location.href = `mailto:rifanfano04@gmail.com?subject=${subject}&body=${body}`;
-
   feedback.classList.add('ok');
   feedback.textContent = 'Demande prête ! Ton client mail s\'ouvre, il ne reste qu\'à envoyer.';
   form.reset();
