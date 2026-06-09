@@ -1,3 +1,10 @@
+// ===== Toujours démarrer en haut (sauf lien avec ancre #) =====
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+function legacyScrollTop() { if (!location.hash) window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }
+legacyScrollTop();
+window.addEventListener('DOMContentLoaded', legacyScrollTop);
+window.addEventListener('load', legacyScrollTop);
+
 // ===== Année footer =====
 document.getElementById('year').textContent = new Date().getFullYear();
 
