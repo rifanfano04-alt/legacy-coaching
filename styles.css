@@ -20,7 +20,7 @@
   /* Échelle d'élévation */
   --shadow-1: 0 1px 2px oklch(0% 0 0 / .30), 0 6px 18px oklch(0% 0 0 / .22);
   --shadow-2: 0 10px 28px oklch(0% 0 0 / .38), 0 28px 64px oklch(0% 0 0 / .42);
-  --glow: 0 8px 28px oklch(78% 0.11 240 / .26);
+  --glow: 0 8px 28px oklch(78% 0.11 240 / .28), 0 13px 34px oklch(52% 0.18 25 / .24);
   --radius: 16px;
   --maxw: 1140px;
   /* Courbes d'easing custom (plus de caractère que les easings natifs) */
@@ -107,7 +107,7 @@ h3 { font-size: 1.3rem; }
   transition: transform .22s var(--ease-out), background .2s ease, color .2s ease, box-shadow .25s var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
-  .btn:hover { transform: translateY(-3px); background: var(--accent-hover); box-shadow: 0 16px 40px oklch(78% .11 240 / .38); }
+  .btn:hover { transform: translateY(-3px); background: var(--accent-hover); box-shadow: 0 16px 40px oklch(78% .11 240 / .4), 0 20px 46px oklch(52% .18 25 / .3); }
 }
 .btn-lg { padding: 16px 32px; font-size: 1.05rem; }
 .btn-sm { padding: 9px 18px; font-size: .9rem; }
@@ -229,6 +229,10 @@ h3 { font-size: 1.3rem; }
 .step-num {
   font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem;
   color: var(--accent); display: block; margin-bottom: 8px;
+}
+/* Reflet rouge sang sur les numéros (le chiffre reste bleu) */
+#methode .step-num {
+  text-shadow: 0 2px 12px oklch(0% 0 0 / .85), 0 0 22px rgba(150,22,30,.6), 6px 4px 16px rgba(150,22,30,.4);
 }
 .step h3 { font-size: 1.15rem; margin-bottom: 8px; }
 .step p { color: var(--muted); font-size: .95rem; }
@@ -436,7 +440,7 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
 .fab svg { width: 20px; height: 20px; flex: none; }
 .fab.show { transform: translateY(0) scale(1); opacity: 1; pointer-events: auto; }
 @media (hover: hover) and (pointer: fine) {
-  .fab.show:hover { transform: translateY(-3px) scale(1); box-shadow: 0 18px 44px oklch(78% .11 240 / .42), var(--shadow-1); }
+  .fab.show:hover { transform: translateY(-3px) scale(1); box-shadow: 0 18px 44px oklch(78% .11 240 / .42), 0 22px 50px oklch(52% .18 25 / .3), var(--shadow-1); }
 }
 .fab.show:active { transform: scale(.96); }
 
