@@ -316,6 +316,7 @@ h3 { font-size: 1.3rem; }
 /* ===== FOOTER ===== */
 .footer { background: var(--bg-alt); border-top: 1px solid var(--border); padding: 50px 0; }
 .footer-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.footer-tagline { font-style: italic; color: var(--accent); font-weight: 600; font-size: 1.02rem; margin-top: -4px; }
 .socials { display: flex; gap: 22px; }
 .socials a { color: var(--muted); font-weight: 600; font-size: .9rem; transition: color .2s; }
 .socials a:hover { color: var(--accent); }
@@ -329,6 +330,32 @@ h3 { font-size: 1.3rem; }
 .about-text h2 { margin: 8px 0 16px; }
 .about-text p { color: var(--muted); margin-bottom: 16px; }
 .about-text .btn { margin-top: 6px; }
+.coach-diplomas { font-size: .92rem; padding-top: 14px; border-top: 1px solid var(--border); }
+
+/* Records du coach */
+.pr-label {
+  font-family: 'Bebas Neue', sans-serif; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--muted); font-size: 1rem; text-align: center; margin: 60px 0 22px;
+}
+.pr-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.pr-stats > div {
+  text-align: center; padding: 22px 10px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow-1), inset 0 1px 0 oklch(100% 0 0 / .05);
+}
+.pr-num {
+  display: block; font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; line-height: 1;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.pr-num small { font-size: .82rem; color: var(--muted); font-family: 'Inter', sans-serif; margin-left: 2px; }
+.pr-tag { display: block; margin-top: 8px; font-size: .82rem; color: var(--muted); }
+.coach-tagline {
+  text-align: center; margin-top: 46px;
+  font-size: clamp(1.2rem, 2.6vw, 1.6rem); font-weight: 700; letter-spacing: -.01em;
+}
+.coach-tagline em { font-style: italic; color: var(--accent); }
+@media (max-width: 900px) { .pr-stats { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 560px) { .pr-stats { grid-template-columns: repeat(2, 1fr); } }
 
 /* ===== RÉVÉLATION AU SCROLL (uniquement si JS actif) ===== */
 html.js .card,
