@@ -73,7 +73,7 @@ section[id], main[id] { scroll-margin-top: 88px; }
 
 h1, h2, h3 { line-height: 1.08; font-weight: 800; letter-spacing: -.02em; }
 h1 { font-size: clamp(2.4rem, 6vw, 4.6rem); }
-h2 { font-size: clamp(1.7rem, 3.6vw, 2.8rem); margin-bottom: 14px; }
+h2 { font-size: clamp(1.7rem, 3.6vw, 2.8rem); margin-bottom: 14px; text-shadow: 0 0 22px rgba(150,22,30,.26); }
 h3 { font-size: 1.3rem; }
 
 .eyebrow {
@@ -87,12 +87,12 @@ h3 { font-size: 1.3rem; }
 }
 .eyebrow::before {
   content: ""; width: 30px; height: 2px; flex: none;
-  background: linear-gradient(90deg, var(--accent-red), var(--accent));
+  background: var(--accent);
 }
 .eyebrow.center { display: flex; justify-content: center; }
 .eyebrow.center::after {
   content: ""; width: 30px; height: 2px; flex: none;
-  background: linear-gradient(90deg, var(--accent), var(--accent-red));
+  background: var(--accent);
 }
 
 /* ===== BUTTONS ===== */
@@ -226,6 +226,7 @@ h3 { font-size: 1.3rem; }
 #methode .eyebrow,
 #methode h2,
 #methode .step { text-shadow: 0 2px 18px oklch(0% 0 0 / .85), 0 1px 3px oklch(0% 0 0 / .9); }
+#methode h2 { text-shadow: 0 2px 18px oklch(0% 0 0 / .85), 0 1px 3px oklch(0% 0 0 / .9), 0 0 24px rgba(150,22,30,.32); }
 .step-num {
   font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem;
   color: var(--accent); display: block; margin-bottom: 8px;
@@ -407,6 +408,7 @@ html.js .hero-inner > .hero-stats{ animation-delay: .60s; }
 #offres .eyebrow, #offres h2, #offres > .container > .muted,
 #resultats .eyebrow, #resultats h2,
 #outil .eyebrow, #outil h2, #outil > .container > .muted { text-shadow: 0 2px 16px oklch(0% 0 0 / .82); }
+#offres h2, #resultats h2, #outil h2 { text-shadow: 0 2px 16px oklch(0% 0 0 / .82), 0 0 24px rgba(150,22,30,.3); }
 /* Cadres translucides au-dessus des fonds photo (gardent leur rôle de guide visuel) */
 #offres .card, #resultats .card,
 #outil .tool-form, #outil .tool-result {
