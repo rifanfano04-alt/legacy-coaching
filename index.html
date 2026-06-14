@@ -24,7 +24,7 @@
   <meta property="og:title" content="Richard « Ritchi » · Coach Streetlifting, Force Athlétique &amp; Calisthénie" />
   <meta property="og:description" content="Coaching sportif en ligne par Richard « Ritchi », coach diplômé d'État. Streetlifting, force athlétique, calisthénie. Programmation sur-mesure, suivi RPE, nutrition pilotée. Résultats mesurés, progression garantie." />
   <meta property="og:url" content="https://rifanfano04-alt.github.io/legacy-coaching/" />
-  <meta property="og:image" content="https://rifanfano04-alt.github.io/legacy-coaching/images/og-image-v2.jpg" />
+  <meta property="og:image" content="https://rifanfano04-alt.github.io/legacy-coaching/images/og-image-v3.jpg" />
   <meta property="og:image:type" content="image/jpeg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -32,7 +32,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Richard « Ritchi » · Coach Streetlifting &amp; Calisthénie | Legacy" />
   <meta name="twitter:description" content="Coaching en ligne : streetlifting, force athlétique, calisthénie. Programmation sur-mesure + suivi RPE + nutrition. Appel découverte offert, sans engagement." />
-  <meta name="twitter:image" content="https://rifanfano04-alt.github.io/legacy-coaching/images/og-image-v2.jpg" />
+  <meta name="twitter:image" content="https://rifanfano04-alt.github.io/legacy-coaching/images/og-image-v3.jpg" />
 
   <!-- Schema.org enrichi -->
   <script type="application/ld+json">
@@ -53,7 +53,7 @@
         "jobTitle": "Coach sportif diplômé d'État",
         "description": "Coach en ligne spécialisé en streetlifting, force athlétique et calisthénie. Programmation sur-mesure, suivi RPE, nutrition pilotée.",
         "url": "https://rifanfano04-alt.github.io/legacy-coaching/",
-        "image": "https://rifanfano04-alt.github.io/legacy-coaching/images/og-image-v2.jpg",
+        "image": "https://rifanfano04-alt.github.io/legacy-coaching/images/og-image-v3.jpg",
         "sameAs": ["https://instagram.com/richard_fano"],
         "knowsAbout": ["Streetlifting", "Force athlétique", "Calisthénie", "Coaching sportif", "Préparation physique", "Muscle Up", "Traction lestée", "Dips lestés", "Squat", "Deadlift", "Bench Press", "Front Lever", "Planche"],
         "hasOccupation": {
@@ -127,7 +127,7 @@
     radial-gradient(70% 150% at 10% 12%, oklch(58% 0.21 28 / .55) 0, transparent 55%),
     radial-gradient(70% 150% at 92% 90%, oklch(52% 0.21 25 / .52) 0, transparent 55%),
     var(--gray-deep);
-  --aura-text: 0 0 4px oklch(55% .2 26 / .22);
+  --aura-text: 0 1px 1px oklch(0% 0 0 / .4);
   --aura-red: 0 0 22px rgba(150,22,30,.5);
   --radius: 16px;
   --maxw: 1140px;
@@ -1080,13 +1080,13 @@ if (typeof gsap !== 'undefined' && !prefersReducedMotion) {
     });
   });
 
-  // ─── Cartes Résultats (chiffres + témoignages) : stagger au scroll (comme les autres sections) ───
+  // ─── Cartes Résultats : fondu rejouable (pas de transform/filtre → texte gris-rouge net, même sur mobile) ───
   document.querySelectorAll('.results-metrics, .results-quotes').forEach(grid => {
     gsap.from(grid.querySelectorAll('.card'), {
-      scrollTrigger: { trigger: grid, start: 'top 82%', toggleActions: 'play reverse play reverse' },
-      opacity: 0, y: 36, filter: 'blur(8px)',
-      duration: 0.8, stagger: 0.1,
-      ease: 'power3.out',
+      scrollTrigger: { trigger: grid, start: 'top 84%', toggleActions: 'play reverse play reverse' },
+      opacity: 0,
+      duration: 0.6, stagger: 0.09,
+      ease: 'power2.out',
       immediateRender: true
     });
   });
