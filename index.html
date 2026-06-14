@@ -15,7 +15,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="icon" type="image/png" href="images/favicon-512.png" />
   <link rel="apple-touch-icon" href="images/favicon-512.png" />
-  <meta name="theme-color" content="#101319" />
+  <meta name="theme-color" content="#0a0b0e" />
 
   <!-- Open Graph enrichi -->
   <meta property="og:type" content="website" />
@@ -119,15 +119,12 @@
   --glow: 0 8px 28px oklch(88% 0 0 / .22), 0 13px 34px oklch(52% 0.18 25 / .28);
   /* signature de marque : gris/noir à reflets rouge sang */
   /* gris clair dominant + reflets rouges dans les coins (rendu constant quelle que soit la longueur du texte) */
+  /* gris clair + reflet rouge net au centre — rendu identique quelle que soit la taille du texte (PC/mobile) */
   --acid-reflets:
-    radial-gradient(70% 150% at 10% 12%, oklch(60% 0.21 28 / .50) 0, transparent 55%),
-    radial-gradient(70% 150% at 92% 90%, oklch(55% 0.21 25 / .48) 0, transparent 55%),
-    var(--accent);
+    linear-gradient(125deg, oklch(92% 0 0) 0%, oklch(86% 0.03 28) 33%, oklch(57% 0.23 27) 50%, oklch(86% 0.03 28) 67%, oklch(92% 0 0) 100%);
   --acid-reflets-deep:
-    radial-gradient(70% 150% at 10% 12%, oklch(58% 0.21 28 / .55) 0, transparent 55%),
-    radial-gradient(70% 150% at 92% 90%, oklch(52% 0.21 25 / .52) 0, transparent 55%),
-    var(--gray-deep);
-  --aura-text: 0 1px 1px oklch(0% 0 0 / .4);
+    linear-gradient(125deg, oklch(72% 0.012 264) 0%, oklch(57% 0.23 27) 50%, oklch(72% 0.012 264) 100%);
+  --aura-text: 0 1px 2px oklch(0% 0 0 / .35);
   --aura-red: 0 0 22px rgba(150,22,30,.5);
   --radius: 16px;
   --maxw: 1140px;
