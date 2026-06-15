@@ -172,6 +172,12 @@ section[id], main[id] { scroll-margin-top: 88px; }
   color: transparent; -webkit-text-fill-color: transparent;
   text-shadow: var(--aura-text);
 }
+/* iOS/Safari : quand un titre est decoupe en mots (GSAP), background-clip:text casse sur le parent .hl.
+   On applique le degrade directement sur chaque mot (.word-inner) -> iOS sait le clipper (comme le logo). */
+.hl .word-inner {
+  background: var(--acid-reflets);
+  -webkit-background-clip: text; background-clip: text;
+}
 /* variantes de la signature (disponibles si besoin) */
 .hld { color: var(--gray-deep); }
 .hlrd {
