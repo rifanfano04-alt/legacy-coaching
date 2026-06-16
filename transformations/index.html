@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Transformations &amp; Records — LEGACY</title>
+<meta name="theme-color" content="#0a0b0e" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Bebas+Neue&family=Unbounded:wght@800;900&display=swap" rel="stylesheet" />
+<style>
+/* ===== TOKENS — repris à l'identique du site Legacy ===== */
+:root{
+  --bg: oklch(14.5% 0.012 264);
+  --bg-alt: oklch(18% 0.014 264);
+  --black: oklch(8% 0.008 264);
+  --surface: oklch(22% 0.016 264);
+  --surface-2: oklch(27% 0.018 264);
+  --text: oklch(96% 0.006 264);
+  --muted: oklch(73% 0.022 264);
+  --accent: oklch(88% 0 0);
+  --accent-hover: oklch(96% 0 0);
+  --gray-deep: oklch(56% 0.006 264);
+  --red: oklch(55% 0.21 25);
+  --blood: oklch(43% 0.16 25);
+  --border: oklch(31% 0.02 264);
+  --border-strong: oklch(40% 0.025 264);
+  --accent-soft: oklch(88% 0 0 / 0.10);
+  --accent-line: oklch(88% 0 0 / 0.30);
+  --ink: oklch(14.5% 0.012 264);
+  --shadow-1: 0 1px 2px oklch(0% 0 0 / .30), 0 6px 18px oklch(0% 0 0 / .22);
+  --shadow-2: 0 10px 28px oklch(0% 0 0 / .38), 0 28px 64px oklch(0% 0 0 / .42);
+  --glow: 0 8px 28px oklch(88% 0 0 / .22), 0 13px 34px oklch(52% 0.18 25 / .28);
+  /* signature de marque : gris/noir à reflets rouge sang */
+  --acid-reflets: linear-gradient(115deg, #ececec 0%, #cf9c9a 20%, #a8353d 37%, #d8c0bf 56%, #ab3a42 80%, #e7e3e3 100%);
+  --aura-text: 0 0 2px rgba(246,246,246,.22), 0 0 6px rgba(168,42,48,.2);
+  --radius: 16px;
+  --maxw: 1140px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--black);
+  color:var(--text);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  position:relative;overflow-x:hidden;
+}
+/* grain + halos repris de l'esprit du hero du site */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.045;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(60% 60% at 78% -4%, oklch(85% 0 0 / .06), transparent 70%),
+    radial-gradient(52% 56% at 8% 86%, rgba(150,22,30,.20), transparent 72%),
+    radial-gradient(90% 90% at 50% 124%, oklch(4% 0.006 264 / .9), transparent 70%)}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+.wrap{position:relative;z-index:2;max-width:var(--maxw);margin:0 auto;padding:24px 22px 90px}
+
+/* signature highlight */
+.hl{
+  background:var(--acid-reflets);
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+  text-shadow:var(--aura-text);
+}
+
+/* ===== TOPBAR ===== */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 0 22px;margin-bottom:46px;border-bottom:1px solid var(--border)}
+.logo{display:inline-flex;flex-direction:column;align-items:center;text-align:center;gap:4px;line-height:1}
+.logo-name{font-family:'Unbounded',sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-.01em;text-transform:uppercase;color:var(--gray-deep);line-height:1}
+.logo .cy{background:var(--acid-reflets);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;text-shadow:var(--aura-text)}
+.logo-slogan{display:flex;align-items:center;gap:7px;font-family:'Bebas Neue',sans-serif;font-size:.62rem;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.logo-slogan::before,.logo-slogan::after{content:"";flex:none;width:12px;height:1px;background:var(--border-strong)}
+.nav{display:flex;gap:26px;font-weight:500;font-size:.95rem}
+.nav a{color:var(--muted);position:relative;transition:color .2s var(--ease-out)}
+.nav a::after{content:"";position:absolute;left:0;right:0;bottom:-7px;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .28s var(--ease-out)}
+.nav a:hover{color:var(--text)}
+.nav a:hover::after{transform:scaleX(1)}
+
+/* ===== HEAD ===== */
+.head{text-align:center;max-width:820px;margin:0 auto 58px}
+.eyebrow{font-family:'Bebas Neue',sans-serif;letter-spacing:.22em;color:var(--accent);font-size:1rem;text-transform:uppercase;margin-bottom:16px;display:inline-flex;align-items:center;gap:11px}
+.eyebrow::before,.eyebrow::after{content:"";width:30px;height:2px;flex:none;background:var(--accent)}
+h1{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:uppercase;font-size:clamp(2.4rem,6.5vw,4.4rem);text-shadow:0 0 26px rgba(150,22,30,.22)}
+.head p{color:var(--muted);font-size:1.15rem;line-height:1.6;margin-top:22px;max-width:60ch;margin-inline:auto}
+
+/* ===== METRICS ===== */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);border-radius:14px;overflow:hidden;background:oklch(20% .015 264 / .5);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:var(--shadow-1);margin-bottom:72px}
+.metrics .m{padding:26px 18px;text-align:center;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;min-height:132px}
+.metrics .m:last-child{border-right:0}
+.metrics .m .dot{width:9px;height:9px;background:var(--acid-reflets);transform:rotate(45deg);box-shadow:0 0 14px rgba(150,22,30,.5)}
+.metrics .m .vp{font-weight:700;font-size:1.02rem;line-height:1.32;color:var(--text);max-width:22ch}
+
+/* ===== SECTION HEAD ===== */
+.sechead{display:flex;align-items:center;gap:18px;margin:0 0 32px}
+.sechead h2{font-weight:800;letter-spacing:-.02em;text-transform:uppercase;font-size:clamp(1.7rem,4vw,2.6rem);white-space:nowrap;text-shadow:0 0 22px rgba(150,22,30,.26)}
+.sechead .line{height:1px;background:var(--border-strong);flex:1}
+.sechead .tag{font-family:'Bebas Neue',sans-serif;text-transform:uppercase;letter-spacing:.16em;font-size:.8rem;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-line);padding:6px 13px;border-radius:50px}
+
+/* ===== TRANSFORMATION CARDS ===== */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:24px;margin-bottom:80px;align-items:start}
+.ba{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-1),inset 0 1px 0 oklch(100% 0 0 / .05);transition:transform .35s var(--ease-out),border-color .4s var(--ease-out),box-shadow .5s var(--ease-out)}
+.ba::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--gray-deep) 0%,var(--accent) 50%,var(--accent-hover) 100%);transform:scaleX(0);transform-origin:left;transition:transform .5s var(--ease-out);z-index:3}
+@media (hover:hover) and (pointer:fine){
+  .ba:hover{transform:translateY(-6px);border-color:oklch(38% .028 264);box-shadow:var(--shadow-2),0 0 0 1px oklch(88% 0 0 / .16),0 0 36px -4px oklch(88% 0 0 / .16)}
+  .ba:hover::before{transform:scaleX(1)}
+}
+.ba .pics{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--border);position:relative}
+.ba .pics.single{grid-template-columns:1fr;justify-items:center;background:transparent}
+.ba .pics.single .ph{width:60%}
+.ph{aspect-ratio:3/4;position:relative;display:grid;place-items:center;overflow:hidden}
+.ph.before{background:repeating-linear-gradient(135deg,oklch(20% .015 264) 0 10px,oklch(17% .014 264) 10px 20px)}
+.ph.after{background:repeating-linear-gradient(135deg,oklch(24% .03 25) 0 10px,oklch(19% .02 25) 10px 20px)}
+.ph .silh{width:54%;height:74%;background:radial-gradient(closest-side,oklch(100% 0 0 / .07),transparent);border-radius:46% 46% 40% 40%;align-self:end}
+.ph .lab{position:absolute;top:10px;left:10px;z-index:4;font-family:'Bebas Neue',sans-serif;text-transform:uppercase;letter-spacing:.14em;font-size:.72rem;padding:4px 10px;background:oklch(8% .008 264 / .8);border-radius:50px}
+.ph.before .lab{color:var(--muted)}
+.ph.after .lab{color:var(--ink);background:var(--accent)}
+.ph .swap-note{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:.62rem;letter-spacing:.12em;color:var(--gray-deep);text-transform:uppercase;z-index:4}
+.ph .media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2;background:#000}
+.ph .vlayer{position:absolute;inset:0;z-index:2;opacity:0;transition:opacity .35s var(--ease-out);display:grid;place-items:center;background:repeating-linear-gradient(135deg,oklch(22% .03 25) 0 12px,oklch(17% .02 25) 12px 24px)}
+.ph:hover .vlayer{opacity:1}
+.ph .vlayer::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,oklch(100% 0 0 / .10) 50%,transparent 65%);background-size:250% 100%;animation:sheen 1.7s linear infinite}
+@keyframes sheen{to{background-position:-250% 0}}
+.ph .vlayer .play{position:relative;z-index:1;display:inline-flex;flex-direction:column;align-items:center;gap:7px;font-family:'Bebas Neue',sans-serif;letter-spacing:.16em;text-transform:uppercase;font-size:.68rem;color:var(--text)}
+.ph .vlayer .play b{font-size:1.5rem;line-height:1;color:var(--accent)}
+.ba .info{padding:20px 22px 22px}
+.ba .name{text-transform:uppercase;font-weight:800;letter-spacing:-.01em;font-size:1.3rem;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ba .name .age{font-size:.8rem;color:var(--muted);font-weight:600;letter-spacing:.02em;white-space:nowrap}
+.ba .result{display:flex;gap:22px;margin:16px 0 12px}
+.ba .result .r .n{font-family:'Bebas Neue',sans-serif;font-size:1.7rem;color:var(--accent);line-height:1}
+.ba .result .r .l{text-transform:uppercase;letter-spacing:.06em;font-size:.66rem;color:var(--muted);margin-top:4px;font-weight:600}
+.ba .quote{color:var(--muted);font-size:.92rem;line-height:1.55;font-style:italic;border-top:1px solid var(--border);padding-top:14px}
+
+/* ===== RECORDS BOARD ===== */
+.board{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:80px;box-shadow:var(--shadow-1)}
+.board .row{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;align-items:center;gap:10px;padding:16px 22px;border-bottom:1px solid var(--border);transition:background .2s var(--ease-out)}
+.board .row:last-child{border-bottom:none}
+.board .row.h{background:var(--surface-2);font-family:'Bebas Neue',sans-serif;text-transform:uppercase;letter-spacing:.14em;font-size:.82rem;color:var(--muted)}
+.board .row:not(.h):hover{background:var(--surface)}
+.board .who{text-transform:uppercase;font-weight:800;letter-spacing:-.01em;font-size:1.1rem}
+.board .who small{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.04em;font-weight:500;text-transform:none}
+.board .val{font-family:'Bebas Neue',sans-serif;font-size:1.08rem;display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 5px;line-height:1.2;color:var(--text)}
+.board .val .from{color:var(--gray-deep)}
+.board .val .ar{font-family:'Inter',sans-serif;font-size:.8rem;color:var(--accent)}
+.board .val .to{color:var(--accent)}
+.board .val .na{color:var(--gray-deep)}
+.board .val .setline{flex-basis:100%;display:flex;align-items:baseline;gap:5px}
+.board .val small{font-family:'Inter',sans-serif;font-size:.62rem;color:var(--muted);letter-spacing:.02em;margin-left:1px;font-weight:600}
+
+/* ===== TESTIMONIALS ===== */
+.testi{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;margin-bottom:80px;align-items:start}
+.quote-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:26px}
+.quote-card .stars{letter-spacing:3px;font-size:.95rem;margin-bottom:9px;background:var(--acid-reflets);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.quote-card .q-title{font-weight:800;font-size:1.08rem;line-height:1.2;letter-spacing:-.01em;margin:0 0 12px;color:var(--text)}
+.quote-card p{font-size:1.02rem;line-height:1.6;color:var(--text)}
+.quote-card p + p{margin-top:13px}
+.quote-card .who{margin-top:18px;text-transform:uppercase;letter-spacing:.06em;font-size:.85rem;color:var(--muted)}
+.quote-card .who b{color:var(--accent)}
+.quote-card .who a{color:var(--accent);text-decoration:none}
+.quote-card .who a:hover{text-decoration:underline}
+
+/* ===== CTA ===== */
+.cta{text-align:center;background:linear-gradient(160deg,var(--surface-2),var(--surface));border:1px solid var(--border);border-radius:calc(var(--radius) + 4px);padding:56px 28px;position:relative;overflow:hidden;box-shadow:var(--shadow-2)}
+.cta::before{content:"";position:absolute;top:-40%;right:-5%;width:45%;height:180%;background:radial-gradient(closest-side,rgba(150,22,30,.22),transparent);transform:rotate(18deg)}
+.cta::after{content:"";position:absolute;top:-30%;left:-8%;width:40%;height:160%;background:radial-gradient(closest-side,oklch(88% 0 0 / .10),transparent);transform:rotate(-12deg)}
+.cta h3{font-weight:800;letter-spacing:-.02em;text-transform:uppercase;font-size:clamp(1.9rem,5vw,3.2rem);line-height:1.02;position:relative;text-shadow:0 0 24px rgba(150,22,30,.3)}
+.cta p{color:var(--muted);font-size:1.08rem;margin:20px auto 30px;max-width:48ch;position:relative}
+.btn{appearance:none;border:2px solid var(--accent);cursor:pointer;font-weight:700;font-size:1.05rem;background:var(--accent);color:var(--ink);padding:16px 32px;border-radius:50px;display:inline-flex;align-items:center;gap:10px;box-shadow:var(--glow);transition:transform .22s var(--ease-out),background .2s var(--ease-out),box-shadow .25s var(--ease-out);position:relative}
+@media (hover:hover) and (pointer:fine){
+  .btn:hover{transform:translateY(-3px);background:var(--accent-hover);box-shadow:0 16px 40px oklch(88% 0 0 / .35),0 20px 46px oklch(52% .18 25 / .3)}
+  .btn:hover .arr{transform:translateX(5px)}
+}
+.btn .arr{transition:transform .2s var(--ease-out)}
+
+/* ===== FOOT ===== */
+.foot{margin-top:50px;text-align:center;font-family:'Bebas Neue',sans-serif;letter-spacing:.2em;text-transform:uppercase;font-size:.78rem;color:var(--gray-deep)}
+.foot .legacy-mark{font-family:'Unbounded',sans-serif;font-weight:800;letter-spacing:-.01em}
+.foot .cy{background:var(--acid-reflets);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+
+/* ===== REVEAL ===== */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s var(--ease-out),transform .6s var(--ease-out)}
+.reveal.show{opacity:1;transform:none}
+
+@media(max-width:720px){
+  .nav{display:none}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .metrics .m:nth-child(2){border-right:0}
+  .metrics .m:nth-child(-n+2){border-bottom:1px solid var(--border)}
+  .board .row{grid-template-columns:1.4fr 1fr;font-size:.9rem}
+  .board .row .hide{display:none}
+  .sechead h2{white-space:normal}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <a href="#top" class="logo">
+      <span class="logo-name">LEGA<span class="cy">CY</span></span>
+      <span class="logo-slogan">Build your own heritage</span>
+    </a>
+    <nav class="nav">
+      <a href="#transfos">Transformations</a>
+      <a href="#records">Records</a>
+      <a href="#avis">Avis</a>
+      <a href="#cta">Coaching</a>
+    </nav>
+  </div>
+
+  <div class="head">
+    <div class="eyebrow reveal">Ils l'ont fait · Tu peux le faire</div>
+    <h1 class="reveal">DES RÉSULTATS<br>QUI NE <span class="hl">MENTENT PAS</span></h1>
+    <p class="reveal">Avant / après, records battus, témoignages. Voici ce que mes athlètes ont construit avec méthode, charge après charge.</p>
+  </div>
+
+  <div class="metrics reveal">
+    <div class="m"><span class="dot"></span><div class="vp">Coach de <span class="hl">terrain</span> depuis toujours</div></div>
+    <div class="m"><span class="dot"></span><div class="vp">Deviens un <span class="hl">meilleur athlète</span></div></div>
+    <div class="m"><span class="dot"></span><div class="vp"><span class="hl">Suivi quotidien</span></div></div>
+    <div class="m"><span class="dot"></span><div class="vp">Build your next <span class="hl">PR</span> together</div></div>
+  </div>
+
+  <!-- TRANSFORMATIONS -->
+  <div id="transfos">
+    <div class="sechead reveal"><h2>Avant / Après</h2><span class="line"></span><span class="tag">Vidéos réelles</span></div>
+    <div class="grid">
+      <div class="ba reveal">
+        <div class="pics single">
+          <div class="ph after"><span class="lab">Dips · 100 kg</span><video class="media" src="videos/jeremy-dips-100kg.mp4" autoplay muted loop playsinline preload="auto"></video></div>
+        </div>
+        <div class="info">
+          <div class="name">Jeremy <span class="age">−80 kg · 16 sem.</span></div>
+          <div class="result">
+            <div class="r"><div class="n">80 → 100</div><div class="l">Dips (kg)</div></div>
+          </div>
+          <div class="quote">Dips à 100 kg.</div>
+        </div>
+      </div>
+
+      <div class="ba reveal">
+        <div class="pics">
+          <div class="ph before"><span class="lab">Avant</span><video class="media" src="videos/coline-mu-avant.mp4" autoplay muted loop playsinline preload="auto"></video></div>
+          <div class="ph after"><span class="lab">Après</span><video class="media" src="videos/coline-mu-apres.mp4" autoplay muted loop playsinline preload="auto"></video></div>
+        </div>
+        <div class="info">
+          <div class="name">Coline <span class="age">−56 kg</span></div>
+          <div class="result">
+            <div class="r"><div class="n">0 → PDC</div><div class="l">Muscle-up</div></div>
+          </div>
+          <div class="quote">Son tout premier muscle-up, débloqué au poids de corps.</div>
+        </div>
+      </div>
+
+      <div class="ba reveal">
+        <div class="pics">
+          <div class="ph before"><span class="lab">Avant</span><video class="media" src="videos/mathias-mu-avant.mp4" autoplay muted loop playsinline preload="auto"></video></div>
+          <div class="ph after"><span class="lab">Après</span><video class="media" src="videos/mathias-mu-apres.mp4" autoplay muted loop playsinline preload="auto"></video></div>
+        </div>
+        <div class="info">
+          <div class="name">Mathias <span class="age">−73 kg · 6 mois</span></div>
+          <div class="result">
+            <div class="r"><div class="n">0 → plusieurs</div><div class="l">Muscle-up au PDC</div></div>
+          </div>
+          <div class="quote">Muscle-up lesté débloqué, jusqu'à +7,5 kg.</div>
+        </div>
+      </div>
+
+      <div class="ba reveal">
+        <div class="pics">
+          <div class="ph before"><span class="lab">Avant</span><video class="media" src="videos/mathias-squat-avant.mp4" autoplay muted loop playsinline preload="auto"></video></div>
+          <div class="ph after"><span class="lab">Après</span><video class="media" src="videos/mathias-squat-apres.mp4" autoplay muted loop playsinline preload="auto"></video></div>
+        </div>
+        <div class="info">
+          <div class="name">Mathias <span class="age">−73 kg · 6 mois</span></div>
+          <div class="result">
+            <div class="r"><div class="n">−100 → 157,5</div><div class="l">Squat (kg)</div></div>
+          </div>
+          <div class="quote">Squat plus lourd et plus solide : 157,5 kg avec de la marge.</div>
+        </div>
+      </div>
+
+      <div class="ba reveal">
+        <div class="pics">
+          <div class="ph before"><span class="lab">Avant</span><img class="media" src="videos/hedi-physique-avant.jpg" alt="Hedi — physique avant"></div>
+          <div class="ph after"><span class="lab">Après</span><img class="media" src="videos/hedi-physique-apres.jpg" alt="Hedi — physique après"></div>
+        </div>
+        <div class="info">
+          <div class="name">Hedi <span class="age">−80 kg · 3 mois</span></div>
+          <div class="result">
+            <div class="r"><div class="n">3 mois</div><div class="l">Évolution physique</div></div>
+          </div>
+          <div class="quote">Transformation physique en 3 mois de suivi.</div>
+        </div>
+      </div>
+
+      <div class="ba reveal">
+        <div class="pics single">
+          <div class="ph after"><span class="lab">Muscle-up · 10 kg</span><video class="media" src="videos/hedi-mu-10kg.mp4" autoplay muted loop playsinline preload="auto"></video></div>
+        </div>
+        <div class="info">
+          <div class="name">Hedi <span class="age">−80 kg · 3 mois</span></div>
+          <div class="result">
+            <div class="r"><div class="n">3×10</div><div class="l">Muscle-up lesté (kg)</div></div>
+          </div>
+          <div class="quote">Muscle-up lesté à 10 kg.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECORDS -->
+  <div id="records">
+    <div class="sechead reveal"><h2>Records clients</h2><span class="line"></span><span class="tag">Progression réelle</span></div>
+    <div class="board reveal">
+      <div class="row h"><div>Athlète</div><div>Muscle up</div><div class="hide">Traction</div><div class="hide">Dip</div><div class="hide">Squat</div></div>
+      <div class="row"><div class="who">Jeremy<small>−80 kg · 16 sem.</small></div><div class="val"><span class="from">12,5</span><span class="ar">→</span><span class="to">17,5</span><small>kg</small></div><div class="val hide"><span class="to">65</span><small>kg</small></div><div class="val hide"><span class="from">80</span><span class="ar">→</span><span class="to">100</span><small>kg</small></div><div class="val hide"><span class="na">—</span></div></div>
+      <div class="row"><div class="who">Mathias<small>−73 kg · 6 mois</small></div><div class="val"><span class="from">0</span><span class="ar">→</span><span class="to">7,5</span><small>kg</small></div><div class="val hide"><span class="to">45</span><small>kg</small></div><div class="val hide"><span class="to">73,75</span><small>kg</small></div><div class="val hide"><span class="from">100</span><span class="ar">→</span><span class="to">157,5</span><small>kg</small></div></div>
+      <div class="row"><div class="who">Charly<small>−80 kg · 6-10 blocks</small></div><div class="val"><span class="from">0</span><span class="ar">→</span><span class="to">5</span><small>kg</small></div><div class="val hide"><span class="from">30</span><span class="ar">→</span><span class="to">4×35</span><span class="setline"><span class="to">2×42,5</span><small>kg</small></span></div><div class="val hide"><span class="from">60</span><span class="ar">→</span><span class="to">3×60</span><span class="setline"><span class="to">2×70</span><small>kg</small></span></div><div class="val hide"><span class="from">100</span><span class="ar">→</span><span class="to">4×100</span><span class="setline"><span class="to">2×120</span><small>kg</small></span></div></div>
+      <div class="row"><div class="who">Coline<small>−56 kg</small></div><div class="val"><span class="from">0</span><span class="ar">→</span><span class="to">PDC</span><small>barre</small></div><div class="val hide"><span class="from">15</span><span class="ar">→</span><span class="to">25</span><small>kg</small></div><div class="val hide"><span class="from">10</span><span class="ar">→</span><span class="to">25</span><small>kg</small></div><div class="val hide"><span class="to">105</span><small>kg</small></div></div>
+      <div class="row"><div class="who">Hedi<small>−80 kg · 3 mois</small></div><div class="val"><span class="from">3×2,5</span><span class="ar">→</span><span class="to">3×10</span><small>kg</small></div><div class="val hide"><span class="from">3×40</span><span class="ar">→</span><span class="setline"><span class="to">4×3 @40</span><small>kg</small></span></div><div class="val hide"><span class="from">3×60</span><span class="ar">→</span><span class="setline"><span class="to">4×3 @65</span><small>kg · RPE 7</small></span></div><div class="val hide"><span class="na">blessé</span></div></div>
+    </div>
+  </div>
+
+  <!-- TESTIMONIALS -->
+  <div id="avis">
+    <div class="sechead reveal"><h2>Ils en parlent</h2><span class="line"></span><span class="tag">Avis vérifiés</span></div>
+    <div class="testi">
+      <div class="quote-card reveal"><div class="stars">★★★★★</div><div class="q-title">De 0 muscle-up à 157 kg au squat</div><p>« Avant d'être avec Richard, je m'entraînais vraiment au hasard, sans voir de réelle évolution, que ce soit au niveau physique ou des performances. Les mouvements étaient vraiment horribles : je n'avais même pas de squat à 100 kg, ni de muscle-up.</p><p>Avec lui, j'ai débloqué mes muscle-ups — j'ai même réussi à monter jusqu'à 7,5 kg au muscle-up, et je suis sûr qu'on va encore progresser. Au squat, j'ai atteint 157 kg avec beaucoup de facilité sur la charge. Sans parler des dips : là où j'étais bloqué à 45 kg, j'ai fait une rep à plus de 73 kg, en 1 an avec lui.</p><p>Ce que j'ai le plus apprécié, c'est de ne plus avoir à réfléchir à quoi faire en arrivant à la salle, tout en voyant les résultats. Il est disponible à tout moment : même en pleine séance, je pouvais lui envoyer un message. Et l'ambiance avec les autres coachés est incroyable. »</p><div class="who"><b>Mathias</b> — <a href="https://instagram.com/mathiaz_br" target="_blank" rel="noopener">@mathiaz_br</a></div></div>
+      <div class="quote-card reveal"><div class="stars">★★★★★</div><div class="q-title">100 kg au dips en 4 mois</div><p>« Je stagnais à 80 kg lestés au dips et un muscle-up à 12,5 kg. En 4 mois de suivi, je suis passé à 100 kg au dips et 17,5 kg au muscle-up. Richard est à l'écoute et super motivant. Si vous visez une compétition et que vous voulez un suivi propre et en toute confiance, choisissez d'être suivi par lui. »</p><div class="who"><b>Jeremy</b> — Streetlifting</div></div>
+      <div class="quote-card reveal"><div class="stars">★★★★★</div><div class="q-title">Gros PR en 8 semaines</div><p>« J'étais bloqué dans la gestion de ma fatigue nerveuse, du coup ma progression n'était pas constante. Depuis, je suis passé de 3 reps à 2,5 kg à 2 reps à 10 kg au muscle-up, et de 3×60 kg RPE 10 aux dips à 3 séries de 4 à 65 kg RPE 7. Ce que j'apprécie, c'est l'ambiance avec les autres et la réactivité de Richard quand je me pose des questions. Je le recommande à ceux qui n'ont pas de notions en force ou qui veulent passer un cap dans leur pratique. »</p><div class="who"><b>Hedi</b> — <a href="https://instagram.com/ba_hedi" target="_blank" rel="noopener">@ba_hedi</a></div></div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta reveal" id="cta">
+    <h3>LE PROCHAIN RECORD,<br>C'EST <span class="hl">LE TIEN</span></h3>
+    <p>Rejoins les athlètes qui ont arrêté de stagner. Diagnostic gratuit, programme sur-mesure, et on construit ta force ensemble.</p>
+    <a class="btn" href="https://rifanfano04-alt.github.io/legacy-coaching/#contact" target="_blank" rel="noopener">Réserver mon appel découverte <span class="arr">→</span></a>
+  </div>
+
+  <div class="foot">Rejoins la <span class="legacy-mark">LEGA<span class="cy">CY</span></span> — la prochaine transformation affichée sur cette page, ce sera la tienne.</div>
+</div>
+
+<script>
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('show'); obs.unobserve(e.target); } });
+  },{threshold:.12});
+  document.querySelectorAll('.reveal').forEach((el)=>obs.observe(el));
+
+  // Lecture auto des vidéos avant/après (muet, en boucle)
+  document.querySelectorAll('.ph video.media').forEach(v=>{ v.muted = true; const p = v.play(); if (p) p.catch(()=>{}); });
+</script>
+</body>
+</html>
