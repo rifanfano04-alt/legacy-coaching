@@ -364,7 +364,7 @@
     <div class="form-card">
       <h3>Reçois ton book</h3>
       <p class="lead">Dis-moi où l'envoyer et il est à toi dans la minute.</p>
-      <form action="https://formspree.io/f/xnjyrrqr" method="POST">
+      <form id="bookForm" action="https://formspree.io/f/xnjyrrqr" method="POST">
         <div class="row2">
           <div class="field">
             <label for="prenom">Prénom</label>
@@ -381,10 +381,9 @@
         </div>
         <input type="hidden" name="_subject" value="Nouveau lead — Book Dips">
         <input type="hidden" name="_language" value="fr">
-        <input type="hidden" name="_next" value="https://rifanfano04-alt.github.io/legacy-coaching/book-dips/merci.html">
         <button type="submit" class="submit-btn">Recevoir mon book gratuit</button>
       </form>
-      <div class="micro">Tu reçois le book par email, en quelques minutes.</div>
+      <div class="micro" id="formMsg">Tu reçois ton book tout de suite après validation.</div>
     </div>
   </div>
 </section>
@@ -396,6 +395,43 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script>
+  // Envoi du formulaire en arriere-plan (AJAX) + redirection vers la page de telechargement
+  const bookForm = document.getElementById("bookForm");
+  const formMsg = document.getElementById("formMsg");
+  const MERCI_URL = "https://rifanfano04-alt.github.io/legacy-coaching/book-dips/merci.html";
+  if (bookForm) {
+    bookForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = bookForm.querySelector(".submit-btn");
+      btn.disabled = true;
+      const original = btn.textContent;
+      btn.textContent = "Envoi…";
+      try {
+        const res = await fetch(bookForm.action, {
+          method: "POST",
+          body: new FormData(bookForm),
+          headers: { "Accept": "application/json" }
+        });
+        if (res.ok) {
+          window.location.href = MERCI_URL;
+        } else {
+          const data = await res.json().catch(() => ({}));
+          formMsg.textContent = (data.errors && data.errors[0] && data.errors[0].message)
+            ? data.errors[0].message
+            : "Oups, une erreur est survenue. Réessaie dans un instant.";
+          formMsg.style.color = "#ff3b3b";
+          btn.disabled = false;
+          btn.textContent = original;
+        }
+      } catch (err) {
+        formMsg.textContent = "Connexion impossible. Vérifie ta connexion et réessaie.";
+        formMsg.style.color = "#ff3b3b";
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    });
+  }
+
   gsap.registerPlugin(ScrollTrigger);
 
   // Entree hero en cascade
