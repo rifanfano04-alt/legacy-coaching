@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Transformations &amp; Records — LEGACY</title>
 <meta name="theme-color" content="#0a0b0e" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="fr_FR" />
+<meta property="og:title" content="Transformations &amp; Records — LEGACY" />
+<meta property="og:description" content="Avant / après, records battus, témoignages : les résultats réels des athlètes coachés par Richard." />
+<meta property="og:image" content="https://rifanfano04-alt.github.io/legacy-coaching/transformations/og-evolution.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://rifanfano04-alt.github.io/legacy-coaching/transformations/og-evolution.jpg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Bebas+Neue&family=Unbounded:wght@800;900&display=swap" rel="stylesheet" />
@@ -178,6 +187,7 @@ h1{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:upperca
 
 /* ===== FOOT ===== */
 .foot{margin-top:50px;text-align:center;font-family:'Bebas Neue',sans-serif;letter-spacing:.2em;text-transform:uppercase;font-size:.78rem;color:var(--gray-deep)}
+.scroll-hint{display:none}
 .foot .legacy-mark{font-family:'Unbounded',sans-serif;font-weight:800;letter-spacing:-.01em}
 .foot .cy{background:var(--acid-reflets);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
 
@@ -190,8 +200,9 @@ h1{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:upperca
   .metrics{grid-template-columns:repeat(2,1fr)}
   .metrics .m:nth-child(2){border-right:0}
   .metrics .m:nth-child(-n+2){border-bottom:1px solid var(--border)}
-  .board .row{grid-template-columns:1.4fr 1fr;font-size:.9rem}
-  .board .row .hide{display:none}
+  .board{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .board .row{grid-template-columns:150px repeat(4,120px);min-width:630px;font-size:.9rem}
+  .scroll-hint{display:block;text-align:center;font-family:'Bebas Neue',sans-serif;letter-spacing:.12em;text-transform:uppercase;font-size:.72rem;color:var(--gray-deep);margin:0 0 14px}
   .sechead h2{white-space:normal}
 }
 </style>
@@ -316,6 +327,7 @@ h1{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:upperca
   <!-- RECORDS -->
   <div id="records">
     <div class="sechead reveal"><h2>Records clients</h2><span class="line"></span><span class="tag">Progression réelle</span></div>
+    <div class="scroll-hint">← glissez pour voir tous les mouvements →</div>
     <div class="board reveal">
       <div class="row h"><div>Athlète</div><div>Muscle up</div><div class="hide">Traction</div><div class="hide">Dip</div><div class="hide">Squat</div></div>
       <div class="row"><div class="who">Jeremy<small>−80 kg · 16 sem.</small></div><div class="val"><span class="from">12,5</span><span class="ar">→</span><span class="to">17,5</span><small>kg</small></div><div class="val hide"><span class="to">65</span><small>kg</small></div><div class="val hide"><span class="from">80</span><span class="ar">→</span><span class="to">100</span><small>kg</small></div><div class="val hide"><span class="na">—</span></div></div>
