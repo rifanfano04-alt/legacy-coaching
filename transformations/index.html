@@ -41,7 +41,7 @@
   --shadow-2: 0 10px 28px oklch(0% 0 0 / .38), 0 28px 64px oklch(0% 0 0 / .42);
   --glow: 0 8px 28px oklch(88% 0 0 / .22), 0 13px 34px oklch(52% 0.18 25 / .28);
   /* signature de marque : gris/noir à reflets rouge sang */
-  --acid-reflets: linear-gradient(115deg, #ececec 0%, #cf9c9a 20%, #a8353d 37%, #d8c0bf 56%, #ab3a42 80%, #e7e3e3 100%);
+  --acid-reflets: linear-gradient(108deg, #fbfbfc 0%, #d2d5da 10%, #9a9ea7 22%, #c4c8ce 33%, #eef0f2 42%, #cf9a9d 49%, #a23b42 53%, #cf9a9d 57%, #e6e8ec 66%, #aeb2b9 78%, #f4f5f6 90%, #b9bdc4 100%);
   --aura-text: 0 0 2px rgba(246,246,246,.22), 0 0 6px rgba(168,42,48,.2);
   --radius: 16px;
   --maxw: 1140px;
@@ -60,28 +60,59 @@ body{
 /* grain + halos repris de l'esprit du hero du site */
 body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.045;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+body::after{content:"";position:fixed;inset:-8%;pointer-events:none;z-index:0;will-change:transform;
   background:
-    radial-gradient(60% 60% at 78% -4%, oklch(85% 0 0 / .06), transparent 70%),
-    radial-gradient(52% 56% at 8% 86%, rgba(150,22,30,.20), transparent 72%),
-    radial-gradient(90% 90% at 50% 124%, oklch(4% 0.006 264 / .9), transparent 70%)}
+    radial-gradient(50% 52% at 84% 6%, oklch(88% 0 0 / .09), transparent 70%),
+    radial-gradient(48% 52% at 4% 26%, oklch(78% 0.035 248 / .08), transparent 72%),
+    radial-gradient(54% 54% at 95% 58%, oklch(80% 0.02 264 / .07), transparent 72%),
+    radial-gradient(52% 56% at 8% 90%, rgba(150,22,30,.13), transparent 72%),
+    radial-gradient(120% 75% at 50% -12%, oklch(4% .006 264 / .82), transparent 60%),
+    radial-gradient(120% 90% at 50% 122%, oklch(3% .006 264 / .92), transparent 62%);
+  animation:aura-drift 24s ease-in-out infinite alternate}
+@keyframes aura-drift{
+  0%{transform:translate3d(-1.5%,-1%,0) scale(1)}
+  50%{transform:translate3d(1.8%,1.5%,0) scale(1.06)}
+  100%{transform:translate3d(.8%,-1.5%,0) scale(1.03)}
+}
+/* photo de fond fixe (chevalier), voile sombre pour la lisibilité — suit le scroll tout du long */
+.bg-photo{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(8,9,11,.80) 0%, rgba(8,9,11,.60) 44%, rgba(8,9,11,.74) 100%),
+    url("videos/fond-chevalier.jpg") center/cover no-repeat}
+
+/* halo de fumée organique (bruit fractal SVG), dérive lente — allégée par-dessus la photo */
+.bg-smoke{position:fixed;inset:-45%;z-index:0;pointer-events:none;opacity:.3;mix-blend-mode:screen;will-change:transform;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='700' height='700'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.013' numOctaves='4' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.54 0 0 0 0 0.56 0 0 0 0 0.63 0 0 0 0.7 -0.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E") center/cover;
+  animation:smoke-drift 48s ease-in-out infinite alternate}
+@keyframes smoke-drift{
+  0%{transform:translate3d(-3%,-2%,0) scale(1.05) rotate(0deg)}
+  50%{transform:translate3d(2.5%,3%,0) scale(1.16) rotate(2deg)}
+  100%{transform:translate3d(3%,-1.5%,0) scale(1.09) rotate(-1.5deg)}
+}
+/* lueur acier douce derrière chaque titre de section */
+.sechead{position:relative}
+.sechead::before{content:"";position:absolute;left:-40px;top:50%;width:320px;height:230px;transform:translateY(-50%);
+  z-index:-1;pointer-events:none;background:radial-gradient(closest-side, oklch(82% 0.01 264 / .10), transparent 72%)}
 img{max-width:100%;display:block}
 a{color:inherit;text-decoration:none}
 .wrap{position:relative;z-index:2;max-width:var(--maxw);margin:0 auto;padding:24px 22px 90px}
 
-/* signature highlight */
+/* signature highlight — rendu métallique poli chrome (reflet animé) */
 .hl{
   background:var(--acid-reflets);
+  background-size:230% 100%;
   -webkit-background-clip:text;background-clip:text;
   color:transparent;-webkit-text-fill-color:transparent;
-  text-shadow:var(--aura-text);
+  text-shadow:0 1px 1px rgba(0,0,0,.26), 0 0 12px rgba(168,42,48,.16);
+  animation:metal-sheen 7s ease-in-out infinite alternate;
 }
+@keyframes metal-sheen{from{background-position:0% 0}to{background-position:100% 0}}
 
 /* ===== TOPBAR ===== */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 0 22px;margin-bottom:46px;border-bottom:1px solid var(--border)}
 .logo{display:inline-flex;flex-direction:column;align-items:center;text-align:center;gap:4px;line-height:1}
 .logo-name{font-family:'Unbounded',sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-.01em;text-transform:uppercase;color:var(--gray-deep);line-height:1}
-.logo .cy{background:var(--acid-reflets);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;text-shadow:var(--aura-text)}
+.logo .cy{background:var(--acid-reflets);background-size:230% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;text-shadow:var(--aura-text);animation:metal-sheen 9s ease-in-out infinite alternate}
 .logo-slogan{display:flex;align-items:center;gap:7px;font-family:'Bebas Neue',sans-serif;font-size:.62rem;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
 .logo-slogan::before,.logo-slogan::after{content:"";flex:none;width:12px;height:1px;background:var(--border-strong)}
 .nav{display:flex;gap:26px;font-weight:500;font-size:.95rem}
@@ -117,6 +148,7 @@ h1{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:upperca
 @media (hover:hover) and (pointer:fine){
   .ba:hover{transform:translateY(-6px);border-color:oklch(38% .028 264);box-shadow:var(--shadow-2),0 0 0 1px oklch(88% 0 0 / .16),0 0 36px -4px oklch(88% 0 0 / .16)}
   .ba:hover::before{transform:scaleX(1)}
+  .ba:hover .media{transform:scale(1.06)}
 }
 .ba .pics{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--border);position:relative}
 .ba .pics.single{grid-template-columns:1fr;justify-items:center;background:transparent}
@@ -129,7 +161,7 @@ h1{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:upperca
 .ph.before .lab{color:var(--muted)}
 .ph.after .lab{color:var(--ink);background:var(--accent)}
 .ph .swap-note{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:.62rem;letter-spacing:.12em;color:var(--gray-deep);text-transform:uppercase;z-index:4}
-.ph .media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2;background:#000}
+.ph .media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2;background:#000;transition:transform .55s var(--ease-out)}
 .ph .vlayer{position:absolute;inset:0;z-index:2;opacity:0;transition:opacity .35s var(--ease-out);display:grid;place-items:center;background:repeating-linear-gradient(135deg,oklch(22% .03 25) 0 12px,oklch(17% .02 25) 12px 24px)}
 .ph:hover .vlayer{opacity:1}
 .ph .vlayer::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,oklch(100% 0 0 / .10) 50%,transparent 65%);background-size:250% 100%;animation:sheen 1.7s linear infinite}
@@ -178,9 +210,9 @@ h1{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:upperca
 .cta::after{content:"";position:absolute;top:-30%;left:-8%;width:40%;height:160%;background:radial-gradient(closest-side,oklch(88% 0 0 / .10),transparent);transform:rotate(-12deg)}
 .cta h3{font-weight:800;letter-spacing:-.02em;text-transform:uppercase;font-size:clamp(1.9rem,5vw,3.2rem);line-height:1.02;position:relative;text-shadow:0 0 24px rgba(150,22,30,.3)}
 .cta p{color:var(--muted);font-size:1.08rem;margin:20px auto 30px;max-width:48ch;position:relative}
-.btn{appearance:none;border:2px solid var(--accent);cursor:pointer;font-weight:700;font-size:1.05rem;background:var(--accent);color:var(--ink);padding:16px 32px;border-radius:50px;display:inline-flex;align-items:center;gap:10px;box-shadow:var(--glow);transition:transform .22s var(--ease-out),background .2s var(--ease-out),box-shadow .25s var(--ease-out);position:relative}
+.btn{appearance:none;border:2px solid #c7cbd1;cursor:pointer;font-weight:700;font-size:1.05rem;background:var(--acid-reflets);background-size:230% 100%;color:var(--ink);padding:16px 32px;border-radius:50px;display:inline-flex;align-items:center;gap:10px;box-shadow:var(--glow);transition:transform .22s var(--ease-out),filter .2s var(--ease-out),box-shadow .25s var(--ease-out);position:relative;animation:metal-sheen 8s ease-in-out infinite alternate}
 @media (hover:hover) and (pointer:fine){
-  .btn:hover{transform:translateY(-3px);background:var(--accent-hover);box-shadow:0 16px 40px oklch(88% 0 0 / .35),0 20px 46px oklch(52% .18 25 / .3)}
+  .btn:hover{transform:translateY(-3px);filter:brightness(1.07) saturate(1.05);box-shadow:0 16px 40px oklch(88% 0 0 / .35),0 20px 46px oklch(52% .18 25 / .3)}
   .btn:hover .arr{transform:translateX(5px)}
 }
 .btn .arr{transition:transform .2s var(--ease-out)}
@@ -189,7 +221,7 @@ h1{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:upperca
 .foot{margin-top:50px;text-align:center;font-family:'Bebas Neue',sans-serif;letter-spacing:.2em;text-transform:uppercase;font-size:.78rem;color:var(--gray-deep)}
 .scroll-hint{display:none}
 .foot .legacy-mark{font-family:'Unbounded',sans-serif;font-weight:800;letter-spacing:-.01em}
-.foot .cy{background:var(--acid-reflets);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.foot .cy{background:var(--acid-reflets);background-size:230% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:metal-sheen 9s ease-in-out infinite alternate}
 
 /* ===== REVEAL ===== */
 .reveal{opacity:0;transform:translateY(20px);transition:opacity .6s var(--ease-out),transform .6s var(--ease-out)}
@@ -205,9 +237,25 @@ h1{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:upperca
   .scroll-hint{display:block;text-align:center;font-family:'Bebas Neue',sans-serif;letter-spacing:.12em;text-transform:uppercase;font-size:.72rem;color:var(--gray-deep);margin:0 0 14px}
   .sechead h2{white-space:normal}
 }
+
+/* ===== TRANSITION DE PAGE (fondu, sans loader) ===== */
+.page-fade{position:fixed;inset:0;z-index:999;pointer-events:none;background:var(--black);
+  animation:page-in .55s var(--ease-out) forwards}
+@keyframes page-in{from{opacity:1}to{opacity:0}}
+body.leaving .page-fade{animation:none;opacity:1;pointer-events:all;transition:opacity .45s var(--ease-out)}
+
+/* ===== MOUVEMENT RÉDUIT ===== */
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  .reveal{opacity:1 !important;transform:none !important}
+}
 </style>
 </head>
 <body>
+<div class="page-fade" aria-hidden="true"></div>
+<div class="bg-photo" aria-hidden="true"></div>
+<div class="bg-smoke" aria-hidden="true"></div>
 <div class="wrap">
 
   <div class="topbar">
@@ -366,6 +414,37 @@ h1{font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:upperca
 
   // Lecture auto des vidéos avant/après (muet, en boucle)
   document.querySelectorAll('.ph video.media').forEach(v=>{ v.muted = true; const p = v.play(); if (p) p.catch(()=>{}); });
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ===== Transition de page : fondu sortant vers une autre page (pas ancres / liens externes / nouvel onglet) =====
+  if(!reducedMotion){
+    document.addEventListener('click', e=>{
+      const a = e.target.closest('a[href]');
+      if(!a) return;
+      const url = new URL(a.href, location.href);
+      const sameDoc = url.pathname === location.pathname && url.search === location.search;
+      const newTab = a.target === '_blank' || e.metaKey || e.ctrlKey || e.shiftKey || a.hasAttribute('download');
+      if(url.origin !== location.origin || sameDoc || newTab || url.href === location.href) return;
+      e.preventDefault();
+      document.body.classList.add('leaving');
+      setTimeout(()=>{ location.href = a.href; }, 430);
+    });
+  }
+
+  // ===== Bouton magnétique (CTA) =====
+  if(window.matchMedia('(hover:hover) and (pointer:fine)').matches && !reducedMotion){
+    document.querySelectorAll('.btn').forEach(btn=>{
+      const s = 0.26;
+      btn.addEventListener('pointermove', e=>{
+        const r = btn.getBoundingClientRect();
+        const mx = e.clientX - (r.left + r.width/2);
+        const my = e.clientY - (r.top + r.height/2);
+        btn.style.transform = `translate(${(mx*s).toFixed(1)}px, ${(my*s-2).toFixed(1)}px)`;
+      });
+      btn.addEventListener('pointerleave', ()=>{ btn.style.transform = ''; });
+    });
+  }
 </script>
 </body>
 </html>
