@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 285">
   <defs>
 
-    <!-- Chrome principal du corps -->
+    <!-- Chrome corps principal -->
     <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%"   stop-color="#eaeaec"/>
       <stop offset="18%"  stop-color="#d4d4d6"/>
@@ -11,45 +11,53 @@
       <stop offset="100%" stop-color="#606064"/>
     </linearGradient>
 
-    <!-- Chrome horizontal pour la poignée -->
+    <!-- Chrome lettres : argent → rouge marque, calé sur la hauteur des anneaux -->
+    <linearGradient id="letterchrome"
+      x1="0" y1="72" x2="0" y2="154"
+      gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#f6f6f6"/>
+      <stop offset="40%"  stop-color="#d8d8da"/>
+      <stop offset="100%" stop-color="#c8323c"/>
+    </linearGradient>
+
+    <!-- Chrome poignée (horizontal) -->
     <linearGradient id="chromegrip" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%"   stop-color="#888890"/>
-      <stop offset="35%"  stop-color="#d6d6d8"/>
-      <stop offset="65%"  stop-color="#dcdcde"/>
+      <stop offset="38%"  stop-color="#d8d8da"/>
+      <stop offset="62%"  stop-color="#dcdcde"/>
       <stop offset="100%" stop-color="#848488"/>
     </linearGradient>
 
-    <!-- Reflet lumineux vertical -->
+    <!-- Reflet lumineux -->
     <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%"   stop-color="white" stop-opacity="0.28"/>
       <stop offset="100%" stop-color="white" stop-opacity="0"/>
     </linearGradient>
 
-    <!-- Dégradé des lettres : argent → rouge marque -->
-    <linearGradient id="lettergrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"   stop-color="#f4f4f4"/>
-      <stop offset="50%"  stop-color="#dcdcde"/>
-      <stop offset="100%" stop-color="#c8323c"/>
-    </linearGradient>
-
-    <!-- Lueur rouge subtile sur le logo -->
+    <!-- Halo rouge sur tout le logo -->
     <filter id="redglow" x="-15%" y="-15%" width="130%" height="130%">
       <feDropShadow dx="0" dy="0" stdDeviation="10"
-        flood-color="#c8323c" flood-opacity="0.18"/>
+        flood-color="#c8323c" flood-opacity="0.20"/>
     </filter>
 
-    <!-- Halo rouge sur les lettres -->
-    <filter id="letterglow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="0" stdDeviation="3"
-        flood-color="#c8323c" flood-opacity="0.45"/>
+    <!-- Halo rouge sur les lettres chrome -->
+    <filter id="letterglow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4"
+        flood-color="#c8323c" flood-opacity="0.35"/>
     </filter>
 
-    <!-- Clip : corps principal -->
+    <!-- Clip anneaux : chaque lettre est clippée dans son cercle -->
+    <clipPath id="clip1"><circle cx="100" cy="113" r="41"/></clipPath>
+    <clipPath id="clip2"><circle cx="213" cy="113" r="41"/></clipPath>
+    <clipPath id="clip3"><circle cx="327" cy="113" r="41"/></clipPath>
+    <clipPath id="clip4"><circle cx="440" cy="113" r="41"/></clipPath>
+
+    <!-- Clip corps -->
     <clipPath id="bodyClip">
       <rect x="12" y="18" width="516" height="190" rx="40"/>
     </clipPath>
 
-    <!-- Clip : poignée -->
+    <!-- Clip poignée -->
     <clipPath id="gripClip">
       <rect x="208" y="202" width="124" height="62" rx="13"/>
     </clipPath>
@@ -59,82 +67,88 @@
   <!-- Fond noir -->
   <rect width="540" height="285" fill="#0a0b0e"/>
 
-  <!-- ─── Poignée / palm rest ─── -->
+  <!-- ─── Poignée palm rest ─── -->
   <rect x="208" y="202" width="124" height="62" rx="13" fill="url(#chromegrip)"/>
-  <!-- Reflet poignée -->
   <rect x="208" y="202" width="124" height="32" fill="url(#sheen)" clip-path="url(#gripClip)"/>
-  <!-- Stries de grip -->
-  <line x1="234" y1="214" x2="234" y2="254" stroke="#707075" stroke-width="1.5"/>
-  <line x1="258" y1="214" x2="258" y2="254" stroke="#707075" stroke-width="1.5"/>
-  <line x1="282" y1="214" x2="282" y2="254" stroke="#707075" stroke-width="1.5"/>
-  <line x1="306" y1="214" x2="306" y2="254" stroke="#707075" stroke-width="1.5"/>
+  <line x1="234" y1="215" x2="234" y2="253" stroke="#606068" stroke-width="1.5"/>
+  <line x1="258" y1="215" x2="258" y2="253" stroke="#606068" stroke-width="1.5"/>
+  <line x1="282" y1="215" x2="282" y2="253" stroke="#606068" stroke-width="1.5"/>
+  <line x1="306" y1="215" x2="306" y2="253" stroke="#606068" stroke-width="1.5"/>
 
   <!-- ─── Corps principal du poing ─── -->
   <rect x="12" y="18" width="516" height="190" rx="40"
     fill="url(#chrome)" filter="url(#redglow)"/>
-
-  <!-- Reflet du dessus -->
-  <rect x="12" y="18" width="516" height="92" rx="40"
+  <!-- Reflet haut -->
+  <rect x="12" y="18" width="516" height="88" rx="40"
     fill="url(#sheen)" clip-path="url(#bodyClip)"/>
+  <!-- Filet lumineux bord supérieur -->
+  <rect x="58" y="19" width="395" height="3" rx="1.5"
+    fill="white" fill-opacity="0.42" clip-path="url(#bodyClip)"/>
 
-  <!-- Filet lumineux sur le bord supérieur -->
-  <rect x="55" y="19" width="400" height="3" rx="1.5"
-    fill="white" fill-opacity="0.45" clip-path="url(#bodyClip)"/>
-
-  <!-- ═══════════════════════════════════════
-       Anneau 1 — lettre  L  (centre 100, 113)
-       ═══════════════════════════════════════ -->
-  <circle cx="100" cy="113" r="48" fill="#111318"/>
-  <circle cx="100" cy="113" r="43" fill="none" stroke="#cacace" stroke-width="4"/>
-  <circle cx="100" cy="113" r="39" fill="none" stroke="#3a3a40" stroke-width="2"/>
-  <circle cx="100" cy="113" r="37" fill="#0a0b0e"/>
+  <!-- ══════════════════════════════════════════════════
+       ANNEAU 1 — Lettre  L
+       La lettre remplit le cercle : son corps chrome EST l'anneau,
+       l'espace noir autour = le trou pour le doigt
+       ══════════════════════════════════════════════════ -->
+  <circle cx="100" cy="113" r="44" fill="#101215"/>
+  <circle cx="100" cy="113" r="41" fill="#0a0b0e"/>
   <text x="100" y="113"
     font-family="Impact, 'Arial Narrow Bold', sans-serif"
-    font-size="46" font-weight="bold"
-    fill="url(#lettergrad)"
+    font-size="80" font-weight="bold"
+    fill="url(#letterchrome)"
+    stroke="#3a3a42" stroke-width="1.5" paint-order="stroke"
     text-anchor="middle" dominant-baseline="central"
-    filter="url(#letterglow)">L</text>
+    filter="url(#letterglow)"
+    clip-path="url(#clip1)">L</text>
+  <circle cx="100" cy="113" r="43" fill="none" stroke="#bebec4" stroke-width="3.5"/>
+  <circle cx="100" cy="113" r="39" fill="none" stroke="#252530" stroke-width="1.5"/>
 
-  <!-- ═══════════════════════════════════════
-       Anneau 2 — lettres EG  (centre 213, 113)
-       ═══════════════════════════════════════ -->
-  <circle cx="213" cy="113" r="48" fill="#111318"/>
-  <circle cx="213" cy="113" r="43" fill="none" stroke="#cacace" stroke-width="4"/>
-  <circle cx="213" cy="113" r="39" fill="none" stroke="#3a3a40" stroke-width="2"/>
-  <circle cx="213" cy="113" r="37" fill="#0a0b0e"/>
+  <!-- ══════════════════════════════════════════════════
+       ANNEAU 2 — Lettres EG
+       ══════════════════════════════════════════════════ -->
+  <circle cx="213" cy="113" r="44" fill="#101215"/>
+  <circle cx="213" cy="113" r="41" fill="#0a0b0e"/>
   <text x="213" y="113"
     font-family="Impact, 'Arial Narrow Bold', sans-serif"
-    font-size="27" font-weight="bold"
-    fill="url(#lettergrad)"
+    font-size="44" font-weight="bold"
+    fill="url(#letterchrome)"
+    stroke="#3a3a42" stroke-width="1.5" paint-order="stroke"
     text-anchor="middle" dominant-baseline="central"
-    filter="url(#letterglow)">EG</text>
+    filter="url(#letterglow)"
+    clip-path="url(#clip2)">EG</text>
+  <circle cx="213" cy="113" r="43" fill="none" stroke="#bebec4" stroke-width="3.5"/>
+  <circle cx="213" cy="113" r="39" fill="none" stroke="#252530" stroke-width="1.5"/>
 
-  <!-- ═══════════════════════════════════════
-       Anneau 3 — lettres AC  (centre 327, 113)
-       ═══════════════════════════════════════ -->
-  <circle cx="327" cy="113" r="48" fill="#111318"/>
-  <circle cx="327" cy="113" r="43" fill="none" stroke="#cacace" stroke-width="4"/>
-  <circle cx="327" cy="113" r="39" fill="none" stroke="#3a3a40" stroke-width="2"/>
-  <circle cx="327" cy="113" r="37" fill="#0a0b0e"/>
+  <!-- ══════════════════════════════════════════════════
+       ANNEAU 3 — Lettres AC
+       ══════════════════════════════════════════════════ -->
+  <circle cx="327" cy="113" r="44" fill="#101215"/>
+  <circle cx="327" cy="113" r="41" fill="#0a0b0e"/>
   <text x="327" y="113"
     font-family="Impact, 'Arial Narrow Bold', sans-serif"
-    font-size="27" font-weight="bold"
-    fill="url(#lettergrad)"
+    font-size="44" font-weight="bold"
+    fill="url(#letterchrome)"
+    stroke="#3a3a42" stroke-width="1.5" paint-order="stroke"
     text-anchor="middle" dominant-baseline="central"
-    filter="url(#letterglow)">AC</text>
+    filter="url(#letterglow)"
+    clip-path="url(#clip3)">AC</text>
+  <circle cx="327" cy="113" r="43" fill="none" stroke="#bebec4" stroke-width="3.5"/>
+  <circle cx="327" cy="113" r="39" fill="none" stroke="#252530" stroke-width="1.5"/>
 
-  <!-- ═══════════════════════════════════════
-       Anneau 4 — lettre  Y  (centre 440, 113)
-       ═══════════════════════════════════════ -->
-  <circle cx="440" cy="113" r="48" fill="#111318"/>
-  <circle cx="440" cy="113" r="43" fill="none" stroke="#cacace" stroke-width="4"/>
-  <circle cx="440" cy="113" r="39" fill="none" stroke="#3a3a40" stroke-width="2"/>
-  <circle cx="440" cy="113" r="37" fill="#0a0b0e"/>
+  <!-- ══════════════════════════════════════════════════
+       ANNEAU 4 — Lettre  Y
+       ══════════════════════════════════════════════════ -->
+  <circle cx="440" cy="113" r="44" fill="#101215"/>
+  <circle cx="440" cy="113" r="41" fill="#0a0b0e"/>
   <text x="440" y="113"
     font-family="Impact, 'Arial Narrow Bold', sans-serif"
-    font-size="46" font-weight="bold"
-    fill="url(#lettergrad)"
+    font-size="80" font-weight="bold"
+    fill="url(#letterchrome)"
+    stroke="#3a3a42" stroke-width="1.5" paint-order="stroke"
     text-anchor="middle" dominant-baseline="central"
-    filter="url(#letterglow)">Y</text>
+    filter="url(#letterglow)"
+    clip-path="url(#clip4)">Y</text>
+  <circle cx="440" cy="113" r="43" fill="none" stroke="#bebec4" stroke-width="3.5"/>
+  <circle cx="440" cy="113" r="39" fill="none" stroke="#252530" stroke-width="1.5"/>
 
 </svg>
