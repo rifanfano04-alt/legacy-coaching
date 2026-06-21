@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Merci — Ton Book Muscle Up · LEGACY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --card:#151517;
+    --line:rgba(255,255,255,.08);
+    --grey-1:#c9cad0;
+    --grey-2:#8a8b91;
+    --grey-3:#5c5d63;
+    --blood-1:#ff3b3b;
+    --blood-2:#7a0d0d;
+    --acid-reflets: linear-gradient(100deg,#9a9ba1 0%,#cfd0d4 18%,#ff3b3b 42%,#7a0d0d 58%,#9a9ba1 80%,#cfd0d4 100%);
+    --shadow-blood: 0 0 40px rgba(255,59,59,.18);
+    --stripes: repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0px, rgba(255,255,255,.035) 1px, transparent 1px, transparent 16px);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    background-image:var(--stripes), radial-gradient(60% 50% at 50% 0%, rgba(255,59,59,.10), transparent 70%);
+    color:var(--grey-1);
+    font-family:'Inter',sans-serif;
+    line-height:1.55;
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:40px 24px;
+    text-align:center;
+  }
+  .hl{
+    background:var(--acid-reflets);background-size:220% auto;
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:shimmer 7s linear infinite;
+  }
+  @keyframes shimmer{0%{background-position:0% 50%}100%{background-position:220% 50%}}
+  .wrap{max-width:560px;}
+  .logo{font-family:'Unbounded';font-weight:800;font-size:22px;margin-bottom:40px;}
+  .check{
+    width:72px;height:72px;margin:0 auto 26px;border-radius:50%;
+    background:rgba(255,59,59,.12);border:1px solid rgba(255,59,59,.4);
+    display:flex;align-items:center;justify-content:center;
+    animation:pop .6s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  @keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+  .check svg{width:34px;height:34px;}
+  .check svg path{stroke:var(--blood-1);stroke-width:4;fill:none;stroke-linecap:round;stroke-linejoin:round;
+    stroke-dasharray:40;stroke-dashoffset:40;animation:draw .5s ease forwards .35s;}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .eyebrow{font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--blood-1);margin-bottom:16px;}
+  h1{font-family:'Unbounded';font-weight:900;font-size:clamp(28px,5vw,44px);line-height:1.1;margin-bottom:18px;}
+  p.sub{color:var(--grey-2);font-size:17px;max-width:440px;margin:0 auto 36px;}
+  .btn{
+    display:inline-block;font-family:'Inter';font-weight:800;font-size:16px;
+    padding:18px 40px;border-radius:10px;background:var(--acid-reflets);color:#0a0a0b;
+    box-shadow:var(--shadow-blood);position:relative;overflow:hidden;
+    transition:box-shadow .3s ease;
+  }
+  .btn:hover{box-shadow:0 0 55px rgba(255,59,59,.32);}
+  .btn::after{content:"";position:absolute;top:0;left:-150%;width:55%;height:100%;
+    background:linear-gradient(120deg,transparent,rgba(255,255,255,.45),transparent);
+    transform:skewX(-20deg);transition:left .65s ease;}
+  .btn:hover::after{left:150%;}
+  a{text-decoration:none;}
+  .note{margin-top:22px;font-size:13px;color:var(--grey-3);}
+  .cta-call{margin-top:46px;padding-top:30px;border-top:1px solid var(--line);}
+  .cta-call p{color:var(--grey-2);font-size:15px;margin-bottom:14px;}
+  .cta-call a{color:var(--blood-1);font-weight:700;border-bottom:1px solid rgba(255,59,59,.4);padding-bottom:2px;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">LEGA<span class="hl">CY</span></div>
+    <div class="check">
+      <svg viewBox="0 0 40 40"><path d="M8 21 L17 30 L33 11"></path></svg>
+    </div>
+    <div class="eyebrow">C'est tout bon</div>
+    <h1>Ton <span class="hl">Book Muscle Up</span> est prêt</h1>
+    <p class="sub">Clique ci-dessous pour le télécharger. Construis la force, soigne la transition, et la barre finira par passer.</p>
+    <a href="https://rifanfano04-alt.github.io/legacy-coaching/book-muscle-up.pdf" class="btn" target="_blank" rel="noopener">📕 Télécharger mon book</a>
+    <div class="note">Le téléchargement ne démarre pas ? <a href="https://rifanfano04-alt.github.io/legacy-coaching/book-muscle-up.pdf" style="color:var(--grey-1);text-decoration:underline;">Clique ici</a>.</div>
+
+    <div class="cta-call">
+      <p>Tu veux aller plus loin et progresser avec un suivi ?</p>
+      <a href="https://rifanfano04-alt.github.io/legacy-coaching/#contact">Réserve ton appel découverte →</a>
+    </div>
+  </div>
+</body>
+</html>

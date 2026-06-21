@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Le Book Muscle Up — LEGACY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --bg-soft:#111113;
+    --card:#151517;
+    --line:rgba(255,255,255,.08);
+    --grey-1:#c9cad0;
+    --grey-2:#8a8b91;
+    --grey-3:#5c5d63;
+    --blood-1:#ff3b3b;
+    --blood-2:#7a0d0d;
+    --acid-reflets: linear-gradient(100deg,#9a9ba1 0%,#cfd0d4 18%,#ff3b3b 42%,#7a0d0d 58%,#9a9ba1 80%,#cfd0d4 100%);
+    --shadow-blood: 0 0 40px rgba(255,59,59,.18);
+    --stripes: repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0px, rgba(255,255,255,.035) 1px, transparent 1px, transparent 16px);
+    --stripes-blood: repeating-linear-gradient(135deg, rgba(255,59,59,.05) 0px, rgba(255,59,59,.05) 1px, transparent 1px, transparent 16px);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--grey-1);
+    font-family:'Inter',sans-serif;
+    line-height:1.55;
+    overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+
+  .hl{
+    background:var(--acid-reflets);
+    background-size:220% auto;
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:shimmer 7s linear infinite;
+  }
+  @keyframes shimmer{
+    0%{background-position:0% 50%}
+    100%{background-position:220% 50%}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001s !important;animation-iteration-count:1 !important;}
+  }
+
+  /* HEADER */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:rgba(10,10,11,.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+    transition:padding .35s ease, box-shadow .35s ease;
+  }
+  header.scrolled{box-shadow:0 10px 30px -10px rgba(0,0,0,.5);}
+  header.scrolled .wrap{padding:10px 24px;}
+  header .wrap{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;transition:padding .35s ease;}
+  .logo{font-family:'Unbounded';font-weight:800;font-size:22px;letter-spacing:.5px;color:var(--grey-1);}
+  .logo span{font-weight:900;}
+
+  /* HERO */
+  .hero{
+    padding:96px 0 64px;
+    text-align:center;
+    position:relative;
+  }
+  .hero{
+    background-image:var(--stripes), radial-gradient(60% 50% at 50% 0%, rgba(255,59,59,.10), transparent 70%);
+  }
+  .eyebrow{
+    font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+    color:var(--blood-1);margin-bottom:18px;
+  }
+  .hero h1{
+    font-family:'Unbounded';font-weight:900;
+    font-size:clamp(34px,6vw,64px);
+    line-height:1.08;
+    color:var(--grey-1);
+    margin-bottom:22px;
+  }
+  .hero p.sub{
+    max-width:560px;margin:0 auto 36px;
+    font-size:18px;color:var(--grey-2);
+  }
+  .btn-main{
+    display:inline-block;
+    font-family:'Inter';font-weight:800;font-size:16px;
+    padding:18px 38px;border-radius:10px;
+    background:var(--acid-reflets);color:#0a0a0b;
+    box-shadow:var(--shadow-blood);
+    border:none;cursor:pointer;
+    position:relative;overflow:hidden;
+    transition:box-shadow .3s ease;
+  }
+  .btn-main:hover{box-shadow:0 0 55px rgba(255,59,59,.32);}
+  .btn-main::after, .submit-btn::after{
+    content:"";position:absolute;top:0;left:-150%;width:55%;height:100%;
+    background:linear-gradient(120deg,transparent,rgba(255,255,255,.45),transparent);
+    transform:skewX(-20deg);transition:left .65s ease;
+    pointer-events:none;
+  }
+  .btn-main:hover::after, .submit-btn:hover::after{left:150%;}
+  .hero-note{margin-top:16px;font-size:13px;color:var(--grey-3);}
+
+  .hero-visual{
+    margin:56px auto 0;
+    max-width:340px;
+    aspect-ratio:3/4;
+    border-radius:18px;
+    background:linear-gradient(160deg,#1c1c1f,#0a0a0b);
+    background-image:var(--stripes), linear-gradient(160deg,#1c1c1f,#0a0a0b);
+    border:1px solid var(--line);
+    box-shadow:0 30px 60px -20px rgba(0,0,0,.6), 0 0 50px rgba(255,59,59,.08);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    position:relative;
+    overflow:hidden;
+    padding:32px 24px;
+    text-align:center;
+    animation:float 6s ease-in-out infinite;
+    will-change:transform;
+  }
+  @keyframes float{
+    0%,100%{transform:translateY(0) rotate(0deg)}
+    50%{transform:translateY(-10px) rotate(.6deg)}
+  }
+  .hero-visual .cover-icon line, .hero-visual .cover-icon circle{
+    stroke-dasharray:140;stroke-dashoffset:140;
+    animation:draw 1.8s ease forwards .4s;
+  }
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .hero-visual .ribbon{
+    position:absolute;top:18px;left:-40px;
+    background:var(--blood-1);color:#0a0a0b;
+    font-family:'Unbounded';font-weight:800;font-size:11px;letter-spacing:1px;
+    padding:6px 50px;transform:rotate(-35deg);
+    z-index:2;
+  }
+  .hero-visual .cover-icon{width:64px;height:64px;margin-bottom:22px;}
+  .hero-visual .cover-icon line, .hero-visual .cover-icon circle{
+    stroke:var(--blood-1);stroke-width:3;stroke-linecap:round;fill:none;
+  }
+  .hero-visual .cover-eyebrow{
+    font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--grey-3);margin-bottom:10px;
+  }
+  .hero-visual .cover-title{
+    font-family:'Unbounded';font-weight:900;font-size:26px;line-height:1.15;
+    color:var(--grey-1);margin-bottom:10px;
+  }
+  .hero-visual .cover-sub{
+    font-size:12px;color:var(--grey-3);letter-spacing:.5px;
+  }
+  .hero-visual .cover-foot{
+    position:absolute;bottom:18px;left:0;right:0;
+    font-family:'Unbounded';font-weight:700;font-size:10px;letter-spacing:2px;
+    color:var(--grey-3);text-transform:uppercase;
+  }
+
+  /* SECTION TITLES */
+  .sec-title{
+    text-align:center;
+    font-family:'Unbounded';font-weight:800;
+    font-size:clamp(24px,4vw,36px);
+    color:var(--grey-1);
+    margin-bottom:14px;
+  }
+  .sec-sub{
+    text-align:center;color:var(--grey-3);
+    max-width:520px;margin:0 auto 48px;
+    font-size:15px;
+  }
+
+  /* PROBLEM / PROMISE */
+  .promise{padding:80px 0;border-top:1px solid var(--line);}
+  .grid3{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:20px;
+  }
+  .pcard{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:28px 24px;
+  }
+  .pcard .num{
+    font-family:'Unbounded';font-weight:900;font-size:22px;
+    color:var(--blood-1);margin-bottom:12px;
+  }
+  .pcard h3{font-size:16px;color:var(--grey-1);margin-bottom:8px;font-weight:700;}
+  .pcard p{font-size:14px;color:var(--grey-3);}
+
+  /* PREUVE */
+  .proof{
+    padding:80px 0;border-top:1px solid var(--line);
+    background-image:var(--stripes-blood);
+  }
+  .stats{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:20px;
+    margin-bottom:40px;
+  }
+  .stat{
+    text-align:center;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:30px 14px;
+  }
+  .stat .big{
+    font-family:'Unbounded';font-weight:900;font-size:30px;
+  }
+  .stat .lbl{font-size:13px;color:var(--grey-3);margin-top:6px;}
+
+  /* FORM SECTION */
+  .form-sec{
+    padding:90px 0 100px;
+    border-top:1px solid var(--line);
+    position:relative;
+  }
+  .form-sec::before{
+    content:"";position:absolute;inset:0;
+    background-image:var(--stripes), radial-gradient(60% 60% at 50% 40%, rgba(255,59,59,.08), transparent 70%);
+    pointer-events:none;
+  }
+  .form-card{
+    position:relative;
+    max-width:480px;margin:0 auto;
+    background:linear-gradient(160deg,#161618,#0d0d0e);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:40px 32px;
+    box-shadow:0 0 60px rgba(255,59,59,.10);
+  }
+  .form-card h3{
+    font-family:'Unbounded';font-weight:800;font-size:24px;
+    text-align:center;color:var(--grey-1);margin-bottom:8px;
+  }
+  .form-card p.lead{
+    text-align:center;color:var(--grey-3);font-size:14px;margin-bottom:28px;
+  }
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;font-size:12px;font-weight:700;letter-spacing:.5px;
+    color:var(--grey-2);text-transform:uppercase;margin-bottom:7px;
+  }
+  .field input{
+    width:100%;padding:13px 14px;
+    background:#0a0a0b;border:1px solid var(--line);
+    border-radius:8px;color:var(--grey-1);font-size:15px;font-family:'Inter';
+    outline:none;
+    transition:border-color .25s, box-shadow .25s, transform .15s;
+  }
+  .field input::placeholder{color:var(--grey-3);}
+  .field input:focus{border-color:var(--blood-1);box-shadow:0 0 0 4px rgba(255,59,59,.12);transform:translateY(-1px);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .submit-btn{
+    width:100%;margin-top:6px;
+    font-family:'Inter';font-weight:800;font-size:16px;
+    padding:16px;border-radius:10px;border:none;cursor:pointer;
+    background:var(--acid-reflets);color:#0a0a0b;
+    box-shadow:var(--shadow-blood);
+    position:relative;overflow:hidden;
+    transition:box-shadow .3s ease, transform .15s ease;
+  }
+  .submit-btn:hover{box-shadow:0 0 55px rgba(255,59,59,.32);}
+  .submit-btn:active{transform:scale(.98);}
+  .micro{
+    text-align:center;font-size:12px;color:var(--grey-3);margin-top:16px;
+  }
+
+  /* FOOTER */
+  footer{
+    padding:36px 0;border-top:1px solid var(--line);
+    text-align:center;color:var(--grey-3);font-size:13px;
+  }
+
+  @media (max-width:760px){
+    .grid3{grid-template-columns:1fr;}
+    .stats{grid-template-columns:1fr;}
+    .row2{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="logo">LEGA<span class="hl">CY</span></div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Guide gratuit · Muscle Up</div>
+    <h1>Décroche ton premier<br><span class="hl">Muscle Up</span></h1>
+    <p class="sub">La méthode simple pour construire la force, débloquer la transition et passer la barre — puis lester ton muscle up sans te blesser.</p>
+    <a href="#form" class="btn-main">Je veux le book gratuit</a>
+    <div class="hero-note">Format PDF · lecture 12 minutes</div>
+
+    <div class="hero-visual">
+      <div class="ribbon">GRATUIT</div>
+      <svg class="cover-icon" viewBox="0 0 64 64">
+        <line x1="10" y1="24" x2="54" y2="24"></line>
+        <circle cx="32" cy="15" r="5"></circle>
+        <line x1="32" y1="20" x2="32" y2="40"></line>
+        <line x1="32" y1="24" x2="21" y2="24"></line>
+        <line x1="32" y1="24" x2="43" y2="24"></line>
+        <line x1="32" y1="40" x2="25" y2="52"></line>
+        <line x1="32" y1="40" x2="39" y2="52"></line>
+      </svg>
+      <div class="cover-eyebrow">LEGACY · MÉTHODE</div>
+      <div class="cover-title">LE BOOK<br>MUSCLE UP</div>
+      <div class="cover-sub">Force · Transition · Lest</div>
+      <div class="cover-foot">Édition 01</div>
+    </div>
+  </div>
+</section>
+
+<section class="promise">
+  <div class="wrap">
+    <div class="sec-title">Ce que tu vas <span class="hl">débloquer</span></div>
+    <div class="sec-sub">Trois maillons à assembler dans le bon ordre pour enfin passer ton muscle up.</div>
+    <div class="grid3">
+      <div class="pcard">
+        <div class="num">01</div>
+        <h3>Les prérequis de force</h3>
+        <p>La traction explosive et la force au dip qui rendent le muscle up possible — avec les repères chiffrés à atteindre.</p>
+      </div>
+      <div class="pcard">
+        <div class="num">02</div>
+        <h3>La transition qui débloque tout</h3>
+        <p>Le passage des poignets au-dessus de la barre, là où 90 % des MU se perdent. Trajectoire, vitesse, et les drills pour l'automatiser.</p>
+      </div>
+      <div class="pcard">
+        <div class="num">03</div>
+        <h3>Du premier MU au MU lesté</h3>
+        <p>La progression exacte pour solidifier ton muscle up au poids du corps, puis ajouter du lest sans casser ta technique.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="proof">
+  <div class="wrap">
+    <div class="sec-title">Ça <span class="hl">fonctionne</span></div>
+    <div class="sec-sub">Quelques résultats d'athlètes suivis avec cette méthode.</div>
+    <div class="stats">
+      <div class="stat"><div class="big hl">1er MU</div><div class="lbl">Coline — de 0 à son premier muscle up</div></div>
+      <div class="stat"><div class="big hl">+10kg</div><div class="lbl">Hedi — muscle up lesté</div></div>
+      <div class="stat"><div class="big hl">+7,5kg</div><div class="lbl">Mathias — MU lesté débloqué</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="form-sec" id="form">
+  <div class="wrap">
+    <div class="form-card">
+      <h3>Reçois ton book</h3>
+      <p class="lead">Dis-moi où l'envoyer et il est à toi dans la minute.</p>
+      <form id="bookForm" action="https://formspree.io/f/xqevznor" method="POST">
+        <div class="row2">
+          <div class="field">
+            <label for="prenom">Prénom</label>
+            <input type="text" id="prenom" name="prenom" placeholder="Ton prénom" required>
+          </div>
+          <div class="field">
+            <label for="nom">Nom</label>
+            <input type="text" id="nom" name="nom" placeholder="Ton nom" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="email">Ton adresse email</label>
+          <input type="email" id="email" name="email" placeholder="prenom@email.com" required>
+        </div>
+        <input type="hidden" name="_subject" value="Nouveau lead — Book Muscle Up">
+        <input type="hidden" name="_language" value="fr">
+        <button type="submit" class="submit-btn">Recevoir mon book gratuit</button>
+      </form>
+      <div class="micro" id="formMsg">Tu reçois ton book tout de suite après validation.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  © LEGACY — Coaching streetlifting · Richard "Ritchi"
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+  // Envoi du formulaire en arriere-plan (AJAX) + redirection vers la page de telechargement
+  const bookForm = document.getElementById("bookForm");
+  const formMsg = document.getElementById("formMsg");
+  const MERCI_URL = "https://rifanfano04-alt.github.io/legacy-coaching/book-muscle-up/merci.html";
+  if (bookForm) {
+    bookForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = bookForm.querySelector(".submit-btn");
+      btn.disabled = true;
+      const original = btn.textContent;
+      btn.textContent = "Envoi…";
+      try {
+        const res = await fetch(bookForm.action, {
+          method: "POST",
+          body: new FormData(bookForm),
+          headers: { "Accept": "application/json" }
+        });
+        if (res.ok) {
+          window.location.href = MERCI_URL;
+        } else {
+          const data = await res.json().catch(() => ({}));
+          formMsg.textContent = (data.errors && data.errors[0] && data.errors[0].message)
+            ? data.errors[0].message
+            : "Oups, une erreur est survenue. Réessaie dans un instant.";
+          formMsg.style.color = "#ff3b3b";
+          btn.disabled = false;
+          btn.textContent = original;
+        }
+      } catch (err) {
+        formMsg.textContent = "Connexion impossible. Vérifie ta connexion et réessaie.";
+        formMsg.style.color = "#ff3b3b";
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    });
+  }
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Entree hero en cascade
+  gsap.timeline({defaults:{ease:"power3.out"}})
+    .from(".eyebrow",{opacity:0,y:14,duration:.6})
+    .from(".hero h1",{opacity:0,y:24,duration:.8},"-=.35")
+    .from(".hero .sub",{opacity:0,y:18,duration:.7},"-=.5")
+    .from(".btn-main",{opacity:0,y:14,duration:.6},"-=.45")
+    .from(".hero-note",{opacity:0,duration:.5},"-=.3")
+    .from(".hero-visual",{opacity:0,y:30,scale:.94,duration:.8,ease:"power2.out"},"-=.4");
+
+  // Revelations au scroll
+  const reveal = (selector, opts={}) => {
+    gsap.utils.toArray(selector).forEach((el,i)=>{
+      gsap.from(el,{
+        opacity:0,y:36,duration:.7,ease:"power3.out",delay:(i%3)*0.08,
+        scrollTrigger:{
+          trigger:el,
+          start:"top 88%",
+          end:"bottom 12%",
+          toggleActions:"restart reverse restart reverse"
+        },
+        ...opts
+      });
+    });
+  };
+  reveal(".sec-title, .sec-sub");
+  reveal(".pcard");
+  reveal(".stat");
+  reveal(".form-card", {y:50,duration:.8});
+
+  // Boutons magnetiques
+  document.querySelectorAll(".btn-main, .submit-btn").forEach(btn=>{
+    btn.addEventListener("mousemove", e=>{
+      const r = btn.getBoundingClientRect();
+      const x = e.clientX - r.left - r.width/2;
+      const y = e.clientY - r.top - r.height/2;
+      gsap.to(btn,{x:x*0.18, y:y*0.35, duration:.3, ease:"power2.out"});
+    });
+    btn.addEventListener("mouseleave", ()=>{
+      gsap.to(btn,{x:0, y:0, duration:.5, ease:"elastic.out(1,.5)"});
+    });
+  });
+
+  // Header qui se resserre au scroll
+  const header = document.querySelector("header");
+  ScrollTrigger.create({
+    start:0, end:99999,
+    onUpdate:self => header.classList.toggle("scrolled", self.scroll() > 40)
+  });
+</script>
+
+</body>
+</html>
