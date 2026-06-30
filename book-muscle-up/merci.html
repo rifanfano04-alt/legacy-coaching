@@ -68,9 +68,25 @@
   .btn:hover::after{left:150%;}
   a{text-decoration:none;}
   .note{margin-top:22px;font-size:13px;color:var(--grey-3);}
-  .cta-call{margin-top:46px;padding-top:30px;border-top:1px solid var(--line);}
-  .cta-call p{color:var(--grey-2);font-size:15px;margin-bottom:14px;}
-  .cta-call a{color:var(--blood-1);font-weight:700;border-bottom:1px solid rgba(255,59,59,.4);padding-bottom:2px;}
+  .cta-call{
+    margin-top:44px;text-align:center;
+    background:linear-gradient(160deg,#161618,#0d0d0e);
+    border:1px solid var(--line);border-radius:18px;
+    padding:32px 28px;box-shadow:0 0 50px rgba(255,59,59,.08);
+  }
+  .cta-call .cta-eyebrow{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--blood-1);margin-bottom:12px;}
+  .cta-call h2{font-family:'Unbounded';font-weight:800;font-size:clamp(20px,3.5vw,26px);color:var(--grey-1);margin-bottom:12px;line-height:1.2;}
+  .cta-call p{color:var(--grey-2);font-size:15px;margin:0 auto 24px;max-width:400px;}
+  .btn-ghost{
+    display:inline-block;font-family:'Inter';font-weight:800;font-size:15px;
+    padding:15px 30px;border-radius:10px;
+    background:rgba(255,59,59,.1);color:var(--grey-1);
+    border:1px solid rgba(255,59,59,.5);
+    transition:background .25s ease,box-shadow .25s ease,transform .15s ease;
+  }
+  .btn-ghost:hover{background:rgba(255,59,59,.18);box-shadow:0 0 30px rgba(255,59,59,.18);transform:translateY(-2px);}
+  .dm-line{margin-top:18px;font-size:13px;color:var(--grey-3);}
+  .dm-line a{color:var(--blood-1);font-weight:700;}
 </style>
 </head>
 <body>
@@ -86,8 +102,11 @@
     <div class="note">Le téléchargement ne démarre pas ? <a href="https://rifanfano04-alt.github.io/legacy-coaching/book-muscle-up.pdf" style="color:var(--grey-1);text-decoration:underline;">Clique ici</a>.</div>
 
     <div class="cta-call">
-      <p>Tu veux aller plus loin et progresser avec un suivi ?</p>
-      <a href="https://rifanfano04-alt.github.io/legacy-coaching/#contact">Réserve ton appel découverte →</a>
+      <div class="cta-eyebrow">Et maintenant ?</div>
+      <h2>Passe à la <span class="hl">vitesse supérieure</span></h2>
+      <p>Le book te donne les bases. Pour un plan adapté à TON niveau et une progression garantie par un suivi, on en parle 15 min — gratuit et sans engagement.</p>
+      <a href="https://rifanfano04-alt.github.io/legacy-coaching/#contact" class="btn-ghost">🎯 Réserver mon appel découverte gratuit</a>
+      <div class="dm-line">Une simple question ? <a href="https://ig.me/m/richard_lgcy" target="_blank" rel="noopener">Écris-moi en DM Instagram →</a></div>
     </div>
   </div>
 <!-- GoatCounter analytics -->
