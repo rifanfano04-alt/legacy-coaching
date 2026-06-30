@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liens — LEGACY · Richard "Ritchi"</title>
+<meta name="description" content="Tous les liens de Richard 'Ritchi' — coaching streetlifting, transformations, ebooks gratuits et réservation.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<meta property="og:title" content="LEGACY — Tous mes liens">
+<meta property="og:description" content="Coaching, transformations, ebooks gratuits et réservation.">
+<meta property="og:image" content="../images/og-image-v5.jpg">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0b;
+    --card:#151517;
+    --line:rgba(255,255,255,.08);
+    --grey-1:#c9cad0;
+    --grey-2:#8a8b91;
+    --grey-3:#5c5d63;
+    --blood-1:#ff3b3b;
+    --acid-reflets: linear-gradient(100deg,#9a9ba1 0%,#cfd0d4 18%,#ff3b3b 42%,#7a0d0d 58%,#9a9ba1 80%,#cfd0d4 100%);
+    --shadow-blood: 0 0 40px rgba(255,59,59,.18);
+    --stripes: repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0px, rgba(255,255,255,.035) 1px, transparent 1px, transparent 16px);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--grey-1);
+    font-family:'Inter',sans-serif;
+    line-height:1.55;
+    min-height:100vh;
+    overflow-x:hidden;
+    background-image:var(--stripes), radial-gradient(70% 45% at 50% 0%, rgba(255,59,59,.12), transparent 70%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  a{color:inherit;text-decoration:none;}
+
+  .hl{
+    background:var(--acid-reflets);
+    background-size:220% auto;
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    animation:shimmer 7s linear infinite;
+  }
+  @keyframes shimmer{0%{background-position:0% 50%}100%{background-position:220% 50%}}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001s !important;animation-iteration-count:1 !important;}}
+
+  .page{
+    width:100%;max-width:460px;
+    padding:56px 22px 48px;
+    text-align:center;
+  }
+
+  /* AVATAR */
+  .avatar{
+    width:118px;height:118px;margin:0 auto 22px;
+    border-radius:50%;
+    padding:3px;
+    background:var(--acid-reflets);
+    background-size:220% auto;
+    animation:shimmer 7s linear infinite;
+    box-shadow:var(--shadow-blood);
+  }
+  .avatar img{
+    width:100%;height:100%;object-fit:cover;object-position:center 22%;
+    border-radius:50%;
+    border:3px solid var(--bg);
+    filter:grayscale(.1) contrast(1.04);
+    display:block;
+  }
+
+  .logo{font-family:'Unbounded';font-weight:800;font-size:26px;letter-spacing:.5px;color:var(--grey-1);margin-bottom:6px;}
+  .logo span{font-weight:900;}
+  .handle{font-size:14px;color:var(--grey-2);font-weight:600;margin-bottom:14px;}
+  .bio{font-size:14px;color:var(--grey-2);max-width:340px;margin:0 auto 34px;}
+  .bio strong{color:var(--grey-1);font-weight:700;}
+
+  /* LINKS */
+  .links{display:flex;flex-direction:column;gap:14px;}
+  .link{
+    position:relative;overflow:hidden;
+    display:flex;align-items:center;gap:14px;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px 18px;
+    text-align:left;
+    transition:transform .2s ease, border-color .25s ease, box-shadow .3s ease;
+    will-change:transform;
+  }
+  .link:hover{
+    transform:translateY(-2px);
+    border-color:rgba(255,59,59,.35);
+    box-shadow:0 10px 30px -12px rgba(0,0,0,.7), 0 0 24px rgba(255,59,59,.10);
+  }
+  .link::after{
+    content:"";position:absolute;top:0;left:-150%;width:55%;height:100%;
+    background:linear-gradient(120deg,transparent,rgba(255,255,255,.10),transparent);
+    transform:skewX(-20deg);transition:left .65s ease;pointer-events:none;
+  }
+  .link:hover::after{left:150%;}
+  .link .ico{
+    flex:0 0 44px;height:44px;border-radius:11px;
+    display:grid;place-items:center;font-size:21px;
+    background:#0a0a0b;border:1px solid var(--line);
+  }
+  .link .meta{flex:1;min-width:0;}
+  .link .t{font-family:'Unbounded';font-weight:700;font-size:15px;color:var(--grey-1);line-height:1.2;}
+  .link .s{font-size:12.5px;color:var(--grey-3);margin-top:3px;}
+  .link .arrow{flex:0 0 auto;color:var(--grey-3);font-size:18px;transition:transform .25s ease,color .25s ease;}
+  .link:hover .arrow{transform:translateX(4px);color:var(--blood-1);}
+
+  /* FEATURED (réserver) */
+  .link.feat{
+    background:linear-gradient(160deg,#1a1112,#0d0d0e);
+    border-color:rgba(255,59,59,.30);
+    box-shadow:0 0 36px rgba(255,59,59,.12);
+  }
+  .link.feat .ico{background:var(--acid-reflets);background-size:220% auto;animation:shimmer 7s linear infinite;border:none;color:#0a0a0b;}
+  .link.feat .t{color:#fff;}
+
+  .tag{
+    display:inline-block;margin-left:8px;
+    font-family:'Inter';font-weight:800;font-size:9.5px;letter-spacing:1px;
+    text-transform:uppercase;color:#0a0a0b;
+    background:var(--blood-1);border-radius:999px;padding:2px 8px;vertical-align:middle;
+  }
+
+  footer{
+    margin-top:38px;font-size:12px;color:var(--grey-3);
+  }
+
+  /* entrée */
+  .anim{opacity:0;transform:translateY(16px);animation:rise .6s ease forwards;}
+  @keyframes rise{to{opacity:1;transform:translateY(0);}}
+  @media (prefers-reduced-motion: reduce){.anim{opacity:1;transform:none;animation:none;}}
+</style>
+</head>
+<body>
+
+<main class="page">
+  <div class="avatar anim" style="animation-delay:.05s">
+    <img src="../images/richard-portrait.jpg" alt="Richard Ritchi">
+  </div>
+
+  <div class="logo anim" style="animation-delay:.12s">LEGA<span class="hl">CY</span></div>
+  <div class="handle anim" style="animation-delay:.16s">@richard_fano</div>
+  <p class="bio anim" style="animation-delay:.2s">Coach &amp; <strong>préparateur physique</strong><br>spé. streetlifting. 🩸</p>
+
+  <nav class="links">
+    <a class="link anim" style="animation-delay:.26s" href="https://rifanfano04-alt.github.io/legacy-coaching/">
+      <div class="ico">🏋️</div>
+      <div class="meta"><div class="t">Coaching en ligne</div><div class="s">Programmation perso · suivi · nutrition</div></div>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="link anim" style="animation-delay:.32s" href="https://rifanfano04-alt.github.io/legacy-coaching/transformations/">
+      <div class="ico">📸</div>
+      <div class="meta"><div class="t">Transformations & Records</div><div class="s">Les résultats de mes athlètes</div></div>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="link anim" style="animation-delay:.38s" href="https://rifanfano04-alt.github.io/legacy-coaching/book-dips/">
+      <div class="ico">📘</div>
+      <div class="meta"><div class="t">Ebook Dips <span class="tag">Gratuit</span></div><div class="s">Progresse enfin au dip</div></div>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="link anim" style="animation-delay:.44s" href="https://rifanfano04-alt.github.io/legacy-coaching/book-muscle-up/">
+      <div class="ico">🏆</div>
+      <div class="meta"><div class="t">Ebook Muscle-Up <span class="tag">Gratuit</span></div><div class="s">Débloque ton premier muscle-up</div></div>
+      <div class="arrow">→</div>
+    </a>
+
+    <a class="link feat anim" style="animation-delay:.5s" href="https://ig.me/m/richard_fano">
+      <div class="ico">📩</div>
+      <div class="meta"><div class="t">Réserver une séance</div><div class="s">Écris-moi en DM Instagram</div></div>
+      <div class="arrow">→</div>
+    </a>
+  </nav>
+
+  <footer class="anim" style="animation-delay:.58s">© LEGACY — Richard "Ritchi"</footer>
+</main>
+
+</body>
+</html>
