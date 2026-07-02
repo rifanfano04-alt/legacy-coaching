@@ -1,7 +1,7 @@
 /* Service worker — Séance LEGACY.
    Stratégie : réseau d'abord pour la page (mises à jour rapides), cache en secours (hors ligne).
    Penser à incrémenter CACHE à chaque déploiement d'une nouvelle version. */
-var CACHE = 'seance-v1';
+var CACHE = 'seance-v2';
 var PRECACHE = [
   './',
   './index.html',
