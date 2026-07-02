@@ -12,6 +12,8 @@ $mime = @{
   '.css'  = 'text/css; charset=utf-8'
   '.js'   = 'application/javascript; charset=utf-8'
   '.svg'  = 'image/svg+xml'
+  '.json' = 'application/json; charset=utf-8'
+  '.webmanifest' = 'application/manifest+json; charset=utf-8'
   '.png'  = 'image/png'
   '.jpg'  = 'image/jpeg'
   '.ico'  = 'image/x-icon'
@@ -25,6 +27,7 @@ while ($listener.IsListening) {
     $rel = [System.Uri]::UnescapeDataString($req.Url.AbsolutePath.TrimStart('/'))
     if ([string]::IsNullOrEmpty($rel)) { $rel = 'index.html' }
     $path = Join-Path $root $rel
+    if (Test-Path $path -PathType Container) { $path = Join-Path $path 'index.html' }
     $res.KeepAlive = $false
     $res.Headers.Add('Connection', 'close')
     if (Test-Path $path -PathType Leaf) {

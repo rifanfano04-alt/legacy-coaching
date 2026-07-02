@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Séance — LEGACY</title>
+<meta name="description" content="Compteur de séries, chrono de récup et notes de séance — outil interne LEGACY coaching." />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#0b0c0f" />
+<link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Séance" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=Unbounded:wght@800;900&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --black: oklch(8% 0.008 264);
+  --bg-alt: oklch(15% 0.013 264);
+  --surface: oklch(19% 0.015 264);
+  --surface-2: oklch(24% 0.017 264);
+  --text: oklch(96% 0.006 264);
+  --muted: oklch(72% 0.02 264);
+  --ink: oklch(14.5% 0.012 264);
+  --red: oklch(55% 0.21 25);
+  --blood: oklch(43% 0.16 25);
+  --green: oklch(70% 0.14 150);
+  --border: oklch(30% 0.02 264);
+  --border-strong: oklch(40% 0.025 264);
+  --acid-reflets:
+    linear-gradient(108deg, #fbfbfc 0%, #d2d5da 10%, #9a9ea7 22%, #c4c8ce 33%, #eef0f2 42%, #cf9a9d 49%, #a23b42 53%, #cf9a9d 57%, #e6e8ec 66%, #aeb2b9 78%, #f4f5f6 90%, #b9bdc4 100%);
+  --radius: 16px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --shadow-2: 0 10px 28px oklch(0% 0 0 / .38), 0 28px 64px oklch(0% 0 0 / .42);
+  --cta-h: 76px;
+}
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background:
+    radial-gradient(120% 60% at 50% -8%, oklch(30% 0.07 25 / .32), transparent 62%),
+    var(--black);
+  color: var(--text);
+  min-height: 100dvh;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+input, textarea { font: inherit; color: var(--text); }
+*:focus-visible { outline: 3px solid oklch(88% 0 0); outline-offset: 2px; }
+
+.wrap { max-width: 560px; margin: 0 auto; padding: 18px 18px calc(var(--cta-h) + 34px + env(safe-area-inset-bottom)); }
+
+/* ===== Brand header ===== */
+.brand { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0 18px; }
+.brand a { text-decoration: none; }
+.logo { font-family: 'Unbounded', sans-serif; font-weight: 900; font-size: 22px; letter-spacing: .06em; color: oklch(80% 0.008 264); }
+.logo .cy {
+  background: var(--acid-reflets); background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  animation: metal-sheen 7s linear infinite;
+}
+.eyebrow { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: .42em; color: var(--muted); text-indent: .42em; }
+@keyframes metal-sheen { from { background-position: 0% 0; } to { background-position: 100% 0; } }
+
+h1.title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(34px, 9vw, 44px); letter-spacing: .04em; line-height: 1.05; margin: 6px 0 4px; }
+.sub { color: var(--muted); font-size: 14.5px; margin-bottom: 18px; }
+
+/* ===== Cards / common ===== */
+.card {
+  background: linear-gradient(180deg, var(--surface), var(--bg-alt));
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 2px oklch(0% 0 0 / .3);
+}
+.card h2 { font-family: 'Bebas Neue', sans-serif; font-size: 21px; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+.hidden { display: none !important; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 50px; padding: 12px 20px; border-radius: 13px;
+  font-weight: 700; font-size: 16px; border: 1px solid var(--border-strong);
+  background: var(--surface-2); transition: transform 160ms var(--ease-out), background-color 160ms ease;
+  user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn-chrome {
+  background: var(--acid-reflets); background-size: 220% 100%;
+  color: var(--ink); border: 0; animation: metal-sheen 7s linear infinite;
+  box-shadow: 0 8px 26px oklch(0% 0 0 / .5);
+}
+.btn-danger { border-color: oklch(43% 0.16 25 / .65); color: oklch(78% 0.09 25); }
+.btn-block { width: 100%; }
+.btn[disabled] { opacity: .38; pointer-events: none; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 44px; padding: 9px 15px; border-radius: 999px;
+  border: 1px solid var(--border-strong); background: var(--surface-2);
+  font-weight: 600; font-size: 15px; color: var(--text);
+  transition: transform 140ms var(--ease-out), background-color 140ms ease, border-color 140ms ease;
+}
+.chip:active { transform: scale(0.95); }
+.chip.on { background: var(--acid-reflets); background-size: 220% 100%; color: var(--ink); border-color: transparent; font-weight: 800; }
+
+label.lbl { display: block; font-size: 13.5px; font-weight: 600; color: var(--muted); margin: 12px 0 6px; letter-spacing: .04em; text-transform: uppercase; }
+.input {
+  width: 100%; min-height: 50px; padding: 12px 14px; border-radius: 12px;
+  background: var(--black); border: 1px solid var(--border-strong);
+  font-size: 16px;
+}
+.input::placeholder { color: oklch(50% 0.015 264); }
+textarea.input { min-height: 92px; resize: vertical; line-height: 1.5; }
+
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button {
+  width: 50px; height: 50px; border-radius: 12px; border: 1px solid var(--border-strong);
+  background: var(--surface-2); font-size: 24px; font-weight: 700; line-height: 1;
+  transition: transform 140ms var(--ease-out);
+}
+.stepper button:active { transform: scale(0.94); }
+.stepper .val { min-width: 64px; text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+
+/* ===== Setup: exercise list ===== */
+.exo-row {
+  display: flex; align-items: center; gap: 10px; padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.exo-row:last-child { border-bottom: 0; }
+.exo-row .num {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  font-family: 'Bebas Neue', sans-serif; font-size: 16px; background: var(--surface-2); color: var(--muted);
+}
+.exo-row .meta { flex: 1; min-width: 0; }
+.exo-row .meta strong { display: block; font-size: 16.5px; overflow-wrap: anywhere; }
+.exo-row .meta span { font-size: 13.5px; color: var(--muted); }
+.exo-row .acts { display: flex; gap: 4px; }
+.exo-row .acts button {
+  width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center;
+  color: var(--muted); font-size: 18px; transition: transform 140ms var(--ease-out);
+}
+.exo-row .acts button:active { transform: scale(0.9); }
+.empty { color: var(--muted); font-size: 14.5px; text-align: center; padding: 14px 0; }
+
+/* ===== Active screen ===== */
+.active-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 4px 0 2px; }
+.active-head .pos { font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: .14em; color: var(--muted); white-space: nowrap; }
+.exo-title {
+  font-family: 'Bebas Neue', sans-serif; font-size: clamp(32px, 8.5vw, 42px); letter-spacing: .03em; line-height: 1.02;
+  background: var(--acid-reflets); background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  animation: metal-sheen 7s linear infinite;
+  margin-bottom: 2px; overflow-wrap: anywhere;
+}
+.exo-meta { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+
+.sets-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 4px; }
+.set-dot {
+  width: 54px; height: 62px; border-radius: 14px; border: 1px solid var(--border-strong);
+  background: var(--surface-2); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: transform 140ms var(--ease-out), border-color 140ms ease;
+}
+.set-dot:active { transform: scale(0.94); }
+.set-dot .n { font-family: 'Bebas Neue', sans-serif; font-size: 22px; line-height: 1; }
+.set-dot .r { font-size: 11.5px; font-weight: 700; color: var(--muted); line-height: 1.2; margin-top: 3px; }
+.set-dot.done { border-color: oklch(60% 0.1 25 / .55); background: linear-gradient(180deg, oklch(26% 0.03 25), var(--surface)); }
+.set-dot.done .n { color: oklch(88% 0.02 264); }
+.set-dot.sel { border-color: #cf9a9d; box-shadow: 0 0 0 2px oklch(55% 0.21 25 / .35); }
+.set-dot.ghost { border-style: dashed; opacity: .45; pointer-events: none; }
+.set-dot.ghost .n { color: var(--muted); }
+@starting-style { .set-dot.done { transform: scale(0.9); opacity: 0; } }
+.set-dot.done { transition: transform 260ms var(--ease-out), opacity 260ms var(--ease-out), border-color 140ms ease; }
+
+.rpe-block { margin-top: 12px; }
+.rpe-block .hint { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.chip.rpe { min-width: 52px; justify-content: center; display: inline-flex; font-variant-numeric: tabular-nums; }
+
+/* ===== Timer ===== */
+.timer-card { text-align: center; position: relative; overflow: hidden; }
+.timer-card.flash::after {
+  content: ""; position: absolute; inset: 0; background: oklch(55% 0.21 25 / .28);
+  animation: flash 900ms ease-out forwards; pointer-events: none;
+}
+@keyframes flash { from { opacity: 1; } to { opacity: 0; } }
+.ring-wrap { position: relative; width: 210px; height: 210px; margin: 4px auto 8px; }
+.ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: var(--border); stroke-width: 7; }
+.ring-fg { fill: none; stroke: url(#ringGrad); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset 240ms linear; }
+.ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+.time-left { font-family: 'Bebas Neue', sans-serif; font-size: 64px; line-height: 1; letter-spacing: .03em; font-variant-numeric: tabular-nums; }
+.time-sub { font-size: 12.5px; letter-spacing: .3em; text-indent: .3em; color: var(--muted); text-transform: uppercase; }
+.timer-acts { display: flex; justify-content: center; gap: 10px; }
+.timer-acts .btn { min-width: 86px; }
+.timer-idle { color: var(--muted); font-size: 14.5px; padding: 10px 0 2px; }
+
+/* ===== Other exercises / list ===== */
+.next-list .exo-row { cursor: pointer; }
+.badge { flex: none; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--muted); text-transform: uppercase; }
+.badge.ok { color: oklch(80% 0.1 150); border-color: oklch(50% 0.09 150 / .6); }
+.badge.warn { color: oklch(80% 0.1 25); border-color: oklch(55% 0.16 25 / .6); }
+
+/* ===== Fixed CTA ===== */
+.cta-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, oklch(8% 0.008 264 / .92) 34%);
+  display: flex; justify-content: center;
+}
+.cta-bar .btn { width: 100%; max-width: 528px; min-height: 64px; font-size: 19px; letter-spacing: .02em; border-radius: 16px; }
+.cta-bar .btn .big { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: .1em; }
+
+/* ===== Sheet (debrief / add exo) ===== */
+.scrim {
+  position: fixed; inset: 0; z-index: 60; background: oklch(0% 0 0 / .58);
+  opacity: 1; transition: opacity 200ms ease;
+}
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 61;
+  max-width: 620px; margin: 0 auto; max-height: 88dvh; overflow-y: auto;
+  background: linear-gradient(180deg, var(--surface), var(--bg-alt));
+  border: 1px solid var(--border-strong); border-bottom: 0;
+  border-radius: 22px 22px 0 0; padding: 14px 18px calc(20px + env(safe-area-inset-bottom));
+  box-shadow: var(--shadow-2);
+  transform: translateY(0); transition: transform 300ms var(--ease-out);
+}
+@starting-style { .sheet { transform: translateY(100%); } .scrim { opacity: 0; } }
+.sheet .grip { width: 42px; height: 5px; border-radius: 99px; background: var(--border-strong); margin: 0 auto 12px; }
+.sheet h3 { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: .05em; margin-bottom: 2px; }
+.sheet .q { font-size: 15px; font-weight: 600; margin: 16px 0 8px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.seg .chip { justify-content: center; display: flex; min-height: 52px; font-size: 16px; }
+.sheet-close { position: absolute; top: 10px; right: 12px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); font-size: 20px; }
+
+/* ===== Recap / notes ===== */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 8px; text-align: center; }
+.stat .v { font-family: 'Bebas Neue', sans-serif; font-size: 30px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.stat .k { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.recap-exo { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.recap-exo:last-child { border-bottom: 0; }
+.recap-exo .head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.recap-exo strong { font-size: 16.5px; }
+.recap-exo .rpes { font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.recap-exo .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.recap-exo .tag { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; border: 1px solid var(--border-strong); color: var(--muted); }
+.recap-exo .tag.warn { color: oklch(80% 0.1 25); border-color: oklch(55% 0.16 25 / .6); }
+.recap-exo .note { font-size: 14px; color: var(--text); background: var(--black); border: 1px solid var(--border); border-radius: 10px; padding: 8px 11px; margin-top: 8px; white-space: pre-wrap; }
+pre.notes {
+  font-family: 'Inter', system-ui, sans-serif; font-size: 13.5px; line-height: 1.6; color: var(--text);
+  background: var(--black); border: 1px solid var(--border-strong); border-radius: 12px;
+  padding: 13px; white-space: pre-wrap; overflow-wrap: anywhere; margin: 10px 0;
+}
+
+/* ===== History ===== */
+.hist-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.hist-row:last-child { border-bottom: 0; }
+.hist-row .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hist-row .head strong { font-size: 15.5px; }
+.hist-row .head span { font-size: 13px; color: var(--muted); }
+.hist-acts { display: flex; gap: 8px; margin-top: 8px; }
+.hist-acts .btn { min-height: 42px; padding: 8px 14px; font-size: 14px; border-radius: 10px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--cta-h) + 22px + env(safe-area-inset-bottom)); z-index: 90;
+  transform: translateX(-50%) translateY(0); background: var(--surface-2); border: 1px solid var(--border-strong);
+  color: var(--text); font-weight: 700; font-size: 14.5px; padding: 11px 18px; border-radius: 12px;
+  box-shadow: var(--shadow-2); transition: transform 240ms var(--ease-out), opacity 240ms ease;
+}
+@starting-style { .toast { transform: translateX(-50%) translateY(14px); opacity: 0; } }
+
+.footer-note { text-align: center; color: oklch(52% 0.015 264); font-size: 12.5px; margin-top: 22px; }
+.footer-note a { color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .logo .cy, .btn-chrome, .chip.on, .exo-title { animation: none; }
+  .sheet, .set-dot.done, .toast { transition-duration: 1ms; }
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+
+  <header class="brand">
+    <a href="https://rifanfano04-alt.github.io/legacy-coaching/" aria-label="Site LEGACY">
+      <div class="logo">LEGA<span class="cy">CY</span></div>
+    </a>
+    <div class="eyebrow">SÉANCE</div>
+  </header>
+
+  <!-- ============ GATE (code d'accès) ============ -->
+  <section id="scr-gate" class="hidden">
+    <h1 class="title">Ton accès</h1>
+    <p class="sub">Cet outil est réservé aux athlètes LEGACY. Entre le code que Ritchi t’a donné (une seule fois, il reste enregistré sur ton téléphone).</p>
+    <div class="card">
+      <label class="lbl" for="g-code">Code d’accès</label>
+      <input class="input" id="g-code" type="text" placeholder="Ex : HEDI24" autocomplete="off" autocapitalize="characters" enterkeyhint="go" />
+      <div class="empty hidden" id="g-err" style="color:oklch(78% 0.12 25);text-align:left"></div>
+      <div style="margin-top:16px">
+        <button class="btn btn-chrome btn-block" id="g-go">Entrer</button>
+      </div>
+    </div>
+    <p class="footer-note">Pas de code ? Demande à <a href="https://ig.me/m/richard_lgcy">Ritchi en DM</a>.</p>
+  </section>
+
+  <!-- ============ SETUP ============ -->
+  <section id="scr-setup">
+    <h1 class="title">Ta séance du jour</h1>
+    <p class="sub">Ajoute tes exercices, puis lance la séance : compteur de séries, chrono de récup automatique, RPE et débrief par exercice.</p>
+
+    <div class="card">
+      <h2>Exercices</h2>
+      <div id="setup-list"></div>
+      <div class="empty" id="setup-empty">Aucun exercice pour l’instant — ajoute le premier ci-dessous.</div>
+    </div>
+
+    <div class="card">
+      <h2>Ajouter un exercice</h2>
+      <label class="lbl" for="in-name">Nom</label>
+      <input class="input" id="in-name" type="text" placeholder="Ex : Dips lestés" autocomplete="off" enterkeyhint="done" />
+      <label class="lbl">Séries prévues</label>
+      <div class="stepper">
+        <button type="button" id="sets-minus" aria-label="Moins de séries">−</button>
+        <div class="val" id="sets-val">4</div>
+        <button type="button" id="sets-plus" aria-label="Plus de séries">+</button>
+      </div>
+      <label class="lbl">Récup entre séries</label>
+      <div class="chips" id="rest-chips"></div>
+      <div style="margin-top:16px">
+        <button class="btn btn-block" id="btn-add">＋ Ajouter l’exercice</button>
+      </div>
+    </div>
+
+    <div class="card" id="hist-card">
+      <h2>Séances précédentes</h2>
+      <div id="hist-list"></div>
+      <div class="empty" id="hist-empty">Aucune séance enregistrée sur ce téléphone.</div>
+    </div>
+
+    <p class="footer-note" id="setup-foot">Outil interne <a href="https://rifanfano04-alt.github.io/legacy-coaching/">LEGACY</a> — tout reste sur ton téléphone, rien n’est envoyé.</p>
+  </section>
+
+  <!-- ============ ACTIVE ============ -->
+  <section id="scr-active" class="hidden">
+    <div class="active-head">
+      <div class="pos" id="a-pos">EXERCICE 1/1</div>
+      <button class="btn" style="min-height:42px;padding:8px 14px;font-size:14px" id="btn-end-session">Terminer la séance</button>
+    </div>
+    <div class="exo-title" id="a-name">—</div>
+    <div class="exo-meta" id="a-meta">—</div>
+
+    <div class="card">
+      <h2>Séries</h2>
+      <div class="sets-strip" id="a-sets"></div>
+      <div class="rpe-block" id="a-rpe-block">
+        <div class="hint" id="a-rpe-hint">RPE de la série (optionnel) :</div>
+        <div class="chips" id="a-rpe-chips"></div>
+      </div>
+    </div>
+
+    <div class="card timer-card" id="timer-card">
+      <h2>Récupération</h2>
+      <div class="ring-wrap hidden" id="ring-wrap">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <defs>
+            <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#eef0f2" />
+              <stop offset="52%" stop-color="#a23b42" />
+              <stop offset="100%" stop-color="#c4c8ce" />
+            </linearGradient>
+          </defs>
+          <circle class="ring-bg" cx="60" cy="60" r="54"></circle>
+          <circle class="ring-fg" id="ring-fg" cx="60" cy="60" r="54"></circle>
+        </svg>
+        <div class="ring-center">
+          <div class="time-left" id="time-left">0:00</div>
+          <div class="time-sub">Récup</div>
+        </div>
+      </div>
+      <div class="timer-idle" id="timer-idle">Le chrono se lance tout seul quand tu valides une série.</div>
+      <div class="timer-acts hidden" id="timer-acts">
+        <button class="btn" id="t-minus">−30 s</button>
+        <button class="btn" id="t-plus">+30 s</button>
+        <button class="btn" id="t-skip">Passer</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-block btn-danger" id="btn-finish-exo">Exercice terminé — faire le débrief</button>
+    </div>
+
+    <div class="card next-list" id="others-card">
+      <h2>Reste de la séance</h2>
+      <div id="a-others"></div>
+      <div style="margin-top:10px">
+        <button class="btn btn-block" id="btn-add-mid">＋ Ajouter un exercice</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DONE ============ -->
+  <section id="scr-done" class="hidden">
+    <h1 class="title">Séance terminée 💪</h1>
+    <p class="sub" id="d-sub">—</p>
+
+    <div class="stat-grid">
+      <div class="stat"><div class="v" id="d-dur">—</div><div class="k">Durée</div></div>
+      <div class="stat"><div class="v" id="d-sets">—</div><div class="k">Séries</div></div>
+      <div class="stat"><div class="v" id="d-rpe">—</div><div class="k">RPE moyen</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Récap par exercice</h2>
+      <div id="d-recap"></div>
+    </div>
+
+    <div class="card">
+      <h2>Notes pour le programme</h2>
+      <p class="sub" style="margin-bottom:0">Uniquement ce que tu as écrit pendant les débriefs — à coller dans la partie « notes » de ton prog.</p>
+      <pre class="notes" id="d-notes"></pre>
+      <button class="btn btn-chrome btn-block" id="btn-copy">Copier les notes</button>
+      <div class="empty hidden" id="d-sync"></div>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-block" id="btn-new">Nouvelle séance</button>
+    </div>
+  </section>
+</div>
+
+<!-- Fixed CTA -->
+<div class="cta-bar hidden" id="cta-bar">
+  <button class="btn btn-chrome" id="btn-set"><span class="big">SÉRIE VALIDÉE ✓</span></button>
+</div>
+
+<!-- Sheets root -->
+<div id="sheet-root"></div>
+<div id="toast-root"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- state & storage ---------- */
+  /* URL du script Google Apps Script (suivi coach + codes d'accès).
+     Vide = outil libre : pas de code demandé, pas d'envoi. */
+  var SYNC_URL = 'https://script.google.com/macros/s/AKfycbyY9FPygRRB2mx1Jj-QPfq64L_1AkwPoGUt_heftoQLvLWHes_KJqQMZfKdEzzXTeQp/exec';
+  var LS_CUR = 'legacy-seance-v1';
+  var LS_HIST = 'legacy-seance-hist-v1';
+  var LS_PROFILE = 'legacy-seance-profile-v1';
+  var LS_OUTBOX = 'legacy-seance-outbox-v1';
+  var REST_PRESETS = [60, 90, 120, 150, 180, 240, 300];
+  var RPE_VALUES = ['<6', 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
+  var DEBRIEF_TAGS = ['Charge à monter', 'Charge à baisser', 'Trop dur', 'Trop facile', 'Douleur / gêne', 'Technique à revoir', 'Récup trop courte'];
+
+  var state = load(LS_CUR) || freshState();
+  var draft = { sets: 4, rest: 120 };   // add-exercise form
+  var selSet = -1;                       // selected set for RPE (-1 = last)
+  var tickHandle = null;
+
+  function freshState() {
+    return { status: 'setup', startedAt: null, endedAt: null, exercises: [], cur: 0, timer: null };
+  }
+  function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+  function save() { try { localStorage.setItem(LS_CUR, JSON.stringify(state)); } catch (e) {} }
+  function history() { return load(LS_HIST) || []; }
+  function saveHistory(h) { try { localStorage.setItem(LS_HIST, JSON.stringify(h.slice(0, 30))); } catch (e) {} }
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+
+  /* ---------- helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, txt) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (txt != null) n.textContent = txt;
+    return n;
+  }
+  function fmtRest(s) { return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  function fmtClock(ts) { var d = new Date(ts); return String(d.getHours()).padStart(2, '0') + 'h' + String(d.getMinutes()).padStart(2, '0'); }
+  function fmtDate(ts) {
+    return new Date(ts).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+  function fmtRpe(v) { if (typeof v !== 'number') return String(v); return (v % 1 === 0) ? String(v) : String(v).replace('.', ','); }
+  function toast(msg) {
+    var root = $('toast-root');
+    root.textContent = '';
+    var t = el('div', 'toast', msg);
+    root.appendChild(t);
+    setTimeout(function () { t.style.opacity = '0'; }, 1900);
+    setTimeout(function () { t.remove(); }, 2300);
+  }
+  function vibrate(pattern) { if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} } }
+
+  /* ---------- audio (needs user gesture first) ---------- */
+  var audioCtx = null;
+  function ensureAudio() {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!audioCtx) { try { audioCtx = new AC(); } catch (e) { return; } }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function beep() {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    var t0 = audioCtx.currentTime;
+    [0, 0.22, 0.44].forEach(function (off, i) {
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = i === 2 ? 1174 : 880;
+      g.gain.setValueAtTime(0.0001, t0 + off);
+      g.gain.linearRampToValueAtTime(0.5, t0 + off + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.2);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0 + off); o.stop(t0 + off + 0.22);
+    });
+  }
+
+  /* ---------- wake lock ---------- */
+  var wakeLock = null;
+  function keepAwake() {
+    if (!('wakeLock' in navigator)) return;
+    navigator.wakeLock.request('screen').then(function (wl) { wakeLock = wl; }).catch(function () {});
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && state.status === 'active') keepAwake();
+  });
+
+  /* ---------- screens ---------- */
+  function show(name) {
+    ['gate', 'setup', 'active', 'done'].forEach(function (s) {
+      $('scr-' + s).classList.toggle('hidden', s !== name);
+    });
+    $('cta-bar').classList.toggle('hidden', name !== 'active');
+    window.scrollTo(0, 0);
+  }
+
+  /* =========================================================
+     SETUP
+  ========================================================= */
+  function renderSetup() {
+    var list = $('setup-list');
+    list.textContent = '';
+    $('setup-empty').classList.toggle('hidden', state.exercises.length > 0);
+
+    state.exercises.forEach(function (ex, i) {
+      var row = el('div', 'exo-row');
+      row.appendChild(el('div', 'num', String(i + 1)));
+      var meta = el('div', 'meta');
+      meta.appendChild(el('strong', null, ex.name));
+      meta.appendChild(el('span', null, ex.target + ' séries · récup ' + fmtRest(ex.rest)));
+      row.appendChild(meta);
+      var acts = el('div', 'acts');
+      var up = el('button', null, '↑'); up.setAttribute('aria-label', 'Monter ' + ex.name);
+      var down = el('button', null, '↓'); down.setAttribute('aria-label', 'Descendre ' + ex.name);
+      var del = el('button', null, '✕'); del.setAttribute('aria-label', 'Supprimer ' + ex.name);
+      up.disabled = i === 0; down.disabled = i === state.exercises.length - 1;
+      if (up.disabled) up.style.opacity = '.25';
+      if (down.disabled) down.style.opacity = '.25';
+      up.onclick = function () { state.exercises.splice(i - 1, 0, state.exercises.splice(i, 1)[0]); save(); renderSetup(); };
+      down.onclick = function () { state.exercises.splice(i + 1, 0, state.exercises.splice(i, 1)[0]); save(); renderSetup(); };
+      del.onclick = function () { state.exercises.splice(i, 1); save(); renderSetup(); };
+      acts.appendChild(up); acts.appendChild(down); acts.appendChild(del);
+      row.appendChild(acts);
+      list.appendChild(row);
+    });
+
+    var startWrap = $('setup-start') || el('div');
+    if (!$('setup-start')) {
+      startWrap.id = 'setup-start';
+      startWrap.style.marginTop = '4px';
+      var b = el('button', 'btn btn-chrome btn-block', null);
+      b.id = 'btn-start';
+      b.innerHTML = '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;letter-spacing:.1em">LANCER LA SÉANCE</span>';
+      b.onclick = startSession;
+      startWrap.appendChild(b);
+      list.parentNode.appendChild(startWrap);
+    }
+    $('btn-start').disabled = state.exercises.length === 0;
+
+    /* pied de page : reflète le mode (envoi coach actif ou 100 % local) */
+    var foot = $('setup-foot');
+    foot.textContent = '';
+    var p = profile();
+    if (SYNC_URL && p) {
+      foot.appendChild(document.createTextNode('Connecté : ' + (p.name || p.code) + ' — les séances terminées sont envoyées à Ritchi. '));
+      var sw = el('a', null, 'Changer de code');
+      sw.href = '#';
+      sw.onclick = function (e) {
+        e.preventDefault();
+        if (!confirm('Changer de code d’accès ?')) return;
+        try { localStorage.removeItem(LS_PROFILE); } catch (err) {}
+        show('gate');
+      };
+      foot.appendChild(sw);
+    } else {
+      var a = el('a', null, 'LEGACY');
+      a.href = 'https://rifanfano04-alt.github.io/legacy-coaching/';
+      foot.appendChild(document.createTextNode('Outil interne '));
+      foot.appendChild(a);
+      foot.appendChild(document.createTextNode(' — tout reste sur ton téléphone.'));
+    }
+
+    renderHistory();
+  }
+
+  function renderRestChips(container, current, onPick) {
+    container.textContent = '';
+    REST_PRESETS.forEach(function (s) {
+      var c = el('button', 'chip' + (s === current ? ' on' : ''), fmtRest(s));
+      c.onclick = function () { onPick(s); };
+      container.appendChild(c);
+    });
+  }
+
+  function addExercise(name, target, rest) {
+    state.exercises.push({ id: uid(), name: name, target: target, rest: rest, sets: [], done: false, debrief: null });
+    save();
+  }
+
+  function bindSetup() {
+    $('sets-minus').onclick = function () { draft.sets = Math.max(1, draft.sets - 1); $('sets-val').textContent = draft.sets; };
+    $('sets-plus').onclick = function () { draft.sets = Math.min(12, draft.sets + 1); $('sets-val').textContent = draft.sets; };
+    function paintRestChips() { renderRestChips($('rest-chips'), draft.rest, function (s) { draft.rest = s; paintRestChips(); }); }
+    paintRestChips();
+
+    $('btn-add').onclick = function () {
+      var name = $('in-name').value.trim();
+      if (!name) { $('in-name').focus(); toast('Donne un nom à l’exercice'); return; }
+      addExercise(name, draft.sets, draft.rest);
+      $('in-name').value = '';
+      renderSetup();
+      toast('Exercice ajouté ✓');
+    };
+    $('in-name').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); $('btn-add').click(); } });
+  }
+
+  function startSession() {
+    ensureAudio();
+    state.status = 'active';
+    state.startedAt = Date.now();
+    state.cur = 0;
+    save();
+    keepAwake();
+    show('active');
+    renderActive();
+  }
+
+  /* ---------- history ---------- */
+  function renderHistory() {
+    var h = history();
+    var list = $('hist-list');
+    list.textContent = '';
+    $('hist-empty').classList.toggle('hidden', h.length > 0);
+    h.forEach(function (s, i) {
+      var row = el('div', 'hist-row');
+      var head = el('div', 'head');
+      var nSets = s.exercises.reduce(function (a, e) { return a + e.sets.length; }, 0);
+      head.appendChild(el('strong', null, fmtDate(s.startedAt)));
+      head.appendChild(el('span', null, s.exercises.length + ' exos · ' + nSets + ' séries'));
+      row.appendChild(head);
+      var acts = el('div', 'hist-acts');
+      var copy = el('button', 'btn', 'Copier notes');
+      copy.onclick = function () {
+        var n = buildNotes(s);
+        if (n) copyText(n); else toast('Pas de note écrite dans cette séance');
+      };
+      var del = el('button', 'btn btn-danger', 'Suppr.');
+      del.onclick = function () {
+        var hh = history(); hh.splice(i, 1); saveHistory(hh); renderHistory();
+      };
+      acts.appendChild(copy); acts.appendChild(del);
+      row.appendChild(acts);
+      list.appendChild(row);
+    });
+  }
+
+  /* =========================================================
+     ACTIVE
+  ========================================================= */
+  function curExo() { return state.exercises[state.cur]; }
+
+  function renderActive() {
+    var ex = curExo();
+    if (!ex) { endSession(); return; }
+    var doneCount = state.exercises.filter(function (e) { return e.done; }).length;
+    $('a-pos').textContent = 'EXERCICE ' + (state.cur + 1) + '/' + state.exercises.length;
+    $('a-name').textContent = ex.name;
+    $('a-meta').textContent = ex.sets.length + (ex.target ? ' / ' + ex.target : '') + ' séries faites · récup ' + fmtRest(ex.rest) + ' · ' + doneCount + ' exo(s) débriefé(s)';
+
+    /* sets strip */
+    var strip = $('a-sets');
+    strip.textContent = '';
+    var shown = Math.max(ex.target, ex.sets.length);
+    for (var i = 0; i < shown; i++) {
+      var isDone = i < ex.sets.length;
+      var d = el('button', 'set-dot' + (isDone ? ' done' : ' ghost'));
+      d.appendChild(el('div', 'n', String(i + 1)));
+      var r = el('div', 'r', isDone && ex.sets[i].rpe != null ? 'RPE ' + fmtRpe(ex.sets[i].rpe) : (isDone ? 'RPE —' : ''));
+      d.appendChild(r);
+      if (isDone) {
+        var effSel = selSet === -1 ? ex.sets.length - 1 : selSet;
+        if (i === effSel) d.classList.add('sel');
+        (function (idx) {
+          d.onclick = function () { selSet = idx; renderActive(); };
+        })(i);
+        d.setAttribute('aria-label', 'Série ' + (i + 1) + ', choisir pour noter le RPE');
+      }
+      strip.appendChild(d);
+    }
+
+    /* RPE chips */
+    var block = $('a-rpe-block');
+    if (ex.sets.length === 0) {
+      block.classList.add('hidden');
+    } else {
+      block.classList.remove('hidden');
+      var effSel2 = selSet === -1 ? ex.sets.length - 1 : Math.min(selSet, ex.sets.length - 1);
+      $('a-rpe-hint').textContent = 'RPE de la série ' + (effSel2 + 1) + ' (optionnel) :';
+      var chips = $('a-rpe-chips');
+      chips.textContent = '';
+      RPE_VALUES.forEach(function (v) {
+        var on = ex.sets[effSel2].rpe === v;
+        var c = el('button', 'chip rpe' + (on ? ' on' : ''), fmtRpe(v));
+        c.onclick = function () {
+          ex.sets[effSel2].rpe = on ? null : v;
+          save(); renderActive();
+        };
+        chips.appendChild(c);
+      });
+    }
+
+    /* others list */
+    var others = $('a-others');
+    others.textContent = '';
+    var any = false;
+    state.exercises.forEach(function (e, i) {
+      if (i === state.cur) return;
+      any = true;
+      var row = el('div', 'exo-row');
+      row.setAttribute('role', 'button');
+      row.tabIndex = 0;
+      row.appendChild(el('div', 'num', String(i + 1)));
+      var meta = el('div', 'meta');
+      meta.appendChild(el('strong', null, e.name));
+      meta.appendChild(el('span', null, e.sets.length + (e.target ? '/' + e.target : '') + ' séries'));
+      row.appendChild(meta);
+      row.appendChild(el('span', 'badge' + (e.done ? ' ok' : ''), e.done ? 'fait' : 'à faire'));
+      function go() { state.cur = i; selSet = -1; save(); renderActive(); window.scrollTo(0, 0); }
+      row.onclick = go;
+      row.onkeydown = function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } };
+      others.appendChild(row);
+    });
+    if (!any) others.appendChild(el('div', 'empty', 'Pas d’autre exercice — tu peux en ajouter un.'));
+
+    renderTimer();
+  }
+
+  /* ---------- set validation ---------- */
+  function validateSet() {
+    ensureAudio();
+    var ex = curExo();
+    if (!ex) return;
+    ex.sets.push({ rpe: null, at: Date.now() });
+    selSet = -1;
+    startTimer(ex.rest);
+    save();
+    vibrate(30);
+    renderActive();
+  }
+
+  /* ---------- timer (timestamp-based, survives background) ---------- */
+  var CIRC = 2 * Math.PI * 54;
+  function startTimer(sec) {
+    state.timer = { endsAt: Date.now() + sec * 1000, total: sec, fired: false };
+    save();
+    ensureTick();
+  }
+  function stopTimer() {
+    state.timer = null;
+    save();
+    renderTimer();
+  }
+  function adjustTimer(delta) {
+    if (!state.timer) return;
+    state.timer.endsAt += delta * 1000;
+    state.timer.total = Math.max(1, state.timer.total + delta);
+    if (state.timer.endsAt <= Date.now()) { finishTimer(); return; }
+    save();
+    renderTimer();
+  }
+  function finishTimer() {
+    state.timer = null;
+    save();
+    beep();
+    vibrate([220, 90, 220, 90, 320]);
+    var card = $('timer-card');
+    card.classList.remove('flash');
+    void card.offsetWidth;
+    card.classList.add('flash');
+    document.title = 'GO ! — Séance LEGACY';
+    setTimeout(function () { document.title = 'Séance — LEGACY'; }, 4000);
+    renderTimer();
+  }
+  function ensureTick() {
+    if (tickHandle) return;
+    tickHandle = setInterval(function () {
+      if (!state.timer) { clearInterval(tickHandle); tickHandle = null; return; }
+      renderTimer();
+    }, 250);
+  }
+  function renderTimer() {
+    var hasTimer = !!state.timer;
+    $('ring-wrap').classList.toggle('hidden', !hasTimer);
+    $('timer-acts').classList.toggle('hidden', !hasTimer);
+    $('timer-idle').classList.toggle('hidden', hasTimer);
+    if (!hasTimer) return;
+    ensureTick();
+    var left = Math.max(0, state.timer.endsAt - Date.now());
+    var s = Math.ceil(left / 1000);
+    $('time-left').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    var frac = Math.min(1, Math.max(0, left / (state.timer.total * 1000)));
+    var ring = $('ring-fg');
+    ring.setAttribute('stroke-dasharray', CIRC.toFixed(2));
+    ring.setAttribute('stroke-dashoffset', (CIRC * (1 - frac)).toFixed(2));
+    if (left <= 0) finishTimer();
+  }
+
+  /* =========================================================
+     SHEETS (debrief / add-exo mid session)
+  ========================================================= */
+  function openSheet(build) {
+    closeSheet();
+    var root = $('sheet-root');
+    var scrim = el('div', 'scrim');
+    var sheet = el('div', 'sheet');
+    sheet.setAttribute('role', 'dialog');
+    sheet.setAttribute('aria-modal', 'true');
+    sheet.appendChild(el('div', 'grip'));
+    var close = el('button', 'sheet-close', '✕');
+    close.setAttribute('aria-label', 'Fermer');
+    close.onclick = closeSheet;
+    scrim.onclick = closeSheet;
+    sheet.appendChild(close);
+    build(sheet);
+    root.appendChild(scrim);
+    root.appendChild(sheet);
+    $('cta-bar').classList.add('hidden');
+  }
+  function closeSheet() {
+    $('sheet-root').textContent = '';
+    if (state.status === 'active') $('cta-bar').classList.remove('hidden');
+  }
+
+  /* ---------- debrief ---------- */
+  function openDebrief(exIdx) {
+    var ex = state.exercises[exIdx];
+    var d = ex.debrief || { ok: null, tags: [], note: '' };
+
+    openSheet(function (sheet) {
+      sheet.appendChild(el('h3', null, 'Débrief — ' + ex.name));
+      sheet.appendChild(el('div', 'sub', ex.sets.length + ' série(s) validée(s)' + rpeSummary(ex)));
+
+      sheet.appendChild(el('div', 'q', 'Tout s’est passé comme prévu ?'));
+      var seg = el('div', 'seg');
+      var bYes = el('button', 'chip', '👍 Oui, RAS');
+      var bNo = el('button', 'chip', '👎 Non, à noter');
+      function paint() {
+        bYes.classList.toggle('on', d.ok === true);
+        bNo.classList.toggle('on', d.ok === false);
+      }
+      bYes.onclick = function () { d.ok = true; paint(); };
+      bNo.onclick = function () { d.ok = false; paint(); };
+      paint();
+      seg.appendChild(bYes); seg.appendChild(bNo);
+      sheet.appendChild(seg);
+
+      sheet.appendChild(el('div', 'q', 'À signaler (optionnel) :'));
+      var tagRow = el('div', 'chips');
+      DEBRIEF_TAGS.forEach(function (t) {
+        var c = el('button', 'chip' + (d.tags.indexOf(t) >= 0 ? ' on' : ''), t);
+        c.onclick = function () {
+          var k = d.tags.indexOf(t);
+          if (k >= 0) d.tags.splice(k, 1); else d.tags.push(t);
+          c.classList.toggle('on', k < 0);
+        };
+        tagRow.appendChild(c);
+      });
+      sheet.appendChild(tagRow);
+
+      sheet.appendChild(el('div', 'q', 'Note pour le programme (optionnel) :'));
+      var ta = el('textarea', 'input');
+      ta.placeholder = 'Ex : épaule qui tire sur la 2e série, passer à 22,5 kg la semaine prochaine…';
+      ta.value = d.note || '';
+      sheet.appendChild(ta);
+
+      var saveB = el('button', 'btn btn-chrome btn-block', 'Valider le débrief');
+      saveB.style.marginTop = '16px';
+      saveB.onclick = function () {
+        d.note = ta.value.trim();
+        if (d.ok === null) d.ok = d.tags.length === 0 && !d.note;
+        ex.debrief = d;
+        ex.done = true;
+        save();
+        closeSheet();
+        toast('Débrief enregistré ✓');
+        var next = nextTodo();
+        if (next === -1) {
+          askEndSession();
+        } else {
+          state.cur = next; selSet = -1; save();
+          renderActive(); window.scrollTo(0, 0);
+        }
+      };
+      sheet.appendChild(saveB);
+    });
+  }
+
+  function nextTodo() {
+    for (var i = 0; i < state.exercises.length; i++) {
+      if (!state.exercises[i].done) return i;
+    }
+    return -1;
+  }
+
+  function askEndSession() {
+    openSheet(function (sheet) {
+      sheet.appendChild(el('h3', null, 'Tous les exercices sont faits 🎉'));
+      sheet.appendChild(el('div', 'sub', 'Tu peux clôturer la séance et récupérer tes notes.'));
+      var b = el('button', 'btn btn-chrome btn-block', 'Terminer la séance');
+      b.style.marginTop = '14px';
+      b.onclick = function () { closeSheet(); endSession(); };
+      sheet.appendChild(b);
+      var c = el('button', 'btn btn-block', 'Pas encore — continuer');
+      c.style.marginTop = '10px';
+      c.onclick = closeSheet;
+      sheet.appendChild(c);
+    });
+  }
+
+  /* ---------- add exercise mid-session ---------- */
+  function openAddMid() {
+    var local = { sets: 4, rest: 120 };
+    openSheet(function (sheet) {
+      sheet.appendChild(el('h3', null, 'Ajouter un exercice'));
+      sheet.appendChild(el('div', 'q', 'Nom'));
+      var inp = el('input', 'input');
+      inp.type = 'text'; inp.placeholder = 'Ex : Traction lestée';
+      sheet.appendChild(inp);
+
+      sheet.appendChild(el('div', 'q', 'Séries prévues'));
+      var st = el('div', 'stepper');
+      var m = el('button', null, '−'), v = el('div', 'val', '4'), p = el('button', null, '+');
+      m.onclick = function () { local.sets = Math.max(1, local.sets - 1); v.textContent = local.sets; };
+      p.onclick = function () { local.sets = Math.min(12, local.sets + 1); v.textContent = local.sets; };
+      st.appendChild(m); st.appendChild(v); st.appendChild(p);
+      sheet.appendChild(st);
+
+      sheet.appendChild(el('div', 'q', 'Récup entre séries'));
+      var chipRow = el('div', 'chips');
+      function paintChips() {
+        chipRow.textContent = '';
+        REST_PRESETS.forEach(function (s) {
+          var c = el('button', 'chip' + (s === local.rest ? ' on' : ''), fmtRest(s));
+          c.onclick = function () { local.rest = s; paintChips(); };
+          chipRow.appendChild(c);
+        });
+      }
+      paintChips();
+      sheet.appendChild(chipRow);
+
+      var b = el('button', 'btn btn-chrome btn-block', 'Ajouter');
+      b.style.marginTop = '16px';
+      b.onclick = function () {
+        var name = inp.value.trim();
+        if (!name) { inp.focus(); return; }
+        addExercise(name, local.sets, local.rest);
+        closeSheet();
+        renderActive();
+        toast('Exercice ajouté ✓');
+      };
+      sheet.appendChild(b);
+      setTimeout(function () { inp.focus(); }, 80);
+    });
+  }
+
+  /* =========================================================
+     END OF SESSION / NOTES
+  ========================================================= */
+  function rpeSummary(ex) {
+    var vals = ex.sets.map(function (s) { return s.rpe; }).filter(function (v) { return v != null; });
+    if (!vals.length) return '';
+    return ' · RPE ' + vals.map(fmtRpe).join(' · ');
+  }
+
+  function endSession() {
+    var remaining = state.exercises.filter(function (e) { return !e.done; }).length;
+    if (remaining > 0 && !confirm(remaining + ' exercice(s) sans débrief. Terminer quand même ?')) return;
+    stopTimer();
+    state.status = 'done';
+    state.endedAt = Date.now();
+    save();
+    var h = history();
+    h.unshift(JSON.parse(JSON.stringify(state)));
+    saveHistory(h);
+    queueForCoach(state);
+    if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
+    renderDone();
+    show('done');
+    trySendOutbox();
+  }
+
+  /* Notes à coller dans le prog : UNIQUEMENT ce que l'athlète a écrit. */
+  function buildNotes(s) {
+    var lines = [];
+    s.exercises.forEach(function (ex) {
+      if (ex.debrief && ex.debrief.note) lines.push(ex.name + ' : ' + ex.debrief.note);
+    });
+    return lines.join('\n');
+  }
+
+  /* Récap complet (date, horaires, RPE, débrief) : affiché à l'écran + envoyé au coach. */
+  function buildRecapText(s) {
+    var lines = [];
+    lines.push('SÉANCE — ' + fmtDate(s.startedAt) + (s.endedAt ? ' (' + fmtClock(s.startedAt) + '–' + fmtClock(s.endedAt) + ')' : ''));
+    s.exercises.forEach(function (ex) {
+      lines.push('');
+      var head = ex.name.toUpperCase() + ' — ' + ex.sets.length + ' série' + (ex.sets.length > 1 ? 's' : '');
+      var rpes = ex.sets.map(function (x) { return x.rpe != null ? fmtRpe(x.rpe) : '—'; });
+      if (rpes.some(function (r) { return r !== '—'; })) head += ' · RPE ' + rpes.join(' / ');
+      lines.push(head);
+      if (ex.debrief) {
+        if (ex.debrief.ok && !ex.debrief.tags.length && !ex.debrief.note) {
+          lines.push('✔ RAS');
+        } else {
+          if (ex.debrief.tags.length) lines.push('⚠ ' + ex.debrief.tags.join(' · '));
+          if (ex.debrief.note) lines.push('Note : ' + ex.debrief.note);
+          if (ex.debrief.ok && !ex.debrief.tags.length && ex.debrief.note) lines.splice(lines.length - 1, 0, '✔ OK');
+        }
+      } else if (!ex.sets.length) {
+        lines.push('— non fait');
+      }
+    });
+    return lines.join('\n');
+  }
+
+  function renderDone() {
+    var s = state;
+    var nSets = s.exercises.reduce(function (a, e) { return a + e.sets.length; }, 0);
+    var durMin = s.endedAt && s.startedAt ? Math.round((s.endedAt - s.startedAt) / 60000) : 0;
+    var rpes = [];
+    s.exercises.forEach(function (e) { e.sets.forEach(function (x) { if (typeof x.rpe === 'number') rpes.push(x.rpe); }); });
+    var avg = rpes.length ? (rpes.reduce(function (a, b) { return a + b; }, 0) / rpes.length) : null;
+
+    $('d-sub').textContent = fmtDate(s.startedAt) + ' · ' + s.exercises.length + ' exercice(s)';
+    $('d-dur').textContent = durMin >= 60 ? Math.floor(durMin / 60) + 'h' + String(durMin % 60).padStart(2, '0') : durMin + ' min';
+    $('d-sets').textContent = String(nSets);
+    $('d-rpe').textContent = avg != null ? fmtRpe(Math.round(avg * 10) / 10) : '—';
+
+    var recap = $('d-recap');
+    recap.textContent = '';
+    s.exercises.forEach(function (ex) {
+      var b = el('div', 'recap-exo');
+      var head = el('div', 'head');
+      head.appendChild(el('strong', null, ex.name));
+      head.appendChild(el('span', 'rpes', ex.sets.length + ' séries'));
+      b.appendChild(head);
+      var rp = ex.sets.map(function (x) { return x.rpe != null ? fmtRpe(x.rpe) : '—'; });
+      if (rp.length) b.appendChild(el('div', 'rpes', 'RPE : ' + rp.join(' / ')));
+      if (ex.debrief) {
+        var tags = el('div', 'tags');
+        if (ex.debrief.ok && !ex.debrief.tags.length && !ex.debrief.note) {
+          tags.appendChild(el('span', 'tag', '✔ RAS'));
+        }
+        ex.debrief.tags.forEach(function (t) { tags.appendChild(el('span', 'tag warn', t)); });
+        if (tags.children.length) b.appendChild(tags);
+        if (ex.debrief.note) b.appendChild(el('div', 'note', ex.debrief.note));
+      }
+      recap.appendChild(b);
+    });
+
+    var notes = buildNotes(s);
+    $('d-notes').textContent = notes || 'Aucune note écrite cette séance.';
+    $('btn-copy').disabled = !notes;
+    renderSyncStatus();
+  }
+
+  function renderSyncStatus() {
+    var box = $('d-sync');
+    if (!SYNC_URL || !profile()) { box.classList.add('hidden'); return; }
+    box.classList.remove('hidden');
+    var pending = (load(LS_OUTBOX) || []).length;
+    box.textContent = pending
+      ? '⏳ Envoi au coach en attente de réseau (' + pending + ')…'
+      : '✓ Séance envoyée au coach.';
+  }
+
+  function copyText(txt) {
+    function done() { toast('Copié ✓ — colle-le dans ton prog'); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(done).catch(function () { legacyCopy(txt); done(); });
+    } else { legacyCopy(txt); done(); }
+  }
+  function legacyCopy(txt) {
+    var ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    ta.remove();
+  }
+
+  /* =========================================================
+     SUIVI COACH (Google Apps Script) + CODE D'ACCÈS
+  ========================================================= */
+  function profile() { return load(LS_PROFILE); }
+
+  function api(payload) {
+    return fetch(SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then(function (r) { return r.json(); });
+  }
+
+  function queueForCoach(s) {
+    if (!SYNC_URL || !profile()) return;
+    var snap = JSON.parse(JSON.stringify(s));
+    var ob = load(LS_OUTBOX) || [];
+    ob.push({ id: uid(), session: snap, recap: buildRecapText(snap), notes: buildNotes(snap) });
+    try { localStorage.setItem(LS_OUTBOX, JSON.stringify(ob)); } catch (e) {}
+  }
+
+  var sending = false;
+  function trySendOutbox() {
+    if (!SYNC_URL || sending) return;
+    var p = profile();
+    var ob = load(LS_OUTBOX) || [];
+    if (!p || !ob.length) { renderSyncStatus(); return; }
+    sending = true;
+    var item = ob[0];
+    api({ action: 'save', code: p.code, name: p.name, session: item.session, recap: item.recap, notes: item.notes })
+      .then(function (res) {
+        sending = false;
+        if (res && res.ok) {
+          var cur = (load(LS_OUTBOX) || []).filter(function (x) { return x.id !== item.id; });
+          try { localStorage.setItem(LS_OUTBOX, JSON.stringify(cur)); } catch (e) {}
+          trySendOutbox();
+        }
+        renderSyncStatus();
+      })
+      .catch(function () { sending = false; renderSyncStatus(); });
+  }
+  window.addEventListener('online', trySendOutbox);
+
+  function bindGate() {
+    function go() {
+      var code = $('g-code').value.trim();
+      if (!code) { $('g-code').focus(); return; }
+      var err = $('g-err');
+      err.classList.add('hidden');
+      $('g-go').disabled = true;
+      $('g-go').textContent = 'Vérification…';
+      api({ action: 'check', code: code })
+        .then(function (res) {
+          if (res && res.ok) {
+            try { localStorage.setItem(LS_PROFILE, JSON.stringify({ code: code, name: res.name || '' })); } catch (e) {}
+            boot();
+          } else {
+            err.textContent = (res && res.reason === 'inactif')
+              ? 'Ce code a été désactivé — vois avec Ritchi.'
+              : 'Code inconnu. Vérifie avec Ritchi.';
+            err.classList.remove('hidden');
+          }
+        })
+        .catch(function () {
+          err.textContent = 'Impossible de vérifier (pas de réseau ?). Réessaie une fois connecté.';
+          err.classList.remove('hidden');
+        })
+        .then(function () {
+          $('g-go').disabled = false;
+          $('g-go').textContent = 'Entrer';
+        });
+    }
+    $('g-go').onclick = go;
+    $('g-code').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+  }
+
+  /* Re-vérifie le code en arrière-plan : si Ritchi coupe un accès, blocage à l'ouverture suivante. */
+  function recheckAccess() {
+    if (!SYNC_URL) return;
+    var p = profile();
+    if (!p) return;
+    api({ action: 'check', code: p.code }).then(function (res) {
+      if (res && res.ok === false) {
+        try { localStorage.removeItem(LS_PROFILE); } catch (e) {}
+        show('gate');
+        var err = $('g-err');
+        err.textContent = 'Ton accès a été désactivé — vois avec Ritchi.';
+        err.classList.remove('hidden');
+      } else if (res && res.ok && res.name) {
+        try { localStorage.setItem(LS_PROFILE, JSON.stringify({ code: p.code, name: res.name })); } catch (e) {}
+      }
+    }).catch(function () {});
+  }
+
+  /* =========================================================
+     BINDINGS & BOOT
+  ========================================================= */
+  $('btn-set').onclick = validateSet;
+  $('t-plus').onclick = function () { adjustTimer(30); };
+  $('t-minus').onclick = function () { adjustTimer(-30); };
+  $('t-skip').onclick = function () { stopTimer(); };
+  $('btn-finish-exo').onclick = function () { ensureAudio(); openDebrief(state.cur); };
+  $('btn-add-mid').onclick = openAddMid;
+  $('btn-end-session').onclick = endSession;
+  $('btn-copy').onclick = function () { copyText(buildNotes(state)); };
+  $('btn-new').onclick = function () {
+    state = freshState();
+    save();
+    renderSetup();
+    show('setup');
+  };
+
+  bindSetup();
+  bindGate();
+
+  /* resume where we were */
+  function boot() {
+    if (state.status === 'active') {
+      show('active');
+      renderActive();
+      keepAwake();
+    } else if (state.status === 'done') {
+      renderDone();
+      show('done');
+      renderSetup();
+    } else {
+      renderSetup();
+      show('setup');
+    }
+    recheckAccess();
+    trySendOutbox();
+  }
+  if (SYNC_URL && !profile()) { show('gate'); } else { boot(); }
+
+  /* PWA : hors ligne une fois installée */
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+})();
+</script>
+<script data-goatcounter="https://ritchi.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
