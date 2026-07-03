@@ -178,8 +178,8 @@ textarea.input { min-height: 92px; resize: vertical; line-height: 1.5; }
 .set-dot.sel { border-color: #cf9a9d; box-shadow: 0 0 0 2px oklch(55% 0.21 25 / .35); }
 .set-dot.ghost { border-style: dashed; opacity: .45; pointer-events: none; }
 .set-dot.ghost .n { color: var(--muted); }
-@starting-style { .set-dot.done { transform: scale(0.9); opacity: 0; } }
-.set-dot.done { transition: transform 260ms var(--ease-out), opacity 260ms var(--ease-out), border-color 140ms ease; }
+@starting-style { .set-dot.done { transform: scale(0.72); opacity: 0; } }
+.set-dot.done { transition: transform 320ms var(--ease-out), opacity 260ms var(--ease-out), border-color 140ms ease; }
 
 .rpe-block { margin-top: 12px; }
 .rpe-block .hint { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
@@ -202,6 +202,115 @@ textarea.input { min-height: 92px; resize: vertical; line-height: 1.5; }
 .timer-acts { display: flex; justify-content: center; gap: 10px; }
 .timer-acts .btn { min-width: 86px; }
 .timer-idle { color: var(--muted); font-size: 14.5px; padding: 10px 0 2px; }
+
+/* ===== Chrono vivant ===== */
+.ring-fg { transition: stroke-dashoffset 240ms linear, stroke 450ms linear; }
+.ring-wrap { cursor: pointer; }
+.time-left { transition: color 300ms ease; }
+.ring-wrap.warn .time-left { color: #ff5b52; animation: pulse-num 1s ease-in-out infinite; }
+.ring-wrap.warn { animation: ring-throb 1s ease-in-out infinite; }
+@keyframes pulse-num { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+@keyframes ring-throb {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(224,49,49,0)); }
+  50% { filter: drop-shadow(0 0 14px rgba(224,49,49,.6)); }
+}
+#btn-focus { margin-top: 10px; }
+
+/* ===== Burst de validation de série ===== */
+.set-burst {
+  position: fixed; left: 50%; top: 40%; z-index: 88;
+  width: 148px; height: 148px; margin: -74px 0 0 -74px; pointer-events: none;
+  animation: burst-out .62s var(--ease-out) forwards;
+}
+.set-burst svg { width: 100%; height: 100%; }
+.set-burst circle { fill: oklch(43% 0.16 25 / .28); stroke: #cf9a9d; stroke-width: 4; }
+.set-burst path {
+  fill: none; stroke: #f4f5f6; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 70; stroke-dashoffset: 70; animation: check-draw .34s .12s var(--ease-out) forwards;
+}
+@keyframes burst-out {
+  0% { transform: scale(.4); opacity: 0; }
+  22% { opacity: 1; }
+  62% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.16); opacity: 0; }
+}
+@keyframes check-draw { to { stroke-dashoffset: 0; } }
+
+/* ===== GO plein écran à zéro ===== */
+.go-overlay {
+  position: fixed; inset: 0; z-index: 95; display: grid; place-items: center; pointer-events: none;
+  background: radial-gradient(58% 46% at 50% 42%, rgba(162,59,66,.5), rgba(6,7,9,.9) 72%);
+  animation: go-fade 1.35s ease-out forwards;
+}
+.go-overlay .go-word {
+  font-family: 'Unbounded', sans-serif; font-weight: 900; font-size: clamp(96px, 33vw, 230px);
+  letter-spacing: .02em; line-height: 1;
+  background: var(--acid-reflets); background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  animation: go-pop .5s var(--ease-out) both, metal-sheen 2.4s linear infinite;
+  text-align: center;
+}
+.go-overlay .go-sub {
+  text-align: center; margin-top: 8px; font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px; letter-spacing: .4em; text-indent: .4em; color: #cf9a9d; text-transform: uppercase;
+}
+@keyframes go-pop { from { transform: scale(.55); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes go-fade { 0% { opacity: 0; } 12% { opacity: 1; } 76% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ===== Filigrane panthère (écran actif) ===== */
+#gym-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; display: none;
+  background: url('icon-512.png') no-repeat center 28% / 116% auto;
+  opacity: .055; filter: grayscale(.25) contrast(1.05);
+  -webkit-mask-image: radial-gradient(72% 56% at 50% 32%, #000 0%, transparent 74%);
+  mask-image: radial-gradient(72% 56% at 50% 32%, #000 0%, transparent 74%);
+}
+body.is-active #gym-bg { display: block; }
+.wrap { position: relative; z-index: 1; }
+
+/* ===== Mode focus salle ===== */
+.focus {
+  position: fixed; inset: 0; z-index: 70; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  padding: calc(28px + env(safe-area-inset-top)) 22px calc(28px + env(safe-area-inset-bottom));
+  background: var(--black);
+}
+.focus::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(80% 55% at 50% 30%, rgba(162,59,66,.16), transparent 68%),
+    url('icon-512.png') no-repeat center 20% / 150% auto;
+  opacity: .12; filter: grayscale(.2);
+  -webkit-mask-image: radial-gradient(62% 52% at 50% 28%, #000, transparent 72%);
+  mask-image: radial-gradient(62% 52% at 50% 28%, #000, transparent 72%);
+}
+.focus > * { position: relative; z-index: 1; }
+.focus-close {
+  position: absolute; top: calc(16px + env(safe-area-inset-top)); right: 18px; z-index: 2;
+  width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center;
+  color: var(--muted); font-size: 22px; background: var(--surface-2); border: 1px solid var(--border-strong);
+}
+.focus-close:active { transform: scale(0.93); }
+.focus-exo {
+  font-family: 'Bebas Neue', sans-serif; font-size: clamp(26px, 7vw, 40px); letter-spacing: .05em;
+  color: var(--muted); text-align: center; text-transform: uppercase; padding: 0 40px; line-height: 1.05;
+}
+.focus-time {
+  font-family: 'Bebas Neue', sans-serif; font-size: clamp(140px, 46vw, 320px); line-height: .86;
+  letter-spacing: .02em; font-variant-numeric: tabular-nums; color: #f4f5f6; transition: color .3s ease;
+}
+.focus.warn .focus-time { color: #ff5b52; animation: pulse-num 1s ease-in-out infinite; }
+.focus-sub { font-size: 15px; letter-spacing: .45em; text-indent: .45em; color: var(--muted); text-transform: uppercase; margin-top: -4px; }
+.focus-bar { width: min(84%, 520px); height: 12px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.focus-bar-fill { height: 100%; width: 100%; border-radius: 99px; background: #c4c8ce; transition: width .24s linear, background .45s linear; }
+.focus-next { font-size: clamp(18px, 5vw, 22px); font-weight: 700; color: #e6e8ec; text-align: center; }
+.focus-acts { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
+.focus-acts .btn { min-width: 106px; min-height: 60px; font-size: 18px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-wrap.warn, .ring-wrap.warn .time-left, .focus.warn .focus-time,
+  .go-overlay .go-word, .set-burst, .set-burst path { animation: none; }
+}
 
 /* ===== Other exercises / list ===== */
 .next-list .exo-row { cursor: pointer; }
@@ -288,6 +397,7 @@ pre.notes {
 </style>
 </head>
 <body>
+<div id="gym-bg" aria-hidden="true"></div>
 <div class="wrap" id="app">
 
   <header class="brand">
@@ -393,6 +503,7 @@ pre.notes {
         <button class="btn" id="t-plus">+30 s</button>
         <button class="btn" id="t-skip">Passer</button>
       </div>
+      <button class="btn btn-block hidden" id="btn-focus">Mode plein écran ⛶</button>
     </div>
 
     <div class="card">
@@ -441,6 +552,21 @@ pre.notes {
 <!-- Fixed CTA -->
 <div class="cta-bar hidden" id="cta-bar">
   <button class="btn btn-chrome" id="btn-set"><span class="big">SÉRIE VALIDÉE ✓</span></button>
+</div>
+
+<!-- Mode focus salle -->
+<div class="focus hidden" id="focus" aria-hidden="true">
+  <button class="focus-close" id="f-close" aria-label="Quitter le plein écran">✕</button>
+  <div class="focus-exo" id="f-exo">—</div>
+  <div class="focus-time" id="f-time">0:00</div>
+  <div class="focus-sub">Récup</div>
+  <div class="focus-bar"><div class="focus-bar-fill" id="f-bar"></div></div>
+  <div class="focus-next" id="f-next">—</div>
+  <div class="focus-acts">
+    <button class="btn" id="f-minus">−30 s</button>
+    <button class="btn" id="f-plus">+30 s</button>
+    <button class="btn btn-chrome" id="f-skip">Passer</button>
+  </div>
 </div>
 
 <!-- Sheets root -->
@@ -509,19 +635,28 @@ pre.notes {
     if (!audioCtx) { try { audioCtx = new AC(); } catch (e) { return; } }
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
-  function beep() {
+  function playTone(freq, at, dur, vol, type) {
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type || 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.linearRampToValueAtTime(vol, at + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(at); o.stop(at + dur + 0.03);
+  }
+  /* petit bip du compte à rebours (3-2-1) */
+  function tick(freq) {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    playTone(freq, audioCtx.currentTime, 0.09, 0.26, 'square');
+  }
+  /* « GO » : triade montante + note claire tenue */
+  function goSound() {
     if (!audioCtx || audioCtx.state !== 'running') return;
     var t0 = audioCtx.currentTime;
-    [0, 0.22, 0.44].forEach(function (off, i) {
-      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.type = 'sine';
-      o.frequency.value = i === 2 ? 1174 : 880;
-      g.gain.setValueAtTime(0.0001, t0 + off);
-      g.gain.linearRampToValueAtTime(0.5, t0 + off + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + off + 0.2);
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start(t0 + off); o.stop(t0 + off + 0.22);
-    });
+    playTone(587, t0, 0.13, 0.45);          // Ré5
+    playTone(784, t0 + 0.12, 0.13, 0.45);   // Sol5
+    playTone(1175, t0 + 0.25, 0.55, 0.5);   // Ré6 tenue
   }
 
   /* ---------- wake lock ---------- */
@@ -540,6 +675,8 @@ pre.notes {
       $('scr-' + s).classList.toggle('hidden', s !== name);
     });
     $('cta-bar').classList.toggle('hidden', name !== 'active');
+    document.body.classList.toggle('is-active', name === 'active');
+    if (name !== 'active') closeFocus();
     window.scrollTo(0, 0);
   }
 
@@ -773,14 +910,40 @@ pre.notes {
     selSet = -1;
     startTimer(ex.rest);
     save();
-    vibrate(30);
+    vibrate([18, 40, 26]);
+    showSetBurst();
     renderActive();
+  }
+
+  /* checkmark satisfaisant à la validation d'une série */
+  function showSetBurst() {
+    var b = document.createElement('div');
+    b.className = 'set-burst';
+    b.setAttribute('aria-hidden', 'true');
+    b.innerHTML = '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44"></circle>' +
+      '<path d="M30 52 L45 67 L72 35"></path></svg>';
+    document.body.appendChild(b);
+    setTimeout(function () { b.remove(); }, 680);
   }
 
   /* ---------- timer (timestamp-based, survives background) ---------- */
   var CIRC = 2 * Math.PI * 54;
+  var lastCountSec = 0, focusOpen = false;
+
+  /* couleur de l'anneau : chrome (plein) → rouge vif (proche de zéro) */
+  function heatStroke(frac) {
+    var t = Math.pow(1 - Math.max(0, Math.min(1, frac)), 1.3);
+    var c1 = [196, 200, 206], c2 = [224, 49, 49], out = '#';
+    for (var i = 0; i < 3; i++) {
+      var x = Math.round(c1[i] + (c2[i] - c1[i]) * t).toString(16);
+      out += x.length === 1 ? '0' + x : x;
+    }
+    return out;
+  }
+
   function startTimer(sec) {
     state.timer = { endsAt: Date.now() + sec * 1000, total: sec, fired: false };
+    lastCountSec = 0;
     save();
     ensureTick();
   }
@@ -799,17 +962,36 @@ pre.notes {
   }
   function finishTimer() {
     state.timer = null;
+    lastCountSec = 0;
     save();
-    beep();
+    goSound();
     vibrate([220, 90, 220, 90, 320]);
     var card = $('timer-card');
     card.classList.remove('flash');
     void card.offsetWidth;
     card.classList.add('flash');
+    showGo();
     document.title = 'GO ! — Séance LEGACY';
     setTimeout(function () { document.title = 'Séance — LEGACY'; }, 4000);
-    renderTimer();
+    /* remet la carte en état repos sans fermer le focus trop vite */
+    $('ring-wrap').classList.add('hidden');
+    $('ring-wrap').classList.remove('warn');
+    $('timer-acts').classList.add('hidden');
+    $('btn-focus').classList.add('hidden');
+    $('timer-idle').classList.remove('hidden');
+    if (focusOpen) setTimeout(closeFocus, 1050);
   }
+
+  /* overlay « GO ! » plein écran */
+  function showGo() {
+    var g = document.createElement('div');
+    g.className = 'go-overlay';
+    g.setAttribute('aria-hidden', 'true');
+    g.innerHTML = '<div><div class="go-word">GO&nbsp;!</div><div class="go-sub">Récup terminée</div></div>';
+    document.body.appendChild(g);
+    setTimeout(function () { g.remove(); }, 1350);
+  }
+
   function ensureTick() {
     if (tickHandle) return;
     tickHandle = setInterval(function () {
@@ -817,21 +999,66 @@ pre.notes {
       renderTimer();
     }, 250);
   }
+
   function renderTimer() {
     var hasTimer = !!state.timer;
     $('ring-wrap').classList.toggle('hidden', !hasTimer);
     $('timer-acts').classList.toggle('hidden', !hasTimer);
+    $('btn-focus').classList.toggle('hidden', !hasTimer);
     $('timer-idle').classList.toggle('hidden', hasTimer);
-    if (!hasTimer) return;
+    if (!hasTimer) {
+      $('ring-wrap').classList.remove('warn');
+      if (focusOpen) closeFocus();
+      return;
+    }
     ensureTick();
     var left = Math.max(0, state.timer.endsAt - Date.now());
     var s = Math.ceil(left / 1000);
-    $('time-left').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    var mmss = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
     var frac = Math.min(1, Math.max(0, left / (state.timer.total * 1000)));
+    var col = heatStroke(frac);
+    var warn = s <= 10 && left > 0;
+
+    $('time-left').textContent = mmss;
     var ring = $('ring-fg');
     ring.setAttribute('stroke-dasharray', CIRC.toFixed(2));
     ring.setAttribute('stroke-dashoffset', (CIRC * (1 - frac)).toFixed(2));
+    ring.setAttribute('stroke', col);
+    $('ring-wrap').classList.toggle('warn', warn);
+
+    /* bips du compte à rebours 3-2-1 */
+    if (s <= 3 && s >= 1 && s !== lastCountSec) { tick(760 + (3 - s) * 200); lastCountSec = s; }
+
+    if (focusOpen) {
+      $('f-time').textContent = mmss;
+      $('f-bar').style.width = (frac * 100).toFixed(1) + '%';
+      $('f-bar').style.background = col;
+      $('focus').classList.toggle('warn', warn);
+    }
     if (left <= 0) finishTimer();
+  }
+
+  /* ---------- mode focus salle ---------- */
+  function focusNextLabel() {
+    var ex = curExo();
+    if (!ex) return '';
+    return 'Prochaine : série ' + (ex.sets.length + 1);
+  }
+  function openFocus() {
+    if (!state.timer) return;
+    ensureAudio();
+    focusOpen = true;
+    var ex = curExo();
+    $('f-exo').textContent = ex ? ex.name : '';
+    $('f-next').textContent = focusNextLabel();
+    $('focus').classList.remove('hidden');
+    $('focus').setAttribute('aria-hidden', 'false');
+    renderTimer();
+  }
+  function closeFocus() {
+    focusOpen = false;
+    $('focus').classList.add('hidden');
+    $('focus').setAttribute('aria-hidden', 'true');
   }
 
   /* =========================================================
@@ -1218,6 +1445,12 @@ pre.notes {
   $('t-plus').onclick = function () { adjustTimer(30); };
   $('t-minus').onclick = function () { adjustTimer(-30); };
   $('t-skip').onclick = function () { stopTimer(); };
+  $('btn-focus').onclick = openFocus;
+  $('ring-wrap').onclick = openFocus;
+  $('f-close').onclick = closeFocus;
+  $('f-plus').onclick = function () { adjustTimer(30); };
+  $('f-minus').onclick = function () { adjustTimer(-30); };
+  $('f-skip').onclick = function () { stopTimer(); closeFocus(); };
   $('btn-finish-exo').onclick = function () { ensureAudio(); openDebrief(state.cur); };
   $('btn-add-mid').onclick = openAddMid;
   $('btn-end-session').onclick = endSession;
