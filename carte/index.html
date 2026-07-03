@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Cartes — LEGACY</title>
+<meta name="description" content="Générateur de cartes story LEGACY — outil interne du coach." />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#0b0c0f" />
+<link rel="icon" href="../seance/icon-192.png" type="image/png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Bebas+Neue&family=Unbounded:wght@800;900&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --black: oklch(8% 0.008 264);
+  --bg-alt: oklch(15% 0.013 264);
+  --surface: oklch(19% 0.015 264);
+  --surface-2: oklch(24% 0.017 264);
+  --text: oklch(96% 0.006 264);
+  --muted: oklch(72% 0.02 264);
+  --ink: oklch(14.5% 0.012 264);
+  --border: oklch(30% 0.02 264);
+  --border-strong: oklch(40% 0.025 264);
+  --acid-reflets:
+    linear-gradient(108deg, #fbfbfc 0%, #d2d5da 10%, #9a9ea7 22%, #c4c8ce 33%, #eef0f2 42%, #cf9a9d 49%, #a23b42 53%, #cf9a9d 57%, #e6e8ec 66%, #aeb2b9 78%, #f4f5f6 90%, #b9bdc4 100%);
+  --radius: 16px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background:
+    radial-gradient(120% 60% at 50% -8%, oklch(30% 0.07 25 / .32), transparent 62%),
+    var(--black);
+  color: var(--text);
+  min-height: 100dvh;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+input, textarea { font: inherit; color: var(--text); }
+*:focus-visible { outline: 3px solid oklch(88% 0 0); outline-offset: 2px; }
+
+.wrap { max-width: 560px; margin: 0 auto; padding: 18px 18px 60px; }
+
+.brand { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0 18px; }
+.brand-img {
+  width: 58px; height: 58px; border-radius: 50%; object-fit: cover;
+  border: 2px solid oklch(40% 0.025 264); margin-bottom: 7px;
+  box-shadow: 0 0 0 3px oklch(8% 0.008 264), 0 0 18px oklch(43% 0.16 25 / .55);
+}
+.logo { font-family: 'Unbounded', sans-serif; font-weight: 900; font-size: 22px; letter-spacing: .06em; color: oklch(80% 0.008 264); }
+.logo .cy {
+  background: var(--acid-reflets); background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  animation: metal-sheen 7s linear infinite;
+}
+.eyebrow { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: .42em; color: var(--muted); text-indent: .42em; }
+@keyframes metal-sheen { from { background-position: 0% 0; } to { background-position: 100% 0; } }
+
+h1.title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(34px, 9vw, 44px); letter-spacing: .04em; line-height: 1.05; margin: 6px 0 4px; }
+.sub { color: var(--muted); font-size: 14.5px; margin-bottom: 18px; }
+
+.card {
+  background: linear-gradient(180deg, var(--surface), var(--bg-alt));
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 2px oklch(0% 0 0 / .3);
+}
+.card h2 { font-family: 'Bebas Neue', sans-serif; font-size: 21px; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; }
+.hidden { display: none !important; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 50px; padding: 12px 20px; border-radius: 13px;
+  font-weight: 700; font-size: 16px; border: 1px solid var(--border-strong);
+  background: var(--surface-2); transition: transform 160ms var(--ease-out);
+  user-select: none;
+}
+.btn:active { transform: scale(0.97); }
+.btn-chrome {
+  background: var(--acid-reflets); background-size: 220% 100%;
+  color: var(--ink); border: 0; animation: metal-sheen 7s linear infinite;
+  box-shadow: 0 8px 26px oklch(0% 0 0 / .5);
+}
+.btn-block { width: 100%; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 44px; padding: 9px 15px; border-radius: 999px;
+  border: 1px solid var(--border-strong); background: var(--surface-2);
+  font-weight: 600; font-size: 15px; color: var(--text);
+  transition: transform 140ms var(--ease-out);
+}
+.chip:active { transform: scale(0.95); }
+.chip.on { background: var(--acid-reflets); background-size: 220% 100%; color: var(--ink); border-color: transparent; font-weight: 800; }
+
+label.lbl { display: block; font-size: 13.5px; font-weight: 600; color: var(--muted); margin: 12px 0 6px; letter-spacing: .04em; text-transform: uppercase; }
+.input {
+  width: 100%; min-height: 50px; padding: 12px 14px; border-radius: 12px;
+  background: var(--black); border: 1px solid var(--border-strong);
+  font-size: 16px;
+}
+.input::placeholder { color: oklch(50% 0.015 264); }
+textarea.input { min-height: 110px; resize: vertical; line-height: 1.6; }
+
+/* fonds */
+.bg-strip { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; -webkit-overflow-scrolling: touch; }
+.bg-thumb {
+  flex: none; width: 66px; height: 104px; border-radius: 10px; overflow: hidden;
+  border: 2px solid var(--border-strong); padding: 0; position: relative;
+  transition: transform 140ms var(--ease-out), border-color 140ms ease;
+  background: var(--black);
+}
+.bg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bg-thumb.on { border-color: #cf9a9d; box-shadow: 0 0 0 2px oklch(55% 0.21 25 / .4); }
+.bg-thumb:active { transform: scale(0.95); }
+.bg-thumb .nm {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 2px 4px;
+  font-size: 9.5px; font-weight: 700; text-align: center; color: #f4f5f6;
+  background: oklch(0% 0 0 / .55); letter-spacing: .02em;
+}
+.bg-dark { display: grid; place-items: center; color: var(--muted); font-size: 11px; font-weight: 700; }
+
+/* aperçu */
+.preview-wrap { display: flex; justify-content: center; padding: 4px 0 12px; }
+#cv {
+  width: 72%; max-width: 300px; height: auto; border-radius: 16px;
+  border: 1px solid var(--border-strong); box-shadow: 0 12px 34px oklch(0% 0 0 / .55);
+}
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 26px; z-index: 90;
+  transform: translateX(-50%); background: var(--surface-2); border: 1px solid var(--border-strong);
+  color: var(--text); font-weight: 700; font-size: 14.5px; padding: 11px 18px; border-radius: 12px;
+  box-shadow: 0 10px 28px oklch(0% 0 0 / .5); transition: opacity 240ms ease;
+}
+.footer-note { text-align: center; color: oklch(52% 0.015 264); font-size: 12.5px; margin-top: 22px; }
+.footer-note a { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="brand">
+    <img class="brand-img" src="../seance/icon-192.png" alt="" width="58" height="58" />
+    <div class="logo">LEGA<span class="cy">CY</span></div>
+    <div class="eyebrow">CARTES</div>
+  </header>
+
+  <h1 class="title">Tes cartes story</h1>
+  <p class="sub">Choisis un modèle, un fond, remplis — et partage les perfs de tes athlètes (ou les tiennes) aux couleurs LEGACY.</p>
+
+  <div class="card">
+    <h2>Modèle</h2>
+    <div class="chips" id="type-chips"></div>
+  </div>
+
+  <div class="card">
+    <h2>Fond</h2>
+    <div class="bg-strip" id="bg-strip"></div>
+  </div>
+
+  <div class="card">
+    <h2>Contenu</h2>
+    <div id="fields"></div>
+  </div>
+
+  <div class="card">
+    <h2>Aperçu</h2>
+    <div class="preview-wrap">
+      <canvas id="cv" width="1080" height="1920" role="img" aria-label="Aperçu de la carte"></canvas>
+    </div>
+    <div class="actions">
+      <button class="btn btn-chrome" id="btn-share">Partager 📤</button>
+      <button class="btn" id="btn-dl">Télécharger</button>
+    </div>
+  </div>
+
+  <p class="footer-note">Outil interne <a href="https://rifanfano04-alt.github.io/legacy-coaching/">LEGACY</a> — réservé au coach.</p>
+</div>
+<div id="toast-root"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, txt) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (txt != null) n.textContent = txt;
+    return n;
+  }
+  function toast(msg) {
+    var root = $('toast-root');
+    root.textContent = '';
+    var t = el('div', 'toast', msg);
+    root.appendChild(t);
+    setTimeout(function () { t.style.opacity = '0'; }, 2200);
+    setTimeout(function () { t.remove(); }, 2700);
+  }
+
+  /* ---------- couleurs (mêmes codes que l'outil Séance / le Sheet) ---------- */
+  function moveColor(name) {
+    var n = String(name).toLowerCase();
+    if (n.indexOf('muscle') !== -1 || /(^|[^a-zà-ÿ])mu([^a-zà-ÿ]|$)/.test(n)) return '#a4c2f4';
+    if (n.indexOf('traction') !== -1 || n.indexOf('pull') !== -1 || /(^|[^a-zà-ÿ])pu([^a-zà-ÿ]|$)/.test(n)) return '#76a5af';
+    if (n.indexOf('dip') !== -1) return '#8e7cc3';
+    if (n.indexOf('squat') !== -1) return '#5a97a5';
+    return '#e6e8ec';
+  }
+
+  /* ---------- modèles ---------- */
+  var TYPES = {
+    record: {
+      label: 'Record / PR', eyebrow: 'NOUVEAU RECORD', date: true,
+      fields: [
+        { id: 'athlete', label: 'Athlète', ph: 'Hedi' },
+        { id: 'move', label: 'Mouvement', ph: 'Dips lestés' },
+        { id: 'value', label: 'La perf', ph: '100 KG' },
+        { id: 'extra', label: 'Précision (optionnel)', ph: '+20 kg en 4 blocs' }
+      ]
+    },
+    evolution: {
+      label: 'Évolution', eyebrow: 'ÉVOLUTION', date: false,
+      fields: [
+        { id: 'athlete', label: 'Athlète', ph: 'Mathias' },
+        { id: 'extra', label: 'Période (optionnel)', ph: 'en 6 mois' },
+        { id: 'lines', label: 'Progressions (une par ligne, avec →)', ph: 'Muscle up 0 → 7,5 kg\nDips 73 → 100 kg\nSquat 100 → 157,5 kg', textarea: true }
+      ]
+    },
+    seance: {
+      label: 'Séance', eyebrow: 'SÉANCE DU JOUR', date: true,
+      fields: [
+        { id: 'athlete', label: 'Athlète', ph: 'Richard' },
+        { id: 'lines', label: 'Exos (un par ligne)', ph: 'Muscle up — 4×3 @ 5 kg\nDips lestés — 5×5 @ 40 kg\nSquat — 4×6 @ 120 kg', textarea: true }
+      ]
+    },
+    bravo: {
+      label: 'Bravo', eyebrow: 'FÉLICITATIONS', date: false,
+      fields: [
+        { id: 'value', label: 'Gros titre', ph: 'BRAVO HEDI' },
+        { id: 'extra', label: 'Sous-titre (optionnel)', ph: 'Premier muscle up validé' }
+      ]
+    },
+    citation: {
+      label: 'Citation', eyebrow: '', date: false,
+      fields: [
+        { id: 'lines', label: 'Citation', ph: 'La régularité bat le talent.', textarea: true },
+        { id: 'athlete', label: 'Signature (optionnel)', ph: 'Ritchi' }
+      ]
+    }
+  };
+
+  var BGS = [
+    { key: 'panthere', label: 'Panthère', url: 'bg-panthere.jpg' },
+    { key: 'jaguar', label: 'Jaguar', url: '../images/faq-jaguar.jpg' },
+    { key: 'hyene', label: 'Hyène', url: '../images/outil-hyene.jpg' },
+    { key: 'chevalier', label: 'Chevalier', url: '../transformations/videos/fond-chevalier.jpg' },
+    { key: 'dips', label: 'Dips', url: '../images/richard-dips.jpg' },
+    { key: 'planche', label: 'Planche', url: '../images/richard-planche.jpg' },
+    { key: 'portrait', label: 'Ritchi', url: '../images/richard-portrait.jpg' },
+    { key: 'render', label: 'Render', url: '../images/planche-render.jpg' },
+    { key: 'illudips', label: 'Illu dips', url: '../images/dips-illustration.jpg' },
+    { key: 'illusquat', label: 'Illu squat', url: '../images/squat-illustration.jpg' },
+    { key: 'noir', label: 'Noir', url: null }
+  ];
+
+  var curType = 'record';
+  var curBg = 'panthere';
+  var vals = {};
+  var imgCache = {};
+  var logoImg = null;
+  var raf = null;
+
+  /* ---------- UI ---------- */
+  function buildTypeChips() {
+    var box = $('type-chips');
+    box.textContent = '';
+    Object.keys(TYPES).forEach(function (k) {
+      var c = el('button', 'chip' + (k === curType ? ' on' : ''), TYPES[k].label);
+      c.onclick = function () { curType = k; buildTypeChips(); buildFields(); queueRender(); };
+      box.appendChild(c);
+    });
+  }
+
+  function buildBgStrip() {
+    var box = $('bg-strip');
+    box.textContent = '';
+    BGS.forEach(function (b) {
+      var t = el('button', 'bg-thumb' + (b.key === curBg ? ' on' : ''));
+      t.setAttribute('aria-label', 'Fond ' + b.label);
+      if (b.url) {
+        var im = el('img');
+        im.src = b.url; im.alt = '';
+        t.appendChild(im);
+      } else {
+        t.classList.add('bg-dark');
+        t.appendChild(document.createTextNode('NOIR'));
+      }
+      t.appendChild(el('span', 'nm', b.label));
+      t.onclick = function () {
+        curBg = b.key;
+        buildBgStrip();
+        loadBg(b, queueRender);
+      };
+      box.appendChild(t);
+    });
+  }
+
+  function buildFields() {
+    var box = $('fields');
+    box.textContent = '';
+    TYPES[curType].fields.forEach(function (f) {
+      var key = curType + ':' + f.id;
+      var lab = el('label', 'lbl', f.label);
+      lab.htmlFor = 'f-' + f.id;
+      box.appendChild(lab);
+      var inp = f.textarea ? el('textarea', 'input') : el('input', 'input');
+      inp.id = 'f-' + f.id;
+      inp.placeholder = f.ph;
+      if (!f.textarea) inp.type = 'text';
+      inp.value = vals[key] || '';
+      inp.addEventListener('input', function () { vals[key] = inp.value; queueRender(); });
+      box.appendChild(inp);
+    });
+  }
+
+  function val(id) {
+    var v = vals[curType + ':' + id];
+    if (v && v.trim()) return v.trim();
+    var f = null;
+    TYPES[curType].fields.forEach(function (x) { if (x.id === id) f = x; });
+    return f ? f.ph : '';
+  }
+
+  function loadBg(b, cb) {
+    if (!b.url) { cb(); return; }
+    if (imgCache[b.key]) { cb(); return; }
+    var im = new Image();
+    im.onload = function () { imgCache[b.key] = im; cb(); };
+    im.onerror = function () { cb(); };
+    im.src = b.url;
+  }
+
+  /* ---------- rendu canvas ---------- */
+  var cv = $('cv');
+  var ctx = cv.getContext('2d');
+  var W = 1080, H = 1920;
+
+  function chromeGrad(x0, x1) {
+    var g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0, '#eef0f2');
+    g.addColorStop(0.5, '#a23b42');
+    g.addColorStop(1, '#c4c8ce');
+    return g;
+  }
+  function coverDraw(img) {
+    var r = Math.max(W / img.width, H / img.height);
+    var w = img.width * r, h = img.height * r;
+    ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+  }
+  function wrapText(text, maxW) {
+    var out = [];
+    String(text).split(/\n/).forEach(function (para) {
+      var words = para.split(/\s+/).filter(Boolean), cur = '';
+      words.forEach(function (wd) {
+        var t = cur ? cur + ' ' + wd : wd;
+        if (ctx.measureText(t).width > maxW && cur) { out.push(cur); cur = wd; }
+        else cur = t;
+      });
+      if (cur) out.push(cur);
+    });
+    return out;
+  }
+  function fitFont(text, weight, family, startPx, maxW, minPx) {
+    var px = startPx;
+    while (px > (minPx || 40)) {
+      ctx.font = weight + ' ' + px + 'px ' + family;
+      if (ctx.measureText(text).width <= maxW) break;
+      px -= 6;
+    }
+    return px;
+  }
+  function todayStr() {
+    return new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' }).toUpperCase();
+  }
+
+  function queueRender() {
+    if (raf) clearTimeout(raf);
+    raf = setTimeout(render, 30);
+  }
+
+  function render() {
+    /* fond */
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#0b0c0f';
+    ctx.fillRect(0, 0, W, H);
+    var bg = null;
+    BGS.forEach(function (b) { if (b.key === curBg) bg = b; });
+    var img = bg && bg.url ? imgCache[bg.key] : null;
+    if (img) {
+      coverDraw(img);
+      /* voiles pour la lisibilité */
+      ctx.fillStyle = 'rgba(8,9,12,0.45)';
+      ctx.fillRect(0, 0, W, H);
+      var gTop = ctx.createLinearGradient(0, 0, 0, 700);
+      gTop.addColorStop(0, 'rgba(6,7,9,0.85)');
+      gTop.addColorStop(1, 'rgba(6,7,9,0)');
+      ctx.fillStyle = gTop;
+      ctx.fillRect(0, 0, W, 700);
+      var gBot = ctx.createLinearGradient(0, H - 900, 0, H);
+      gBot.addColorStop(0, 'rgba(6,7,9,0)');
+      gBot.addColorStop(1, 'rgba(6,7,9,0.94)');
+      ctx.fillStyle = gBot;
+      ctx.fillRect(0, H - 900, W, 900);
+    } else {
+      var glow = ctx.createRadialGradient(540, 120, 0, 540, 120, 1000);
+      glow.addColorStop(0, 'rgba(162,59,66,0.36)');
+      glow.addColorStop(1, 'rgba(162,59,66,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, 1150);
+    }
+
+    /* en-tête */
+    if (logoImg) {
+      ctx.save();
+      ctx.beginPath(); ctx.arc(540, 230, 92, 0, Math.PI * 2); ctx.clip();
+      ctx.drawImage(logoImg, 448, 138, 184, 184);
+      ctx.restore();
+      ctx.beginPath(); ctx.arc(540, 230, 96, 0, Math.PI * 2);
+      ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(162,59,66,0.85)'; ctx.stroke();
+    }
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = '900 78px Unbounded, sans-serif';
+    var w1 = ctx.measureText('LEGA').width, w2 = ctx.measureText('CY').width;
+    var x0 = (W - w1 - w2) / 2, yW = 430;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#9a9ea7';
+    ctx.fillText('LEGA', x0, yW);
+    ctx.fillStyle = chromeGrad(x0 + w1, x0 + w1 + w2);
+    ctx.fillText('CY', x0 + w1, yW);
+
+    var eyebrow = TYPES[curType].eyebrow;
+    if (eyebrow) {
+      ctx.textAlign = 'center';
+      try { ctx.letterSpacing = '14px'; } catch (e) {}
+      ctx.font = '400 46px "Bebas Neue", sans-serif';
+      ctx.fillStyle = '#cf9a9d';
+      ctx.fillText(eyebrow, 540, 520);
+      try { ctx.letterSpacing = '0px'; } catch (e) {}
+    }
+
+    /* contenu */
+    if (curType === 'record') drawRecord();
+    else if (curType === 'evolution') drawEvolution();
+    else if (curType === 'seance') drawSeance();
+    else if (curType === 'bravo') drawBravo();
+    else drawCitation();
+
+    /* pied */
+    ctx.textAlign = 'center';
+    ctx.font = '800 46px Inter, sans-serif';
+    ctx.fillStyle = '#f4f5f6';
+    ctx.fillText('@richard_lgcy', 540, 1790);
+    try { ctx.letterSpacing = '8px'; } catch (e) {}
+    ctx.font = '400 38px "Bebas Neue", sans-serif';
+    ctx.fillStyle = '#9a9ea7';
+    ctx.fillText('BUILD YOUR OWN HERITAGE', 540, 1850);
+    try { ctx.letterSpacing = '0px'; } catch (e) {}
+  }
+
+  function drawDate(y) {
+    ctx.textAlign = 'center';
+    try { ctx.letterSpacing = '6px'; } catch (e) {}
+    ctx.font = '400 40px "Bebas Neue", sans-serif';
+    ctx.fillStyle = '#9a9ea7';
+    ctx.fillText(todayStr(), 540, y);
+    try { ctx.letterSpacing = '0px'; } catch (e) {}
+  }
+
+  function drawRecord() {
+    var move = val('move'), value = val('value'), athlete = val('athlete'), extra = vals[curType + ':extra'] ? vals[curType + ':extra'].trim() : val('extra');
+    ctx.textAlign = 'center';
+    var px = fitFont(move.toUpperCase(), '400', '"Bebas Neue", sans-serif', 96, 900);
+    ctx.font = '400 ' + px + 'px "Bebas Neue", sans-serif';
+    ctx.fillStyle = moveColor(move);
+    ctx.fillText(move.toUpperCase(), 540, 800);
+
+    var vpx = fitFont(value.toUpperCase(), '900', 'Unbounded, sans-serif', 170, 940, 60);
+    ctx.font = '900 ' + vpx + 'px Unbounded, sans-serif';
+    var wV = ctx.measureText(value.toUpperCase()).width;
+    ctx.fillStyle = chromeGrad(540 - wV / 2, 540 + wV / 2);
+    ctx.fillText(value.toUpperCase(), 540, 1010);
+
+    if (extra) {
+      ctx.font = '500 46px Inter, sans-serif';
+      ctx.fillStyle = '#9a9ea7';
+      ctx.fillText(extra, 540, 1110);
+    }
+    ctx.font = '800 60px Inter, sans-serif';
+    ctx.fillStyle = '#f4f5f6';
+    ctx.fillText('— ' + athlete + ' —', 540, 1280);
+    drawDate(1360);
+  }
+
+  function drawEvolution() {
+    var athlete = val('athlete'), extra = vals[curType + ':extra'] ? vals[curType + ':extra'].trim() : val('extra');
+    ctx.textAlign = 'center';
+    var px = fitFont(athlete.toUpperCase(), '900', 'Unbounded, sans-serif', 92, 900, 50);
+    ctx.font = '900 ' + px + 'px Unbounded, sans-serif';
+    ctx.fillStyle = '#f4f5f6';
+    ctx.fillText(athlete.toUpperCase(), 540, 720);
+    if (extra) {
+      try { ctx.letterSpacing = '6px'; } catch (e) {}
+      ctx.font = '400 46px "Bebas Neue", sans-serif';
+      ctx.fillStyle = '#9a9ea7';
+      ctx.fillText(extra.toUpperCase(), 540, 790);
+      try { ctx.letterSpacing = '0px'; } catch (e) {}
+    }
+    var lines = val('lines').split(/\n/).filter(function (l) { return l.trim(); }).slice(0, 5);
+    var y = 960, step = 130;
+    lines.forEach(function (line) {
+      var parts = line.split('→');
+      if (parts.length >= 2) {
+        var left = parts[0].trim();
+        var right = parts.slice(1).join('→').trim();
+        var m = left.match(/^([^0-9]+)(.*)$/);
+        var name = m ? m[1].trim() : left;
+        var before = m && m[2] ? m[2].trim() : '';
+        ctx.font = '400 62px "Bebas Neue", sans-serif';
+        var wName = ctx.measureText(name.toUpperCase() + '  ').width;
+        ctx.font = '600 54px Inter, sans-serif';
+        var wBefore = before ? ctx.measureText(before + ' ').width : 0;
+        ctx.font = '800 56px Inter, sans-serif';
+        var wArrow = ctx.measureText(' →  ').width;
+        ctx.font = '800 62px Inter, sans-serif';
+        var wAfter = ctx.measureText(right).width;
+        var total = wName + wBefore + wArrow + wAfter;
+        var x = 540 - total / 2;
+        ctx.textAlign = 'left';
+        ctx.font = '400 62px "Bebas Neue", sans-serif';
+        ctx.fillStyle = moveColor(name);
+        ctx.fillText(name.toUpperCase() + '  ', x, y);
+        x += wName;
+        if (before) {
+          ctx.font = '600 54px Inter, sans-serif';
+          ctx.fillStyle = '#9a9ea7';
+          ctx.fillText(before + ' ', x, y);
+          x += wBefore;
+        }
+        ctx.font = '800 56px Inter, sans-serif';
+        ctx.fillStyle = '#a23b42';
+        ctx.fillText(' →  ', x, y);
+        x += wArrow;
+        ctx.font = '800 62px Inter, sans-serif';
+        ctx.fillStyle = '#f4f5f6';
+        ctx.fillText(right, x, y);
+      } else {
+        ctx.textAlign = 'center';
+        ctx.font = '600 56px Inter, sans-serif';
+        ctx.fillStyle = '#e6e8ec';
+        ctx.fillText(line.trim(), 540, y);
+      }
+      y += step;
+    });
+  }
+
+  function drawSeance() {
+    var athlete = val('athlete');
+    ctx.textAlign = 'center';
+    var px = fitFont(athlete.toUpperCase(), '900', 'Unbounded, sans-serif', 88, 900, 50);
+    ctx.font = '900 ' + px + 'px Unbounded, sans-serif';
+    ctx.fillStyle = '#f4f5f6';
+    ctx.fillText(athlete.toUpperCase(), 540, 720);
+    drawDate(790);
+    ctx.fillStyle = 'rgba(162,59,66,0.65)';
+    ctx.fillRect(120, 850, 840, 4);
+    var lines = val('lines').split(/\n/).filter(function (l) { return l.trim(); }).slice(0, 7);
+    var y = 970, step = 104;
+    lines.forEach(function (line) {
+      var sep = line.search(/—|:|-/);
+      var name = sep > 0 ? line.slice(0, sep).trim() : line.trim();
+      var rest = sep > 0 ? line.slice(sep + 1).trim() : '';
+      ctx.textAlign = 'left';
+      ctx.font = '700 50px Inter, sans-serif';
+      ctx.fillStyle = moveColor(name);
+      var nm = name.length > 16 ? name.slice(0, 15) + '…' : name;
+      ctx.fillText(nm, 130, y);
+      if (rest) {
+        ctx.textAlign = 'right';
+        ctx.font = '600 46px Inter, sans-serif';
+        ctx.fillStyle = '#e6e8ec';
+        ctx.fillText(rest, 950, y);
+      }
+      ctx.fillStyle = 'rgba(42,45,52,0.9)';
+      ctx.fillRect(130, y + 28, 820, 2);
+      y += step;
+    });
+  }
+
+  function drawBravo() {
+    var value = val('value'), extra = vals[curType + ':extra'] ? vals[curType + ':extra'].trim() : val('extra');
+    ctx.textAlign = 'center';
+    ctx.font = '900 118px Unbounded, sans-serif';
+    var lines = wrapText(value.toUpperCase(), 900).slice(0, 3);
+    var px = 118;
+    if (lines.length === 1) px = fitFont(lines[0], '900', 'Unbounded, sans-serif', 130, 920, 64);
+    ctx.font = '900 ' + px + 'px Unbounded, sans-serif';
+    var y = 940 - (lines.length - 1) * (px * 0.62);
+    lines.forEach(function (l) {
+      var wL = ctx.measureText(l).width;
+      ctx.fillStyle = chromeGrad(540 - wL / 2, 540 + wL / 2);
+      ctx.fillText(l, 540, y);
+      y += px * 1.18;
+    });
+    if (extra) {
+      ctx.font = '600 52px Inter, sans-serif';
+      ctx.fillStyle = '#e6e8ec';
+      wrapText(extra, 860).slice(0, 3).forEach(function (l) {
+        ctx.fillText(l, 540, y + 40);
+        y += 74;
+      });
+    }
+  }
+
+  function drawCitation() {
+    var text = val('lines'), author = vals[curType + ':athlete'] ? vals[curType + ':athlete'].trim() : val('athlete');
+    ctx.textAlign = 'center';
+    ctx.font = '900 190px Unbounded, sans-serif';
+    ctx.fillStyle = chromeGrad(430, 650);
+    ctx.fillText('«', 540, 800);
+    ctx.font = '600 60px Inter, sans-serif';
+    var lines = wrapText(text, 840).slice(0, 6);
+    var y = 940;
+    lines.forEach(function (l) {
+      ctx.fillStyle = '#f4f5f6';
+      ctx.fillText(l, 540, y);
+      y += 90;
+    });
+    if (author) {
+      try { ctx.letterSpacing = '5px'; } catch (e) {}
+      ctx.font = '400 52px "Bebas Neue", sans-serif';
+      ctx.fillStyle = '#cf9a9d';
+      ctx.fillText('— ' + author.toUpperCase() + ' —', 540, y + 60);
+      try { ctx.letterSpacing = '0px'; } catch (e) {}
+    }
+  }
+
+  /* ---------- partage ---------- */
+  function exportBlob(cb) {
+    cv.toBlob(function (blob) { if (blob) cb(blob); }, 'image/png');
+  }
+  $('btn-share').onclick = function () {
+    exportBlob(function (blob) {
+      var file = null;
+      try { file = new File([blob], 'carte-legacy.png', { type: 'image/png' }); } catch (e) {}
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file] }).catch(function () {});
+      } else {
+        dl(blob);
+      }
+    });
+  };
+  $('btn-dl').onclick = function () { exportBlob(dl); };
+  function dl(blob) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'carte-legacy.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast('Image enregistrée ✓');
+  }
+
+  /* ---------- boot ---------- */
+  buildTypeChips();
+  buildBgStrip();
+  buildFields();
+
+  var boot = new Image();
+  boot.onload = function () { logoImg = boot; queueRender(); };
+  boot.onerror = function () { queueRender(); };
+  boot.src = '../seance/icon-512.png';
+
+  Promise.all([
+    document.fonts.load('900 118px Unbounded'),
+    document.fonts.load('400 62px "Bebas Neue"'),
+    document.fonts.load('700 50px Inter'),
+    document.fonts.load('800 62px Inter')
+  ]).catch(function () {}).then(function () {
+    loadBg(BGS[0], queueRender);
+  });
+})();
+</script>
+<script data-goatcounter="https://ritchi.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
