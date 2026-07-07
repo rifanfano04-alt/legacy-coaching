@@ -458,6 +458,17 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
 }
 @starting-style { .toast { transform: translateX(-50%) translateY(14px); opacity: 0; } }
 
+/* bandeau d'aide (navigateur Instagram, installation) */
+.top-banner {
+  position: relative; z-index: 5;
+  background: oklch(24% 0.06 65 / .92);
+  border: 1px solid oklch(70% 0.12 75 / .5);
+  border-radius: 12px; padding: 11px 40px 11px 13px;
+  font-size: 13px; line-height: 1.5; margin-bottom: 14px;
+}
+.top-banner b { color: var(--gold); }
+.top-banner .close { position: absolute; top: 5px; right: 5px; width: 30px; height: 30px; color: var(--muted); font-size: 15px; }
+
 .footer-note { text-align: center; color: oklch(56% 0.02 80); font-size: 12.5px; margin-top: 22px; }
 .footer-note a { color: var(--muted); }
 .sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 5px; vertical-align: 1px; }
@@ -950,6 +961,13 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     if (kept.length === list.length) { kept.unshift(f); }
     store(LS_FAVS, kept.slice(0, 60));
   }
+  function addFav(f) {
+    /* ajoute ou met à jour, sans jamais retirer (re-créer un aliment ne doit pas effacer son favori) */
+    var k = foodKey(f);
+    var list = favs().filter(function (x) { return foodKey(x) !== k; });
+    list.unshift(f);
+    store(LS_FAVS, list.slice(0, 60));
+  }
   function addRecent(f) {
     var k = foodKey(f);
     var list = recents().filter(function (x) { return foodKey(x) !== k; });
@@ -1138,9 +1156,9 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     });
     $('meals-empty').classList.toggle('hidden', any);
 
-    /* recopier hier */
+    /* recopier hier : seulement si la journée en cours est vide (évite les doubles copies) */
     var yd = getDay(addDays(viewKey, -1));
-    $('copy-yday').classList.toggle('hidden', !(yd.entries && yd.entries.length));
+    $('copy-yday').classList.toggle('hidden', !(yd.entries && yd.entries.length) || d.entries.length > 0);
 
     /* eau */
     var wrow = $('water-row');
@@ -1753,7 +1771,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         if (!isFinite(k)) { fK.focus(); return; }
         function num(i) { var v = parseFloat(String(i.value).replace(',', '.')); return isFinite(v) ? v : 0; }
         var f = { n: n, b: fB.value.trim(), per: { k: k, p: num(fP), g: num(fG), l: num(fL), f: num(fF) }, u: 0, ul: '', src: 'custom' };
-        toggleFav(f); /* sauvé en favori pour le retrouver */
+        addFav(f); /* sauvé (ou mis à jour) en favori pour le retrouver */
         openQtySheet(f, null);
       };
       sh.appendChild(main);
@@ -2214,6 +2232,9 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
           var cur = (load(LS_OUTBOX) || []).filter(function (x) { return x.id !== item.id; });
           store(LS_OUTBOX, cur);
           trySendOutbox();
+        } else if (res && res.reason === 'inactif') {
+          /* accès coupé : inutile de réessayer en boucle */
+          store(LS_OUTBOX, []);
         }
         renderFoot();
       })
@@ -2304,11 +2325,44 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   $('tab-coach').onclick = openCoach;
   bindGate();
 
+  /* ---------- bandeaux d'aide ---------- */
+  function inAppBrowser() {
+    return /(Instagram|FBAN|FBAV|FB_IAB|Line\/|musical_ly|TikTok|Snapchat)/i.test(navigator.userAgent)
+      || /(^|[?&])inapp\b/.test(location.search);
+  }
+  function isStandalone() {
+    return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  }
+  function showBanner(html, key) {
+    if (key && load(key)) return;
+    var hdr = document.querySelector('.brand');
+    var b = el('div', 'top-banner');
+    b.innerHTML = html;
+    var x = el('button', 'close', '✕');
+    x.setAttribute('aria-label', 'Fermer');
+    x.onclick = function () {
+      if (key) store(key, 1);
+      b.remove();
+    };
+    b.appendChild(x);
+    hdr.parentNode.insertBefore(b, hdr.nextSibling);
+  }
+  function helpBanners() {
+    if (inAppBrowser()) {
+      showBanner('<b>Tu es dans le navigateur Instagram / d’une appli.</b> Ouvre la page dans Safari ou Chrome (menu ⋯ en haut → « Ouvrir dans le navigateur ») pour pouvoir scanner les codes-barres, installer l’app et garder ton historique.', 'legacy-diet-ban-inapp-v1');
+    } else if (!isStandalone() && /iPhone|iPad|Android/i.test(navigator.userAgent)) {
+      showBanner('<b>Installe l’app sur ton écran d’accueil</b> pour l’avoir hors ligne et protéger ton historique : bouton Partager → « Sur l’écran d’accueil » (iPhone) ou menu ⋮ → « Installer l’application » (Android).', 'legacy-diet-ban-install-v1');
+    }
+    /* demande au navigateur de ne pas effacer le stockage local */
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  }
+
   function boot() {
     var p = profile();
     $('tab-coach').classList.toggle('hidden', !(p && p.role === 'coach'));
     show('journal');
     renderJournal();
+    helpBanners();
     recheckAccess();
     trySendOutbox();
   }
