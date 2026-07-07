@@ -91,9 +91,9 @@ body {
 #photo-scrim {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    radial-gradient(120% 62% at 50% -8%, oklch(30% 0.06 70 / .30), transparent 62%),
-    radial-gradient(95% 58% at 50% 124%, oklch(4% 0.008 70 / .62), transparent 72%),
-    linear-gradient(180deg, oklch(7% 0.012 70 / .40), oklch(7% 0.012 70 / .18) 42%, oklch(7% 0.012 70 / .5));
+    radial-gradient(120% 62% at 50% -8%, oklch(30% 0.06 70 / .32), transparent 62%),
+    radial-gradient(95% 58% at 50% 124%, oklch(4% 0.008 70 / .66), transparent 72%),
+    linear-gradient(180deg, oklch(7% 0.012 70 / .46), oklch(7% 0.012 70 / .24) 42%, oklch(7% 0.012 70 / .56));
 }
 /* braises qui montent (générées en JS) */
 #embers { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
@@ -166,16 +166,22 @@ h1.title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(34px, 9vw, 44
   text-shadow: none;
 }
 
-/* ===== Cards ===== */
+/* ===== Sections (sans encadrement : le contenu vit sur le fond) ===== */
 .card {
-  background: var(--glass);
-  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border); border-radius: var(--radius);
-  padding: 16px; margin-bottom: 14px;
+  background: transparent;
+  border: 0;
+  padding: 14px 0 4px; margin-bottom: 10px;
   transition: transform 400ms var(--ease-out), opacity 400ms ease;
 }
 @starting-style { .card { transform: translateY(14px); opacity: 0; } }
-.card h2 { font-family: 'Bebas Neue', sans-serif; font-size: 19px; letter-spacing: .12em; color: var(--muted); margin-bottom: 10px; }
+.card h2 {
+  font-family: 'Bebas Neue', sans-serif; font-size: 19px; letter-spacing: .12em; color: var(--muted);
+  margin-bottom: 12px; padding-bottom: 8px; position: relative;
+}
+.card h2::after {
+  content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 1px;
+  background: linear-gradient(90deg, oklch(72% 0.1 82 / .55), oklch(72% 0.1 82 / .12) 55%, transparent);
+}
 .card h2 .r { float: right; font-family: 'Inter', sans-serif; font-size: 12.5px; letter-spacing: 0; font-weight: 600; }
 .hidden { display: none !important; }
 
@@ -350,6 +356,38 @@ h1.title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(34px, 9vw, 44
 .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border-strong); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* règle déroulante (choix des grammes au doigt) */
+.ruler { position: relative; margin: 12px 0 2px; }
+.ruler-scroll { overflow-x: auto; scrollbar-width: none; padding: 0 50%; }
+.ruler-scroll::-webkit-scrollbar { display: none; }
+.ruler-track {
+  position: relative; height: 48px; flex: none;
+  background:
+    repeating-linear-gradient(90deg, oklch(75% 0.1 82 / .85) 0 2px, transparent 2px 150px),
+    repeating-linear-gradient(90deg, oklch(62% 0.05 82 / .4) 0 1px, transparent 1px 15px);
+  background-size: auto 24px, auto 13px;
+  background-repeat: repeat-x;
+  background-position: left bottom, left bottom;
+}
+.ruler-lab { position: absolute; top: 0; transform: translateX(-50%); font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ruler-needle {
+  position: absolute; left: 50%; top: -4px; bottom: -2px; width: 2px; transform: translateX(-1px);
+  background: var(--gold); box-shadow: 0 0 10px var(--gold); border-radius: 2px; pointer-events: none;
+}
+.ruler-hint { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+
+/* compteur d'unités (œufs, tranches, doses… sans limite) */
+.unit-step { display: flex; align-items: center; justify-content: center; gap: 20px; margin-top: 14px; }
+.us-btn {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 1px solid var(--border-strong); background: oklch(12% 0.015 75 / .5);
+  font-size: 23px; color: var(--text);
+  transition: transform 140ms var(--ease-out);
+}
+.us-btn:active { transform: scale(.9); }
+.us-val { min-width: 110px; text-align: center; font-size: 14.5px; color: var(--muted); }
+.us-val b { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: .03em; color: var(--gold); margin-right: 7px; vertical-align: -2px; }
+
 /* fiche quantité */
 .qty-preview { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 12px 0 4px; }
 .qty-preview .c { text-align: center; background: oklch(10% 0.014 72 / .6); border: 1px solid var(--border); border-radius: 10px; padding: 8px 2px; }
@@ -387,7 +425,7 @@ h1.title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(34px, 9vw, 44
 .hist-day .meta .pg { font-size: 12px; color: var(--muted); }
 .hist-day .w { font-size: 12.5px; color: var(--muted); text-align: right; white-space: nowrap; }
 .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-.stat { background: var(--glass-strong); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 8px; text-align: center; -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.stat { background: transparent; border: 0; border-bottom: 1px solid oklch(72% 0.1 82 / .25); border-radius: 0; padding: 12px 8px; text-align: center; }
 .stat .v { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: .03em; color: var(--gold); }
 .stat .k { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .chart-wrap { margin: 6px 0 2px; }
@@ -632,6 +670,26 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Entrecôte', 190, 19, 0, 13, 0],
     ['Filet mignon de porc', 120, 21, 0, 3.5, 0],
     ['Côte de porc', 186, 18.5, 0, 12.5, 0],
+    ['Porc (échine)', 200, 17, 0, 15, 0],
+    /* boucherie */
+    ['Bavette de bœuf', 130, 21, 0, 5, 0],
+    ['Rumsteck', 120, 22, 0, 3.5, 0],
+    ['Faux-filet', 160, 21, 0, 8.5, 0],
+    ['Onglet de bœuf', 125, 21, 0, 4.5, 0],
+    ['Filet de bœuf', 140, 21.5, 0, 6, 0],
+    ['Côte de bœuf', 190, 19, 0, 13, 0],
+    ['Steak haché 10%', 170, 19.5, 0, 10, 0],
+    ['Veau (escalope)', 105, 22, 0, 1.8, 0],
+    ['Veau (côte)', 160, 19.5, 0, 9, 0],
+    ['Agneau (gigot)', 155, 19, 0, 9, 0],
+    ['Agneau (côtelette)', 230, 17, 0, 18, 0],
+    ['Agneau (épaule)', 200, 17.5, 0, 14.5, 0],
+    ['Magret de canard (sans peau)', 130, 22, 0, 4.5, 0],
+    ['Cuisse de canard', 200, 18, 0, 14, 0],
+    ['Lapin', 130, 21, 0, 5, 0],
+    ['Merguez', 280, 15, 2, 24, 0, 60, 'merguez'],
+    ['Chipolata', 270, 15, 1.5, 23, 0, 50, 'chipolata'],
+    ['Saucisse de Toulouse', 290, 15, 1, 25, 0, 100, 'saucisse'],
     ['Jambon blanc', 108, 20, 0.8, 2.8, 0, 45, 'tranche'],
     ['Jambon cru', 218, 26, 0.5, 12, 0, 15, 'tranche'],
     ['Bacon (grillé)', 300, 34, 1, 18, 0, 15, 'tranche'],
@@ -645,7 +703,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Cabillaud', 78, 18, 0, 0.6, 0],
     ['Colin / merlu', 85, 18, 0, 1, 0],
     ['Tilapia', 90, 20, 0, 1.5, 0],
-    ['Crevettes (cuites)', 89, 19.5, 0.4, 0.9, 0],
+    ['Crevettes (crues, décortiquées)', 85, 20, 0.5, 0.8, 0],
+    ['Crevettes (cuites)', 99, 24, 0.3, 1, 0],
     ['Sardines (boîte, égouttées)', 208, 24.5, 0, 12, 0],
     ['Maquereau', 220, 18, 0, 16.5, 0],
     ['Surimi', 96, 7.5, 12, 1.6, 0, 18, 'bâtonnet'],
@@ -898,7 +957,35 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     store(LS_REC, list.slice(0, 25));
   }
 
-  /* ---------- recherche locale ---------- */
+  /* ---------- recherche locale (tolérante aux fautes de frappe) ---------- */
+  function editLe(a, b, max) {
+    /* distance d'édition ≤ max ? (bornée, avec sortie anticipée) */
+    if (Math.abs(a.length - b.length) > max) return false;
+    var prev = [], cur = [], j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (var i = 1; i <= a.length; i++) {
+      cur[0] = i;
+      var best = cur[0];
+      for (j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (cur[j] < best) best = cur[j];
+      }
+      if (best > max) return false;
+      prev = cur.slice();
+    }
+    return prev[b.length] <= max;
+  }
+  function wordMatches(w, hay, toks) {
+    if (hay.indexOf(w) !== -1) return 1;       /* correspondance exacte (sous-chaîne) */
+    if (w.length < 5) return 0;
+    var max = w.length >= 8 ? 2 : 1;           /* fautes tolérées selon la longueur */
+    for (var t = 0; t < toks.length; t++) {
+      var tk = toks[t];
+      if (tk.length < 4) continue;
+      if (editLe(w, tk, max) || (tk.length > w.length && editLe(w, tk.slice(0, w.length + max), max))) return 2;
+    }
+    return 0;
+  }
   function searchLocal(q) {
     var nq = norm(q);
     if (!nq) return [];
@@ -907,9 +994,15 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     function scan(list, bonus) {
       list.forEach(function (f) {
         var hay = norm(f.n + ' ' + (f.b || ''));
-        var ok = words.every(function (w) { return hay.indexOf(w) !== -1; });
+        var toks = hay.split(' ');
+        var fuzzy = false;
+        var ok = words.every(function (w) {
+          var m = wordMatches(w, hay, toks);
+          if (m === 2) fuzzy = true;
+          return m > 0;
+        });
         if (!ok) return;
-        var score = bonus + (hay.indexOf(words[0]) === 0 ? 2 : 0) + (hay.length < 18 ? 1 : 0);
+        var score = bonus + (hay.indexOf(words[0]) === 0 ? 2 : 0) + (hay.length < 18 ? 1 : 0) - (fuzzy ? 3 : 0);
         scored.push({ f: f, s: score });
       });
     }
@@ -1205,7 +1298,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       chips.appendChild(bScan);
       chips.appendChild(bNew);
       sh.appendChild(chips);
-      sh.appendChild(el('div', 'src-note', '⚖️ Règle LEGACY : tout se pèse CRU (avant cuisson).'));
+      sh.appendChild(el('div', 'src-note', '⚖️ Règle LEGACY : tout se pèse CRU (avant cuisson). Valeurs génériques = table officielle CIQUAL · « MARQUE » = étiquette du produit (Open Food Facts). Ton paquet dit autre chose ? « ＋ Créer un aliment » et recopie l’étiquette.'));
 
       var box = el('div');
       sh.appendChild(box);
@@ -1457,8 +1550,15 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       if (editEntry) sh.appendChild(el('div', 'src-note', food.n + (food.b ? ' — ' + food.b : '')));
       else if (food.b) sh.appendChild(el('div', 'src-note', food.b));
 
+      /* d'où viennent les valeurs (transparence) */
+      var srcTxt = food.src === 'off'
+        ? '🏷️ Étiquette du produit (Open Food Facts)'
+        : (food.src === 'custom' ? '✍️ Aliment créé (tes valeurs)' : '📖 Table officielle CIQUAL — pour 100 g, cru');
+      sh.appendChild(el('div', 'src-note', srcTxt + ' · 100 g = ' + round(food.per.k) + ' kcal · P ' + g1(food.per.p) + ' · G ' + g1(food.per.g) + ' · L ' + g1(food.per.l)));
+
       var qty = editEntry ? editEntry.qty : (food.u || 100);
       var meal = editEntry ? editEntry.meal : guessMeal();
+      var paintUnits = null;
 
       sh.appendChild(el('label', 'lbl', 'Quantité en grammes — poids cru' + (food.u && food.ul ? ' (1 ' + food.ul + ' ≈ ' + food.u + ' g)' : '')));
       var qin = el('input', 'input');
@@ -1469,18 +1569,72 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       qin.value = String(qty);
       sh.appendChild(qin);
 
-      var qchips = el('div', 'chips');
-      qchips.style.marginTop = '8px';
-      var presets = [];
-      if (food.u) {
-        presets.push({ t: '1 ' + food.ul, v: food.u });
-        presets.push({ t: '2 ' + food.ul, v: food.u * 2 });
-        presets.push({ t: '3 ' + food.ul, v: food.u * 3 });
+      /* règle déroulante */
+      var RULER_MAX = 1000, PXG = 3;
+      var rul = el('div', 'ruler');
+      var scroller = el('div', 'ruler-scroll');
+      var track = el('div', 'ruler-track');
+      track.style.width = (RULER_MAX * PXG) + 'px';
+      for (var lg = 0; lg <= RULER_MAX; lg += 100) {
+        var lab = el('span', 'ruler-lab', String(lg));
+        lab.style.left = (lg * PXG) + 'px';
+        track.appendChild(lab);
       }
-      [30, 50, 100, 150, 200, 300].forEach(function (v) { presets.push({ t: v + ' g', v: v }); });
-      presets.forEach(function (p) {
-        var c = el('button', 'chip', p.t);
-        c.onclick = function () { qin.value = String(Math.round(p.v * 10) / 10); paint(); };
+      scroller.appendChild(track);
+      rul.appendChild(scroller);
+      rul.appendChild(el('div', 'ruler-needle'));
+      sh.appendChild(rul);
+      sh.appendChild(el('div', 'ruler-hint', 'Fais glisser la règle, ou tape la quantité'));
+
+      var rulerLock = 0;
+      function syncRuler() {
+        var q = parseFloat(String(qin.value).replace(',', '.')) || 0;
+        rulerLock = Date.now();
+        scroller.scrollLeft = Math.max(0, Math.min(RULER_MAX, q)) * PXG;
+      }
+      scroller.addEventListener('scroll', function () {
+        if (Date.now() - rulerLock < 250) return;
+        var q = Math.round(scroller.scrollLeft / PXG);
+        if (q < 1) q = 1;
+        qin.value = String(q);
+        paint();
+        if (paintUnits) paintUnits();
+      }, { passive: true });
+
+      /* compteur d'unités (sans limite) */
+      if (food.u) {
+        var us = el('div', 'unit-step');
+        var minus = el('button', 'us-btn', '−');
+        var uval = el('div', 'us-val');
+        var plus = el('button', 'us-btn', '＋');
+        var unitCount = function () {
+          var q = parseFloat(String(qin.value).replace(',', '.')) || 0;
+          return Math.max(0, Math.round(q / food.u * 10) / 10);
+        };
+        paintUnits = function () {
+          var n = unitCount();
+          uval.innerHTML = '<b>' + String(n).replace('.', ',') + '</b> ' + food.ul;
+        };
+        var setUnits = function (n) {
+          n = Math.max(0.5, Math.round(n * 2) / 2); /* demi-unités possibles, sans plafond */
+          qin.value = String(Math.round(n * food.u * 10) / 10);
+          paint(); syncRuler(); paintUnits();
+        };
+        minus.onclick = function () { setUnits(unitCount() - 1); };
+        plus.onclick = function () { setUnits(unitCount() + 1); };
+        us.appendChild(minus); us.appendChild(uval); us.appendChild(plus);
+        sh.appendChild(us);
+      }
+
+      var qchips = el('div', 'chips');
+      qchips.style.marginTop = '10px';
+      [30, 50, 100, 150, 200, 300, 500].forEach(function (v) {
+        var c = el('button', 'chip', v + ' g');
+        c.onclick = function () {
+          qin.value = String(v);
+          paint(); syncRuler();
+          if (paintUnits) paintUnits();
+        };
         qchips.appendChild(c);
       });
       sh.appendChild(qchips);
@@ -1510,8 +1664,14 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
           '<div class="c l"><b>' + g1(food.per.l * r) + '</b><span>Lip</span></div>' +
           '<div class="c f"><b>' + g1(food.per.f * r) + '</b><span>Fibres</span></div>';
       }
-      qin.addEventListener('input', paint);
+      qin.addEventListener('input', function () {
+        paint();
+        syncRuler();
+        if (paintUnits) paintUnits();
+      });
       paint();
+      if (paintUnits) paintUnits();
+      setTimeout(syncRuler, 60); /* après le rendu du sheet, pour que la largeur soit connue */
 
       var favBtn = el('button', 'btn btn-block', isFav(food) ? '⭐ Retirer des favoris' : '☆ Mettre en favori');
       favBtn.style.marginTop = '12px';
