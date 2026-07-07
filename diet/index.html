@@ -526,7 +526,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     <div class="card">
       <h2>Hydratation <span class="r water-note" id="water-note"></span></h2>
       <div class="water-row" id="water-row"></div>
-      <div class="water-note">1 goutte = 500 ml — objectif 5 L</div>
+      <div class="water-note">1 goutte = 500 ml</div>
     </div>
 
     <div class="card">
@@ -1070,7 +1070,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       })(i);
     }
     var litres = (d.water || 0) / 1000;
-    $('water-note').innerHTML = '<b>' + String(Math.round(litres * 100) / 100).replace('.', ',') + ' L</b> / 5 L';
+    $('water-note').innerHTML = '<b>' + String(Math.round(litres * 100) / 100).replace('.', ',') + ' L</b>';
 
     /* poids */
     var w = $('in-weight');
