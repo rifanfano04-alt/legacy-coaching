@@ -567,7 +567,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     </div>
 
     <div class="card">
-      <h2>Repas <span class="r"><a href="#" id="copy-yday" class="hidden" style="color:var(--gold)">Recopier hier</a></span></h2>
+      <h2>Repas <span class="r"><a href="#" id="btn-mealtpl" style="color:var(--gold)">Repas types</a> · <a href="#" id="copy-yday" class="hidden" style="color:var(--gold)">Recopier hier</a></span></h2>
       <div id="meals"></div>
       <div class="empty" id="meals-empty">Rien pour l’instant — ajoute ton premier aliment avec le bouton doré.</div>
     </div>
@@ -628,6 +628,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   var LS_REC     = 'legacy-diet-recents-v1';
   var LS_OUTBOX  = 'legacy-diet-outbox-v1';
   var LS_GOALS   = 'legacy-diet-goals-v1';
+  var LS_RECIPES = 'legacy-diet-recipes-v1';
+  var LS_TPL     = 'legacy-diet-templates-v1';
   var MEALS = ['Petit-déj', 'Collation matin', 'Déjeuner', 'Collation aprèm', 'Dîner'];
   var GLASS_ML = 500, GLASS_N = 10; /* simple suivi, jusqu'à 5 L (pas un objectif) */
   var DEMO = /(^|[?&])demo\b/.test(location.search);
@@ -1246,6 +1248,27 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     store(LS_REC, list.slice(0, 25));
   }
 
+  /* ---------- recettes perso (plusieurs ingrédients pesés -> un aliment réutilisable) ---------- */
+  function recipes() { return load(LS_RECIPES) || []; }
+  function saveRecipe(r) {
+    var list = recipes();
+    var i = list.findIndex(function (x) { return x.id === r.id; });
+    if (i >= 0) list[i] = r; else list.push(r);
+    store(LS_RECIPES, list);
+  }
+  function deleteRecipe(id) { store(LS_RECIPES, recipes().filter(function (x) { return x.id !== id; })); }
+  function recipeToFood(r) { return { n: r.n, b: '', per: r.per, u: 0, ul: '', src: 'recipe', a: '' }; }
+
+  /* ---------- repas types (combo fixe de plusieurs aliments, reloggé d'un coup) ---------- */
+  function mealTpls() { return load(LS_TPL) || []; }
+  function saveMealTpl(t) {
+    var list = mealTpls();
+    var i = list.findIndex(function (x) { return x.id === t.id; });
+    if (i >= 0) list[i] = t; else list.push(t);
+    store(LS_TPL, list);
+  }
+  function deleteMealTpl(id) { store(LS_TPL, mealTpls().filter(function (x) { return x.id !== id; })); }
+
   /* ---------- recherche locale (tolérante aux fautes de frappe) ---------- */
   function editLe(a, b, max) {
     /* distance d'édition ≤ max ? (bornée, avec sortie anticipée) */
@@ -1299,6 +1322,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       });
     }
     scan(favs(), 5);
+    scan(recipes().map(recipeToFood), 4);
     scan(recents(), 3);
     scan(FOODS.map(foodObj), 0);
     scored.sort(function (a, b) { return b.s - a.s; });
@@ -1351,7 +1375,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       back.onclick = function () { viewKey = todayKey(); renderJournal(); };
       sub.appendChild(back);
     }
-    $('d-next').style.visibility = isToday ? 'hidden' : 'visible';
+    $('d-next').style.visibility = 'visible';
 
     /* anneau kcal (compteur animé) */
     var kcal = round(t.k);
@@ -1516,7 +1540,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
 
   /* navigation de jour */
   $('d-prev').onclick = function () { viewKey = addDays(viewKey, -1); renderJournal(); };
-  $('d-next').onclick = function () { if (viewKey < todayKey()) { viewKey = addDays(viewKey, 1); renderJournal(); } };
+  $('d-next').onclick = function () { viewKey = addDays(viewKey, 1); renderJournal(); };
+  $('btn-mealtpl').onclick = function (e) { e.preventDefault(); openMealTplListSheet(); };
   $('copy-yday').onclick = function (e) {
     e.preventDefault();
     var yd = getDay(addDays(viewKey, -1));
@@ -1571,9 +1596,9 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
 
   /* ---------- ajout d'aliment : recherche ---------- */
   var offTimer = null, offSeq = 0;
-  function openAddSheet() {
+  function openAddSheet(onPick, title) {
     openSheet(function (sh) {
-      sheetHead(sh, 'Ajouter un aliment');
+      sheetHead(sh, title || 'Ajouter un aliment');
 
       var input = el('input', 'input');
       input.type = 'search';
@@ -1586,10 +1611,15 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       chips.style.margin = '10px 0 4px';
       var bScan = el('button', 'chip', '📷 Scanner un code-barres');
       var bNew = el('button', 'chip', '＋ Créer un aliment');
-      bScan.onclick = function () { openScanSheet(); };
-      bNew.onclick = function () { openCustomSheet(input.value.trim()); };
+      bScan.onclick = function () { openScanSheet(onPick); };
+      bNew.onclick = function () { openCustomSheet(input.value.trim(), onPick); };
       chips.appendChild(bScan);
       chips.appendChild(bNew);
+      if (!onPick) {
+        var bRec = el('button', 'chip', '🍲 Mes recettes');
+        bRec.onclick = function () { openRecipeListSheet(); };
+        chips.appendChild(bRec);
+      }
       sh.appendChild(chips);
       sh.appendChild(el('div', 'src-note', '⚖️ Règle LEGACY : tout se pèse CRU (avant cuisson). Valeurs génériques = table officielle CIQUAL · « MARQUE » = étiquette du produit (Open Food Facts). Ton paquet dit autre chose ? « ＋ Créer un aliment » et recopie l’étiquette.'));
 
@@ -1621,7 +1651,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         r.appendChild(meta);
         if (badge === 'fav' || isFav(f)) r.appendChild(el('span', 'badge fav', '⭐'));
         else if (f.src === 'off') r.appendChild(el('span', 'badge', 'MARQUE'));
-        r.onclick = function () { openQtySheet(f, null); };
+        else if (f.src === 'recipe') r.appendChild(el('span', 'badge', '🍲'));
+        r.onclick = function () { if (onPick) onPick(f); else openQtySheet(f, null); };
         return r;
       }
 
@@ -1729,7 +1760,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   }
 
   /* ---------- scanner code-barres ---------- */
-  function openScanSheet() {
+  function openScanSheet(onFound) {
     openSheet(function (sh) {
       sheetHead(sh, 'Scanner un produit');
       var status = el('div', 'src-note', 'Autorise la caméra pour scanner le code-barres…');
@@ -1758,8 +1789,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         stopped = true;
         status.textContent = 'Code ' + code + ' — recherche du produit…';
         offBarcode(code).then(function (f) {
-          if (f) { openQtySheet(f, null); }
-          else { toast('Produit introuvable dans Open Food Facts'); closeSheet(); openAddSheet(); }
+          if (f) { if (onFound) onFound(f); else openQtySheet(f, null); }
+          else { toast('Produit introuvable dans Open Food Facts'); closeSheet(); openAddSheet(onFound); }
         }).catch(function () {
           toast('Pas de réseau — impossible de chercher le produit');
           closeSheet();
@@ -1868,7 +1899,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     if (h < 18.5) return 3;      /* collation aprèm */
     return 4;                    /* dîner */
   }
-  function openQtySheet(food, editEntry) {
+  function openQtySheet(food, editEntry, opts) {
     openSheet(function (sh) {
       sheetHead(sh, editEntry ? 'Modifier' : food.n);
       if (editEntry) sh.appendChild(el('div', 'src-note', food.n + (food.b ? ' — ' + food.b : '')));
@@ -1877,7 +1908,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       /* d'où viennent les valeurs (transparence) */
       var srcTxt = food.src === 'off'
         ? '🏷️ Étiquette du produit (Open Food Facts)'
-        : (food.src === 'custom' ? '✍️ Aliment créé (tes valeurs)' : '📖 Table officielle CIQUAL — pour 100 g, cru');
+        : (food.src === 'custom' ? '✍️ Aliment créé (tes valeurs)'
+          : (food.src === 'recipe' ? '🍲 Recette perso (tes ingrédients)' : '📖 Table officielle CIQUAL — pour 100 g, cru'));
       sh.appendChild(el('div', 'src-note', srcTxt + ' · 100 g = ' + round(food.per.k) + ' kcal · P ' + g1(food.per.p) + ' · G ' + g1(food.per.g) + ' · L ' + g1(food.per.l)));
 
       var qty = editEntry ? editEntry.qty : (food.u || 100);
@@ -1963,18 +1995,20 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       });
       sh.appendChild(qchips);
 
-      sh.appendChild(el('label', 'lbl', 'Repas'));
-      var mchips = el('div', 'chips');
-      var mbtns = MEALS.map(function (mn, mi) {
-        var c = el('button', 'chip' + (mi === meal ? ' on' : ''), mn);
-        c.onclick = function () {
-          meal = mi;
-          mbtns.forEach(function (b, j) { b.classList.toggle('on', j === mi); });
-        };
-        mchips.appendChild(c);
-        return c;
-      });
-      sh.appendChild(mchips);
+      if (!opts || !opts.hideMeal) {
+        sh.appendChild(el('label', 'lbl', 'Repas'));
+        var mchips = el('div', 'chips');
+        var mbtns = MEALS.map(function (mn, mi) {
+          var c = el('button', 'chip' + (mi === meal ? ' on' : ''), mn);
+          c.onclick = function () {
+            meal = mi;
+            mbtns.forEach(function (b, j) { b.classList.toggle('on', j === mi); });
+          };
+          mchips.appendChild(c);
+          return c;
+        });
+        sh.appendChild(mchips);
+      }
 
       var prev = el('div', 'qty-preview');
       sh.appendChild(prev);
@@ -2005,11 +2039,12 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       };
       sh.appendChild(favBtn);
 
-      var main = el('button', 'btn btn-chrome btn-block', editEntry ? 'Enregistrer' : 'Ajouter au journal');
+      var main = el('button', 'btn btn-chrome btn-block', (opts && opts.confirmLabel) || (editEntry ? 'Enregistrer' : 'Ajouter au journal'));
       main.style.marginTop = '10px';
       main.onclick = function () {
         var q = parseFloat(String(qin.value).replace(',', '.'));
         if (!isFinite(q) || q <= 0) { qin.focus(); return; }
+        if (opts && opts.onConfirm) { opts.onConfirm(q, meal); return; }
         var day = getDay(viewKey);
         if (editEntry) {
           var e2 = day.entries.filter(function (x) { return x.id === editEntry.id; })[0];
@@ -2046,7 +2081,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   }
 
   /* ---------- créer un aliment (macros à la main) ---------- */
-  function openCustomSheet(prefill) {
+  function openCustomSheet(prefill, onCreate) {
     openSheet(function (sh) {
       sheetHead(sh, 'Créer un aliment');
       sh.appendChild(el('div', 'src-note', 'Valeurs pour 100 g (regarde l’étiquette du produit).'));
@@ -2079,7 +2114,259 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         function num(i) { var v = parseFloat(String(i.value).replace(',', '.')); return (isFinite(v) && v > 0) ? Math.min(v, 100) : 0; }
         var f = { n: n, b: fB.value.trim(), per: { k: k, p: num(fP), g: num(fG), l: num(fL), f: num(fF) }, u: 0, ul: '', src: 'custom' };
         addFav(f); /* sauvé (ou mis à jour) en favori pour le retrouver */
-        openQtySheet(f, null);
+        if (onCreate) onCreate(f); else openQtySheet(f, null);
+      };
+      sh.appendChild(main);
+    });
+  }
+
+  /* ---------- recettes perso : liste (créer / modifier / supprimer) ---------- */
+  function openRecipeListSheet() {
+    openSheet(function (sh) {
+      sheetHead(sh, 'Mes recettes');
+      var addBtn = el('button', 'btn btn-chrome btn-block', '＋ Nouvelle recette');
+      addBtn.onclick = function () { openRecipeSheet({ id: null, n: '', ingredients: [] }); };
+      sh.appendChild(addBtn);
+
+      var list = recipes();
+      if (!list.length) {
+        sh.appendChild(el('div', 'empty', 'Aucune recette pour l’instant — combine plusieurs aliments pesés en une recette réutilisable.'));
+        return;
+      }
+      list.forEach(function (r) {
+        var row = el('div', 'entry');
+        var meta = el('div', 'meta');
+        meta.appendChild(el('strong', null, r.n));
+        meta.appendChild(el('span', null, round(r.per.k) + ' kcal / 100 g · ' + r.ingredients.length + ' ingrédient(s)'));
+        row.appendChild(meta);
+        row.onclick = function () { openRecipeSheet(JSON.parse(JSON.stringify(r))); };
+        var del = el('button', 'chip', '✕');
+        del.onclick = function (e) {
+          e.stopPropagation();
+          if (!confirm('Supprimer cette recette ?')) return;
+          deleteRecipe(r.id);
+          openRecipeListSheet();
+        };
+        row.appendChild(del);
+        sh.appendChild(row);
+      });
+    });
+  }
+
+  /* ---------- recettes perso : création / édition ---------- */
+  function openRecipeSheet(draft) {
+    openSheet(function (sh) {
+      sheetHead(sh, draft.id ? 'Modifier la recette' : 'Créer une recette');
+      sh.appendChild(el('label', 'lbl', 'Nom de la recette'));
+      var nameIn = el('input', 'input');
+      nameIn.type = 'text';
+      nameIn.value = draft.n;
+      sh.appendChild(nameIn);
+
+      sh.appendChild(el('label', 'lbl', 'Ingrédients'));
+      var box = el('div');
+      sh.appendChild(box);
+      function renderIngs() {
+        box.textContent = '';
+        if (!draft.ingredients.length) {
+          box.appendChild(el('div', 'empty', 'Aucun ingrédient ajouté.'));
+          return;
+        }
+        var totalK = 0;
+        draft.ingredients.forEach(function (ing, idx) {
+          totalK += ing.per.k * ing.qty / 100;
+          var row = el('div', 'entry');
+          var meta = el('div', 'meta');
+          meta.appendChild(el('strong', null, ing.n));
+          meta.appendChild(el('span', null, round(ing.qty) + ' g · ' + round(ing.per.k * ing.qty / 100) + ' kcal'));
+          row.appendChild(meta);
+          var del = el('button', 'chip', '✕');
+          del.onclick = function () { draft.ingredients.splice(idx, 1); renderIngs(); };
+          row.appendChild(del);
+          box.appendChild(row);
+        });
+        box.appendChild(el('div', 'src-note', 'Total du lot : ' + round(totalK) + ' kcal pour ' + round(draft.ingredients.reduce(function (a, i) { return a + i.qty; }, 0)) + ' g'));
+      }
+      renderIngs();
+
+      var addIng = el('button', 'btn btn-block', '＋ Ajouter un ingrédient');
+      addIng.style.marginTop = '10px';
+      addIng.onclick = function () {
+        draft.n = nameIn.value.trim();
+        openAddSheet(function (food) {
+          if (food.src === 'recipe') { toast('Impossible d’ajouter une recette dans une recette'); return; }
+          openQtySheet(food, null, {
+            hideMeal: true,
+            confirmLabel: 'Ajouter à la recette',
+            onConfirm: function (qty) {
+              draft.ingredients.push({ n: food.n, b: food.b || '', per: food.per, qty: qty });
+              openRecipeSheet(draft);
+            }
+          });
+        }, 'Ingrédient de la recette');
+      };
+      sh.appendChild(addIng);
+
+      var main = el('button', 'btn btn-chrome btn-block', 'Enregistrer la recette');
+      main.style.marginTop = '14px';
+      main.onclick = function () {
+        var n = nameIn.value.trim();
+        if (!n) { nameIn.focus(); return; }
+        if (!draft.ingredients.length) { toast('Ajoute au moins un ingrédient'); return; }
+        var totalG = draft.ingredients.reduce(function (a, i) { return a + i.qty; }, 0);
+        var sums = draft.ingredients.reduce(function (a, i) {
+          var r = i.qty / 100;
+          a.k += i.per.k * r; a.p += i.per.p * r; a.g += i.per.g * r; a.l += i.per.l * r; a.f += i.per.f * r;
+          return a;
+        }, { k: 0, p: 0, g: 0, l: 0, f: 0 });
+        var per100 = {
+          k: sums.k / totalG * 100, p: sums.p / totalG * 100, g: sums.g / totalG * 100,
+          l: sums.l / totalG * 100, f: sums.f / totalG * 100
+        };
+        var r = { id: draft.id || uid(), n: n, ingredients: draft.ingredients, per: per100, totalG: totalG, src: 'recipe' };
+        saveRecipe(r);
+        toast('Recette enregistrée ✓');
+        openQtySheet(recipeToFood(r), null);
+      };
+      sh.appendChild(main);
+    });
+  }
+
+  /* ---------- repas types : liste (créer / appliquer / supprimer) ---------- */
+  function openMealTplListSheet() {
+    openSheet(function (sh) {
+      sheetHead(sh, 'Repas types');
+      var addBtn = el('button', 'btn btn-chrome btn-block', '＋ Nouveau repas type');
+      addBtn.onclick = function () { openMealTplBuilderSheet({ id: null, n: '', items: [] }); };
+      sh.appendChild(addBtn);
+
+      var list = mealTpls();
+      if (!list.length) {
+        sh.appendChild(el('div', 'empty', 'Aucun repas type pour l’instant — combine plusieurs aliments que tu manges souvent ensemble.'));
+        return;
+      }
+      list.forEach(function (t) {
+        var totalK = t.items.reduce(function (a, i) { return a + i.per.k * i.qty / 100; }, 0);
+        var row = el('div', 'entry');
+        var meta = el('div', 'meta');
+        meta.appendChild(el('strong', null, t.n));
+        meta.appendChild(el('span', null, round(totalK) + ' kcal · ' + t.items.length + ' aliment(s)'));
+        row.appendChild(meta);
+        row.onclick = function () { openMealTplApplySheet(t); };
+        var edit = el('button', 'chip', '✎');
+        edit.onclick = function (e) { e.stopPropagation(); openMealTplBuilderSheet(JSON.parse(JSON.stringify(t))); };
+        row.appendChild(edit);
+        var del = el('button', 'chip', '✕');
+        del.onclick = function (e) {
+          e.stopPropagation();
+          if (!confirm('Supprimer ce repas type ?')) return;
+          deleteMealTpl(t.id);
+          openMealTplListSheet();
+        };
+        row.appendChild(del);
+        sh.appendChild(row);
+      });
+    });
+  }
+
+  /* ---------- repas types : création / édition ---------- */
+  function openMealTplBuilderSheet(draft) {
+    openSheet(function (sh) {
+      sheetHead(sh, draft.id ? 'Modifier le repas type' : 'Créer un repas type');
+      sh.appendChild(el('label', 'lbl', 'Nom du repas type'));
+      var nameIn = el('input', 'input');
+      nameIn.type = 'text';
+      nameIn.value = draft.n;
+      sh.appendChild(nameIn);
+
+      sh.appendChild(el('label', 'lbl', 'Aliments'));
+      var box = el('div');
+      sh.appendChild(box);
+      function renderItems() {
+        box.textContent = '';
+        if (!draft.items.length) {
+          box.appendChild(el('div', 'empty', 'Aucun aliment ajouté.'));
+          return;
+        }
+        draft.items.forEach(function (it, idx) {
+          var row = el('div', 'entry');
+          var meta = el('div', 'meta');
+          meta.appendChild(el('strong', null, it.n));
+          meta.appendChild(el('span', null, round(it.qty) + ' g · ' + round(it.per.k * it.qty / 100) + ' kcal'));
+          row.appendChild(meta);
+          var del = el('button', 'chip', '✕');
+          del.onclick = function () { draft.items.splice(idx, 1); renderItems(); };
+          row.appendChild(del);
+          box.appendChild(row);
+        });
+      }
+      renderItems();
+
+      var addItem = el('button', 'btn btn-block', '＋ Ajouter un aliment');
+      addItem.style.marginTop = '10px';
+      addItem.onclick = function () {
+        draft.n = nameIn.value.trim();
+        openAddSheet(function (food) {
+          openQtySheet(food, null, {
+            hideMeal: true,
+            confirmLabel: 'Ajouter au repas',
+            onConfirm: function (qty) {
+              draft.items.push({ n: food.n, b: food.b || '', per: food.per, qty: qty });
+              openMealTplBuilderSheet(draft);
+            }
+          });
+        }, 'Aliment du repas type');
+      };
+      sh.appendChild(addItem);
+
+      var main = el('button', 'btn btn-chrome btn-block', 'Enregistrer le repas type');
+      main.style.marginTop = '14px';
+      main.onclick = function () {
+        var n = nameIn.value.trim();
+        if (!n) { nameIn.focus(); return; }
+        if (!draft.items.length) { toast('Ajoute au moins un aliment'); return; }
+        saveMealTpl({ id: draft.id || uid(), n: n, items: draft.items });
+        toast('Repas type enregistré ✓');
+        openMealTplListSheet();
+      };
+      sh.appendChild(main);
+    });
+  }
+
+  /* ---------- repas types : application au journal du jour ---------- */
+  function openMealTplApplySheet(tpl) {
+    openSheet(function (sh) {
+      sheetHead(sh, tpl.n);
+      sh.appendChild(el('div', 'src-note', tpl.items.length + ' aliment(s) — choisis le repas où les ajouter.'));
+      var meal = guessMeal();
+      sh.appendChild(el('label', 'lbl', 'Repas'));
+      var mchips = el('div', 'chips');
+      var mbtns = MEALS.map(function (mn, mi) {
+        var c = el('button', 'chip' + (mi === meal ? ' on' : ''), mn);
+        c.onclick = function () {
+          meal = mi;
+          mbtns.forEach(function (b, j) { b.classList.toggle('on', j === mi); });
+        };
+        mchips.appendChild(c);
+        return c;
+      });
+      sh.appendChild(mchips);
+
+      var main = el('button', 'btn btn-chrome btn-block', 'Ajouter au journal');
+      main.style.marginTop = '14px';
+      main.onclick = function () {
+        var day = getDay(viewKey);
+        tpl.items.forEach(function (it) {
+          day.entries.push({
+            id: uid(), n: it.n, b: it.b || '', meal: meal, qty: it.qty,
+            per: { k: it.per.k, p: it.per.p, g: it.per.g, l: it.per.l, f: it.per.f },
+            u: 0, ul: ''
+          });
+        });
+        setDay(viewKey, day);
+        closeSheet();
+        renderJournal();
+        toast('Repas ajouté ✓ (' + tpl.items.length + ' aliments)');
       };
       sh.appendChild(main);
     });
@@ -2625,7 +2912,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   /* =========================================================
      BINDINGS & BOOT
   ========================================================= */
-  $('btn-add').onclick = openAddSheet;
+  $('btn-add').onclick = function () { openAddSheet(); };
   $('btn-goals').onclick = openGoalsSheet;
   $('tab-journal').onclick = function () { show('journal'); renderJournal(); };
   $('tab-hist').onclick = function () { show('hist'); renderHist(); };
