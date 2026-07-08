@@ -637,10 +637,12 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   var FOODS = [
     /* Féculents & céréales */
     ['Pâtes', 359, 12, 71, 1.5, 3.2],
+    ['Pâtes complètes', 348, 13, 64, 2.5, 8],
     ['Pâtes (déjà cuites)', 155, 5.5, 30, 0.9, 2],
     ['Riz blanc', 352, 7, 78, 0.9, 1.4],
     ['Riz blanc (déjà cuit)', 135, 2.9, 29, 0.3, 0.8],
     ['Riz basmati', 355, 8, 77, 0.9, 1.5],
+    ['Riz thaï (jasmin)', 355, 7.5, 79, 0.8, 1.2],
     ['Riz complet', 362, 7.5, 76, 2.7, 3.8],
     ['Riz complet (déjà cuit)', 150, 3.2, 31, 1, 1.8],
     ['Riz de konjac', 10, 0.1, 2, 0, 2.5],
@@ -654,10 +656,11 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Pain blanc (baguette)', 279, 8.6, 56, 1.2, 2.9],
     ['Pain complet', 251, 9.5, 44, 2.2, 6.5, 35, 'tranche'],
     ['Pain de mie', 265, 8, 47, 3.8, 2.9, 35, 'tranche'],
+    ['Pain aux céréales', 270, 9.5, 45, 4.5, 5.5, 40, 'tranche'],
     ['Biscottes', 407, 10.4, 76, 5.5, 4.2, 10, 'biscotte'],
     ['Galettes de riz', 387, 8, 81, 2.8, 2.5, 8, 'galette'],
     ['Wrap / tortilla', 306, 8, 49, 7.5, 2.7, 60, 'wrap'],
-    ['Pomme de terre', 80, 1.8, 16.5, 0.1, 1.8],
+    ['Pomme de terre', 80, 1.8, 16.5, 0.1, 1.8, 0, '', 'patate'],
     ['Patate douce', 79, 1.4, 17, 0.1, 2.5],
     ['Purée de pomme de terre', 87, 1.9, 13, 2.9, 1.4],
     ['Frites', 245, 3.4, 30, 12, 3],
@@ -671,13 +674,13 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Corn flakes', 380, 7, 84, 0.9, 3],
     ['Vermicelles de riz (cuits)', 109, 1.6, 25, 0.2, 0.9],
     /* Viandes, poissons, œufs */
-    ['Poulet (blanc)', 112, 23.1, 0, 1.8, 0],
+    ['Poulet (blanc)', 112, 23.1, 0, 1.8, 0, 0, '', 'escalope filet blanc de poulet'],
     ['Poulet blanc (déjà cuit)', 145, 29.5, 0, 2.4, 0],
     ['Poulet, cuisse (sans peau)', 161, 20.6, 0, 8.8, 0],
-    ['Escalope de dinde', 105, 24, 0, 0.8, 0],
-    ['Steak haché 5% (bœuf)', 128, 21, 0, 5, 0],
-    ['Steak haché 15% (bœuf)', 213, 18.5, 0, 15, 0],
-    ['Steak de bœuf', 150, 21.5, 0, 7, 0],
+    ['Escalope de dinde', 105, 24, 0, 0.8, 0, 0, '', 'blanc de dinde filet'],
+    ['Steak haché 5% (bœuf)', 128, 21, 0, 5, 0, 0, '', 'viande hachée'],
+    ['Steak haché 15% (bœuf)', 213, 18.5, 0, 15, 0, 0, '', 'viande hachée'],
+    ['Steak de bœuf', 150, 21.5, 0, 7, 0, 0, '', 'viande rouge'],
     ['Entrecôte', 190, 19, 0, 13, 0],
     ['Filet mignon de porc', 120, 21, 0, 3.5, 0],
     ['Côte de porc', 186, 18.5, 0, 12.5, 0],
@@ -689,7 +692,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Onglet de bœuf', 125, 21, 0, 4.5, 0],
     ['Filet de bœuf', 140, 21.5, 0, 6, 0],
     ['Côte de bœuf', 190, 19, 0, 13, 0],
-    ['Steak haché 10% (bœuf)', 170, 19.5, 0, 10, 0],
+    ['Steak haché 10% (bœuf)', 170, 19.5, 0, 10, 0, 0, '', 'viande hachée'],
     ['Veau (escalope)', 105, 22, 0, 1.8, 0],
     ['Veau (côte)', 160, 19.5, 0, 9, 0],
     ['Agneau (gigot)', 155, 19, 0, 9, 0],
@@ -711,9 +714,9 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Thon frais', 140, 24, 0, 4.5, 0],
     ['Saumon', 190, 20.5, 0, 12, 0],
     ['Saumon fumé', 184, 23, 0.5, 10, 0, 35, 'tranche'],
-    ['Cabillaud', 78, 18, 0, 0.6, 0],
-    ['Colin / merlu', 85, 18, 0, 1, 0],
-    ['Tilapia', 90, 20, 0, 1.5, 0],
+    ['Cabillaud', 78, 18, 0, 0.6, 0, 0, '', 'poisson blanc'],
+    ['Colin / merlu', 85, 18, 0, 1, 0, 0, '', 'poisson blanc'],
+    ['Tilapia', 90, 20, 0, 1.5, 0, 0, '', 'poisson blanc'],
     ['Crevettes (crues, décortiquées)', 85, 20, 0.5, 0.8, 0],
     ['Crevettes (cuites)', 99, 24, 0.3, 1, 0],
     ['Sardines (boîte, égouttées)', 208, 24.5, 0, 12, 0],
@@ -733,9 +736,10 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Skyr', 57, 10, 3.9, 0.2, 0, 150, 'pot'],
     ['Yaourt grec', 115, 5.5, 3.8, 8.5, 0, 150, 'pot'],
     ['Yaourt nature', 61, 4, 4.8, 3, 0, 125, 'pot'],
+    ['Yaourt nature 0%', 43, 4.3, 5, 0.1, 0, 125, 'pot'],
     ['Petit suisse', 87, 9.4, 3.5, 3.6, 0, 60, 'petit suisse'],
     ['Mozzarella', 227, 18, 1, 17, 0],
-    ['Emmental', 382, 28.5, 0.1, 29.5, 0, 30, 'portion'],
+    ['Emmental', 382, 28.5, 0.1, 29.5, 0, 30, 'portion', 'fromage râpé gruyère'],
     ['Parmesan', 393, 36, 0.5, 28, 0, 10, 'c. à soupe'],
     ['Feta', 274, 17.5, 0.5, 22.5, 0],
     ['Camembert', 278, 20, 0.5, 21.5, 0, 30, 'part'],
@@ -747,10 +751,11 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Mascarpone', 415, 4.8, 4.5, 42, 0],
     ['Beurre', 745, 0.7, 0.6, 82, 0, 10, 'noisette'],
     /* Compléments */
-    ['Whey protéine', 380, 78, 6, 6, 1, 30, 'dose'],
+    ['Whey protéine', 380, 78, 6, 6, 1, 30, 'dose', 'shaker poudre de protéine'],
     ['Caséine', 365, 75, 6, 3, 1, 30, 'dose'],
     ['Gainer', 390, 25, 60, 5, 2, 100, 'dose'],
     ['Barre protéinée', 360, 33, 30, 11, 5, 60, 'barre'],
+    ['Barre de céréales', 400, 6, 65, 12, 4, 25, 'barre'],
     ['Beurre de cacahuète', 611, 25, 12, 50, 6.5, 15, 'c. à soupe'],
     ['Purée d’amandes', 634, 21, 7, 56, 7, 15, 'c. à soupe'],
     /* Matières grasses & oléagineux */
@@ -766,6 +771,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Avocat', 169, 1.8, 2.8, 16, 5, 100, 'demi'],
     ['Olives vertes', 145, 1, 1.5, 14, 3.5],
     ['Chocolat noir 70%', 566, 9.5, 33, 42, 10.5, 10, 'carré'],
+    ['Chocolat blanc', 539, 6, 58, 32, 0.2, 10, 'carré'],
     ['Chocolat au lait', 550, 7.5, 54, 33, 2.5, 10, 'carré'],
     ['Graines de chia', 480, 17, 8, 31, 34, 15, 'c. à soupe'],
     ['Graines de lin', 500, 18, 1.6, 42, 27, 10, 'c. à soupe'],
@@ -793,6 +799,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Figue', 67, 0.9, 13.5, 0.4, 2.9, 50, 'figue'],
     ['Compote sans sucre ajouté', 68, 0.3, 15, 0.2, 1.7, 100, 'pot'],
     ['Jus d’orange', 45, 0.6, 9.5, 0.2, 0.2, 200, 'verre'],
+    ['Jus de pomme', 44, 0.1, 10.5, 0.1, 0.1, 200, 'verre'],
     ['Citron', 34, 0.8, 2.5, 0.5, 2],
     /* Légumes */
     ['Brocoli', 29, 2.1, 2.7, 0.6, 2.5],
@@ -833,13 +840,14 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Pizza', 240, 10, 28, 9.5, 2.3, 120, 'part'],
     ['Burger (fast-food)', 250, 13, 25, 11, 1.7, 220, 'burger'],
     ['Kebab (sandwich)', 215, 12, 20, 10, 1.8, 350, 'kebab'],
+    ['Tacos (french tacos)', 220, 9, 22, 10, 1.5, 350, 'tacos'],
     ['Nuggets de poulet', 260, 14, 15, 16, 1, 20, 'nugget'],
     ['Sushi (saumon)', 150, 5.5, 28, 1.8, 0.5, 30, 'sushi'],
     ['Biscuits petit-beurre', 435, 7, 74, 12, 2.5, 8, 'biscuit'],
     ['Madeleine', 460, 6, 52, 25, 1.5, 25, 'madeleine'],
     ['Chips', 530, 6, 50, 33, 4, 30, 'poignée'],
     ['Glace vanille', 200, 3.5, 24, 10, 0.4, 60, 'boule'],
-    ['Coca-cola', 42, 0, 10.6, 0, 0, 330, 'canette'],
+    ['Coca-cola', 42, 0, 10.6, 0, 0, 330, 'canette', 'soda'],
     ['Coca-cola zéro', 0.3, 0, 0, 0, 0, 330, 'canette'],
     ['Boisson énergisante', 45, 0, 11, 0, 0, 250, 'canette'],
     ['Bière', 43, 0.4, 3, 0, 0.2, 250, 'demi'],
@@ -848,7 +856,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Sirop (grenadine…)', 325, 0, 81, 0, 0, 20, 'dose']
   ];
   function foodObj(row) {
-    return { n: row[0], b: '', per: { k: row[1], p: row[2], g: row[3], l: row[4], f: row[5] }, u: row[6] || 0, ul: row[7] || '', src: 'local' };
+    /* row[8] = alias de recherche (mots cachés, ex : « patate » pour Pomme de terre) */
+    return { n: row[0], b: '', per: { k: row[1], p: row[2], g: row[3], l: row[4], f: row[5] }, u: row[6] || 0, ul: row[7] || '', a: row[8] || '', src: 'local' };
   }
 
   /* ---------- helpers ---------- */
@@ -1023,7 +1032,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     var scored = [];
     function scan(list, bonus) {
       list.forEach(function (f) {
-        var hay = norm(f.n + ' ' + (f.b || ''));
+        var hay = norm(f.n + ' ' + (f.b || '') + ' ' + (f.a || ''));
         var toks = hay.split(' ');
         var fuzzy = false;
         var ok = words.every(function (w) {
@@ -1781,8 +1790,9 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         var n = fN.value.trim();
         var k = parseFloat(String(fK.value).replace(',', '.'));
         if (!n) { fN.focus(); return; }
-        if (!isFinite(k)) { fK.focus(); return; }
-        function num(i) { var v = parseFloat(String(i.value).replace(',', '.')); return isFinite(v) ? v : 0; }
+        /* garde-fous : pas de négatif, max 950 kcal/100 g (l'huile pure = 900) */
+        if (!isFinite(k) || k < 0 || k > 950) { fK.focus(); toast('Calories entre 0 et 950 pour 100 g'); return; }
+        function num(i) { var v = parseFloat(String(i.value).replace(',', '.')); return (isFinite(v) && v > 0) ? Math.min(v, 100) : 0; }
         var f = { n: n, b: fB.value.trim(), per: { k: k, p: num(fP), g: num(fG), l: num(fL), f: num(fF) }, u: 0, ul: '', src: 'custom' };
         addFav(f); /* sauvé (ou mis à jour) en favori pour le retrouver */
         openQtySheet(f, null);
