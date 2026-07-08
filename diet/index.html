@@ -1151,7 +1151,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       $('r-goal').textContent = '';
       $('r-left').textContent = 'Pas d’objectif défini pour l’instant.';
     }
-    $('goal-cta').classList.toggle('hidden', !!tg || coachSetTargets());
+    $('goal-cta').classList.toggle('hidden', coachSetTargets());
+    $('btn-goals').textContent = load(LS_GOALS) ? 'Modifier mes objectifs' : 'Définir mes objectifs';
 
     /* barres macros */
     function macro(idV, idB, val, goal) {
