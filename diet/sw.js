@@ -1,7 +1,7 @@
 /* Service worker — Diet LEGACY.
    Stratégie : réseau d'abord pour la page (mises à jour rapides), cache en secours (hors ligne).
    Penser à incrémenter CACHE à chaque déploiement d'une nouvelle version. */
-var CACHE = 'diet-v10';
+var CACHE = 'diet-v11';
 var PRECACHE = [
   './',
   './index.html',

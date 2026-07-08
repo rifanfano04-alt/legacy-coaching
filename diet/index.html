@@ -1545,53 +1545,83 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       };
 
       var video = boxS.querySelector('video');
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        status.textContent = 'Caméra non disponible sur ce téléphone — tape le code-barres à la main.';
+      function camFail(e) {
+        var name = e && e.name ? e.name : '';
+        status.textContent = name === 'NotAllowedError'
+          ? 'Caméra refusée — autorise la caméra pour ce site dans les réglages du navigateur, ou tape le code-barres à la main.'
+          : (name === 'NotFoundError'
+            ? 'Aucune caméra trouvée — tape le code-barres à la main.'
+            : 'Caméra indisponible' + (name ? ' (' + name + ')' : '') + ' — tape le code-barres à la main.');
         boxS.style.display = 'none';
-        return;
       }
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
-        .then(function (st) {
-          stream = st;
-          video.srcObject = st;
-          return video.play();
-        })
-        .then(function () {
-          if ('BarcodeDetector' in window) {
+      /* Lecteur de secours (iPhone & téléphones sans détecteur natif) : gère la caméra lui-même */
+      function startZx() {
+        status.textContent = 'Chargement du lecteur…';
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+        s.onload = function () {
+          if (stopped) return;
+          try {
+            zxReader = new window.ZXing.BrowserMultiFormatReader();
+            zxReader.timeBetweenDecodingAttempts = 250;
+            var onScan = function (res) { if (res) found(res.getText()); };
+            var ready = function () { if (!stopped) status.textContent = 'Vise le code-barres du produit.'; };
+            if (typeof zxReader.decodeFromConstraints === 'function') {
+              zxReader.decodeFromConstraints({ audio: false, video: { facingMode: 'environment' } }, video, onScan).then(ready).catch(camFail);
+            } else {
+              zxReader.decodeFromVideoDevice(undefined, video, onScan).then(ready).catch(camFail);
+            }
+          } catch (e) { camFail(e); }
+        };
+        s.onerror = function () {
+          status.textContent = 'Lecteur indisponible (pas de réseau ?) — tape le code-barres à la main.';
+        };
+        document.head.appendChild(s);
+      }
+      /* Détecteur natif (Android/Chrome) */
+      function startNative() {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+          .then(function (st) {
+            stream = st;
+            video.srcObject = st;
+            return video.play();
+          })
+          .then(function () {
+            var det;
+            try {
+              det = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] });
+            } catch (e) {
+              /* détecteur inutilisable : on libère la caméra et on passe au lecteur de secours */
+              if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+              startZx();
+              return;
+            }
             status.textContent = 'Vise le code-barres du produit.';
-            var det = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] });
             detTimer = setInterval(function () {
               if (stopped) return;
               det.detect(video).then(function (codes) {
                 if (codes && codes.length) found(codes[0].rawValue);
               }).catch(function () {});
             }, 350);
-          } else {
-            status.textContent = 'Chargement du lecteur…';
-            var s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
-            s.onload = function () {
-              if (stopped) return;
-              status.textContent = 'Vise le code-barres du produit.';
-              try {
-                zxReader = new window.ZXing.BrowserMultiFormatReader();
-                zxReader.decodeFromVideoElementContinuously(video, function (res) {
-                  if (res) found(res.getText());
-                });
-              } catch (e) {
-                status.textContent = 'Scanner indisponible ici — tape le code-barres à la main.';
-              }
-            };
-            s.onerror = function () {
-              status.textContent = 'Scanner indisponible (pas de réseau ?) — tape le code-barres à la main.';
-            };
-            document.head.appendChild(s);
-          }
-        })
-        .catch(function () {
-          status.textContent = 'Caméra refusée ou indisponible — tape le code-barres à la main.';
-          boxS.style.display = 'none';
-        });
+          })
+          .catch(camFail);
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        status.textContent = 'Caméra non disponible dans ce navigateur (ouvre le site dans Safari ou Chrome) — tape le code-barres à la main.';
+        boxS.style.display = 'none';
+      } else if ('BarcodeDetector' in window && typeof window.BarcodeDetector.getSupportedFormats === 'function') {
+        /* le détecteur peut « exister » sans savoir lire les codes EAN (Android sans services Google) : on vérifie */
+        window.BarcodeDetector.getSupportedFormats()
+          .then(function (fmts) {
+            if (fmts && fmts.indexOf('ean_13') !== -1) startNative();
+            else startZx();
+          })
+          .catch(startZx);
+      } else if ('BarcodeDetector' in window) {
+        startNative();
+      } else {
+        startZx();
+      }
     });
   }
 
