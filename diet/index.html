@@ -717,7 +717,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Cabillaud', 78, 18, 0, 0.6, 0, 0, '', 'poisson blanc'],
     ['Colin / merlu', 85, 18, 0, 1, 0, 0, '', 'poisson blanc'],
     ['Tilapia', 90, 20, 0, 1.5, 0, 0, '', 'poisson blanc'],
-    ['Crevettes (crues, décortiquées)', 85, 20, 0.5, 0.8, 0],
+    ['Crevettes (décortiquées)', 85, 20, 0.5, 0.8, 0],
     ['Crevettes (cuites)', 99, 24, 0.3, 1, 0],
     ['Sardines (boîte, égouttées)', 208, 24.5, 0, 12, 0],
     ['Maquereau', 220, 18, 0, 16.5, 0],
@@ -1042,6 +1042,9 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         });
         if (!ok) return;
         var score = bonus + (hay.indexOf(words[0]) === 0 ? 2 : 0) + (hay.length < 18 ? 1 : 0) - (fuzzy ? 3 : 0);
+        /* règle « tout pesé cru » : le cru passe devant les versions cuites
+           (sans effet quand on tape « cuit » : seuls les cuits correspondent alors) */
+        if (/\bcuit/.test(hay)) score -= 2;
         scored.push({ f: f, s: score });
       });
     }
