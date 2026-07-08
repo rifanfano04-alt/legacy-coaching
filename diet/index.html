@@ -628,7 +628,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   var LS_REC     = 'legacy-diet-recents-v1';
   var LS_OUTBOX  = 'legacy-diet-outbox-v1';
   var LS_GOALS   = 'legacy-diet-goals-v1';
-  var MEALS = ['Petit-déj', 'Déjeuner', 'Collation', 'Dîner'];
+  var MEALS = ['Petit-déj', 'Collation matin', 'Déjeuner', 'Collation aprèm', 'Dîner'];
   var GLASS_ML = 500, GLASS_N = 10; /* simple suivi, jusqu'à 5 L (pas un objectif) */
   var DEMO = /(^|[?&])demo\b/.test(location.search);
 
@@ -913,6 +913,18 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   /* ---------- données jours ---------- */
   var days = load(LS_DAYS) || {};
   var viewKey = todayKey();
+
+  /* migration : insertion de « Collation matin » entre petit-déj et déjeuner
+     (les anciens numéros de repas 1/2/3 deviennent 2/3/4, une seule fois) */
+  if (!load('legacy-diet-meals-v2')) {
+    Object.keys(days).forEach(function (k) {
+      (days[k].entries || []).forEach(function (e) {
+        if (e.meal >= 1) e.meal += 1;
+      });
+    });
+    store(LS_DAYS, days);
+    store('legacy-diet-meals-v2', 1);
+  }
 
   function getDay(k) { return days[k] || { entries: [], water: 0, weight: null }; }
   function setDay(k, d) {
@@ -1557,10 +1569,11 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   /* ---------- fiche quantité (ajout / édition) ---------- */
   function guessMeal() {
     var h = new Date().getHours() + new Date().getMinutes() / 60;
-    if (h < 10.5) return 0;
-    if (h < 14.5) return 1;
-    if (h < 18) return 2;
-    return 3;
+    if (h < 10) return 0;        /* petit-déj */
+    if (h < 11.75) return 1;     /* collation matin */
+    if (h < 14.5) return 2;      /* déjeuner */
+    if (h < 18.5) return 3;      /* collation aprèm */
+    return 4;                    /* dîner */
   }
   function openQtySheet(food, editEntry) {
     openSheet(function (sh) {
