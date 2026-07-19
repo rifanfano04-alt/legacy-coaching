@@ -719,6 +719,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     ['Faux-filet', 160, 21, 0, 8.5, 0],
     ['Onglet de bœuf', 125, 21, 0, 4.5, 0],
     ['Filet de bœuf', 140, 21.5, 0, 6, 0],
+    ['Tournedos', 140, 21.5, 0, 6, 0],
     ['Côte de bœuf', 190, 19, 0, 13, 0],
     ['Steak haché 10% (bœuf)', 170, 19.5, 0, 10, 0, 0, '', 'viande hachée'],
     ['Veau (escalope)', 105, 22, 0, 1.8, 0],
@@ -1614,10 +1615,13 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       chips.style.margin = '10px 0 4px';
       var bScan = el('button', 'chip', '📷 Scanner un code-barres');
       var bNew = el('button', 'chip', '＋ Créer un aliment');
+      var bEst = el('button', 'chip', '🤔 Estimation rapide');
       bScan.onclick = function () { openScanSheet(onPick); };
       bNew.onclick = function () { openCustomSheet(input.value.trim(), onPick); };
+      bEst.onclick = function () { openQuickEstimateSheet(input.value.trim(), onPick); };
       chips.appendChild(bScan);
       chips.appendChild(bNew);
+      chips.appendChild(bEst);
       if (!onPick) {
         var bRec = el('button', 'chip', '🍲 Mes recettes');
         bRec.onclick = function () { openRecipeListSheet(); };
@@ -1655,6 +1659,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         if (badge === 'fav' || isFav(f)) r.appendChild(el('span', 'badge fav', '⭐'));
         else if (f.src === 'off') r.appendChild(el('span', 'badge', 'MARQUE'));
         else if (f.src === 'recipe') r.appendChild(el('span', 'badge', '🍲'));
+        else if (f.src === 'estimate') r.appendChild(el('span', 'badge', '🤔'));
         r.onclick = function () { if (onPick) onPick(f); else openQtySheet(f, null); };
         return r;
       }
@@ -1912,7 +1917,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       var srcTxt = food.src === 'off'
         ? '🏷️ Étiquette du produit (Open Food Facts)'
         : (food.src === 'custom' ? '✍️ Aliment créé (tes valeurs)'
-          : (food.src === 'recipe' ? '🍲 Recette perso (tes ingrédients)' : '📖 Table officielle CIQUAL — pour 100 g, cru'));
+          : (food.src === 'recipe' ? '🍲 Recette perso (tes ingrédients)'
+            : (food.src === 'estimate' ? '🤔 Estimation rapide (calories approximatives, à vue de nez)' : '📖 Table officielle CIQUAL — pour 100 g, cru')));
       sh.appendChild(el('div', 'src-note', srcTxt + ' · 100 g = ' + round(food.per.k) + ' kcal · P ' + g1(food.per.p) + ' · G ' + g1(food.per.g) + ' · L ' + g1(food.per.l)));
 
       var qty = editEntry ? editEntry.qty : (food.u || 100);
@@ -2116,6 +2122,43 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         if (!isFinite(k) || k < 0 || k > 950) { fK.focus(); toast('Calories entre 0 et 950 pour 100 g'); return; }
         function num(i) { var v = parseFloat(String(i.value).replace(',', '.')); return (isFinite(v) && v > 0) ? Math.min(v, 100) : 0; }
         var f = { n: n, b: fB.value.trim(), per: { k: k, p: num(fP), g: num(fG), l: num(fL), f: num(fF) }, u: 0, ul: '', src: 'custom' };
+        addFav(f); /* sauvé (ou mis à jour) en favori pour le retrouver */
+        if (onCreate) onCreate(f); else openQtySheet(f, null);
+      };
+      sh.appendChild(main);
+    });
+  }
+
+  /* ---------- estimation rapide (juste un nom + une calorie approximative) ---------- */
+  function openQuickEstimateSheet(prefill, onCreate) {
+    openSheet(function (sh) {
+      sheetHead(sh, 'Estimation rapide');
+      sh.appendChild(el('div', 'src-note', 'Tu ne connais pas les macros ? Donne juste un nom, le poids approximatif de la portion et les calories que tu penses que ça fait — pratique pour un plat maison sans étiquette.'));
+
+      function field(label, val) {
+        sh.appendChild(el('label', 'lbl', label));
+        var i = el('input', 'input');
+        i.type = label === 'Nom du plat' ? 'text' : 'number';
+        if (i.type === 'number') { i.inputMode = 'decimal'; i.min = '0'; i.step = '1'; }
+        i.value = val || '';
+        sh.appendChild(i);
+        return i;
+      }
+      var fN = field('Nom du plat', prefill);
+      var fW = field('Poids de la portion (g, à vue de nez)', '200');
+      var fK = field('Calories estimées pour cette portion', '');
+
+      var main = el('button', 'btn btn-chrome btn-block', 'Créer et choisir la quantité');
+      main.style.marginTop = '14px';
+      main.onclick = function () {
+        var n = fN.value.trim();
+        var w = parseFloat(String(fW.value).replace(',', '.'));
+        var k = parseFloat(String(fK.value).replace(',', '.'));
+        if (!n) { fN.focus(); return; }
+        if (!isFinite(w) || w <= 0) { fW.focus(); toast('Indique un poids de portion valide'); return; }
+        if (!isFinite(k) || k < 0) { fK.focus(); toast('Indique une estimation de calories'); return; }
+        var per100 = Math.min(k / w * 100, 950);
+        var f = { n: n, b: '', per: { k: per100, p: 0, g: 0, l: 0, f: 0 }, u: Math.round(w), ul: 'portion', src: 'estimate' };
         addFav(f); /* sauvé (ou mis à jour) en favori pour le retrouver */
         if (onCreate) onCreate(f); else openQtySheet(f, null);
       };
