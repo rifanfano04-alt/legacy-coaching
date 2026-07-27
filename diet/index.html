@@ -531,6 +531,10 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     </div>
 
     <div class="card hero">
+      <div class="chips" id="trainday-toggle" style="margin-bottom:10px">
+        <button class="chip" id="btn-trainday-on">🏋️ Entraînement</button>
+        <button class="chip" id="btn-trainday-off">😴 Repos</button>
+      </div>
       <div class="ring-wrap" id="ring-wrap">
         <svg viewBox="0 0 120 120" aria-hidden="true">
           <defs>
@@ -1191,7 +1195,17 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     store('legacy-diet-meals-v2', 1);
   }
 
-  function getDay(k) { return days[k] || { entries: [], water: 0, weight: null }; }
+  /* migration : objectifs uniques -> un set « entraînement » + un set « repos »
+     (les anciennes valeurs uniques s'appliquent aux deux au départ, une seule fois) */
+  if (!load('legacy-diet-goals-v2')) {
+    var oldGoals = load(LS_GOALS);
+    if (oldGoals && Number(oldGoals.kcal) > 0 && !oldGoals.train && !oldGoals.rest) {
+      store(LS_GOALS, { train: oldGoals, rest: oldGoals });
+    }
+    store('legacy-diet-goals-v2', 1);
+  }
+
+  function getDay(k) { return days[k] || { entries: [], water: 0, weight: null, trainDay: false }; }
   function setDay(k, d) {
     days[k] = d;
     /* garde ~400 jours max */
@@ -1212,12 +1226,19 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   /* ---------- profil, objectifs ---------- */
   var demoProfile = DEMO ? { code: 'DEMO', name: 'Démo', role: 'coach', targets: { kcal: 2600, prot: 180, gluc: 300, lip: 72, fib: 30 } } : null;
   function profile() { return demoProfile || load(LS_PROFILE); }
-  function targets() {
+  /* objectifs perso : un set pour les jours d'entraînement, un pour les jours de repos */
+  function dayGoals(dayKey, g) {
+    g = g || load(LS_GOALS) || {};
+    var isTrain = !!getDay(dayKey).trainDay;
+    var primary = isTrain ? g.train : g.rest;
+    if (primary && Number(primary.kcal) > 0) return primary;
+    var other = isTrain ? g.rest : g.train; /* repli si un seul des deux a été renseigné */
+    return (other && Number(other.kcal) > 0) ? other : null;
+  }
+  function targets(dayKey) {
     var p = profile();
     if (p && p.targets && Number(p.targets.kcal) > 0) return p.targets;
-    var g = load(LS_GOALS);
-    if (g && Number(g.kcal) > 0) return g;
-    return null;
+    return dayGoals(dayKey || todayKey());
   }
   function coachSetTargets() {
     var p = profile();
@@ -1365,8 +1386,12 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   function renderJournal() {
     var d = getDay(viewKey);
     var t = totalsOf(d);
-    var tg = targets();
+    var tg = targets(viewKey);
     var isToday = viewKey === todayKey();
+
+    /* bascule jour d'entraînement / jour de repos */
+    $('btn-trainday-on').classList.toggle('on', !!d.trainDay);
+    $('btn-trainday-off').classList.toggle('on', !d.trainDay);
 
     /* entête de jour */
     $('d-title').textContent = isToday ? 'Aujourd’hui' : fmtLong(viewKey);
@@ -1546,6 +1571,14 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   $('d-prev').onclick = function () { viewKey = addDays(viewKey, -1); renderJournal(); };
   $('d-next').onclick = function () { viewKey = addDays(viewKey, 1); renderJournal(); };
   $('btn-mealtpl').onclick = function (e) { e.preventDefault(); openMealTplListSheet(); };
+  function setTrainDay(v) {
+    var day = getDay(viewKey);
+    day.trainDay = v;
+    setDay(viewKey, day);
+    renderJournal();
+  }
+  $('btn-trainday-on').onclick = function () { setTrainDay(true); };
+  $('btn-trainday-off').onclick = function () { setTrainDay(false); };
   $('copy-yday').onclick = function (e) {
     e.preventDefault();
     var yd = getDay(addDays(viewKey, -1));
@@ -2419,11 +2452,24 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   }
 
   /* ---------- objectifs (locaux, si pas fixés par le coach) ---------- */
-  function openGoalsSheet() {
+  function openGoalsSheet(which) {
+    which = which === 'rest' ? 'rest' : 'train';
     openSheet(function (sh) {
       sheetHead(sh, 'Mes objectifs');
       sh.appendChild(el('div', 'src-note', 'Si Ritchi te fixe des objectifs, ce sont les siens qui s’affichent.'));
-      var g = load(LS_GOALS) || {};
+
+      var wchips = el('div', 'chips');
+      wchips.style.margin = '10px 0';
+      var bTrain = el('button', 'chip' + (which === 'train' ? ' on' : ''), '🏋️ Jour d’entraînement');
+      var bRest = el('button', 'chip' + (which === 'rest' ? ' on' : ''), '😴 Jour de repos');
+      bTrain.onclick = function () { openGoalsSheet('train'); };
+      bRest.onclick = function () { openGoalsSheet('rest'); };
+      wchips.appendChild(bTrain);
+      wchips.appendChild(bRest);
+      sh.appendChild(wchips);
+
+      var allGoals = load(LS_GOALS) || {};
+      var g = allGoals[which] || {};
       function field(label, val) {
         sh.appendChild(el('label', 'lbl', label));
         var i = el('input', 'input');
@@ -2443,7 +2489,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       main.style.marginTop = '14px';
       main.onclick = function () {
         function num(i) { var v = parseFloat(String(i.value).replace(',', '.')); return isFinite(v) && v > 0 ? Math.round(v) : null; }
-        store(LS_GOALS, { kcal: num(fK), prot: num(fP), gluc: num(fG), lip: num(fL), fib: num(fF) });
+        allGoals[which] = { kcal: num(fK), prot: num(fP), gluc: num(fG), lip: num(fL), fib: num(fF) };
+        store(LS_GOALS, allGoals);
         closeSheet();
         renderJournal();
         toast('Objectifs enregistrés ✓');
@@ -2959,7 +3006,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
      BINDINGS & BOOT
   ========================================================= */
   $('btn-add').onclick = function () { openAddSheet(); };
-  $('btn-goals').onclick = openGoalsSheet;
+  $('btn-goals').onclick = function () { openGoalsSheet(); };
   $('tab-journal').onclick = function () { show('journal'); renderJournal(); };
   $('tab-hist').onclick = function () { show('hist'); renderHist(); };
   $('tab-coach').onclick = openCoach;
