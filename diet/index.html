@@ -1758,8 +1758,6 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
           favLink.onclick = function (e) { e.preventDefault(); openFavListSheet(onPick); };
           favHead.appendChild(favLink);
           box.appendChild(favHead);
-          fv.slice().sort(function (a, b) { return (b.useCount || 0) - (a.useCount || 0); })
-            .slice(0, 5).forEach(function (f) { box.appendChild(resRow(f, 'fav')); });
         }
         if (rc.length) {
           box.appendChild(el('div', 'src-note', '🕘 Récents'));
