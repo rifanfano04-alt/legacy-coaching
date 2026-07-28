@@ -414,6 +414,11 @@ h1.title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(34px, 9vw, 44
 .seg { display: flex; gap: 6px; margin-bottom: 14px; }
 .seg button { flex: 1; min-height: 42px; border-radius: 10px; border: 1px solid var(--border-strong); color: var(--muted); font-weight: 700; font-size: 14px; background: oklch(12% 0.015 75 / .5); }
 .seg button.on { color: oklch(92% 0.08 85); border-color: oklch(72% 0.11 82 / .8); box-shadow: 0 0 14px oklch(70% 0.12 80 / .3); }
+
+.dtoggle { display: flex; align-items: center; justify-content: space-between; }
+.dtoggle button { border: none; background: transparent; color: var(--muted); font-weight: 700; font-size: 13px; letter-spacing: .04em; padding: 4px 2px; cursor: pointer; transition: color 180ms ease, text-shadow 180ms ease; }
+.dtoggle button.on { color: oklch(92% 0.08 85); text-shadow: 0 0 12px oklch(70% 0.12 80 / .45); }
+.dtoggle-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .14em; }
 .hist-day { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
 .hist-day:last-child { border-bottom: 0; }
 .hist-day .d { width: 52px; text-align: center; }
@@ -531,9 +536,10 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     </div>
 
     <div class="card hero">
-      <div class="chips" id="trainday-toggle" style="margin-bottom:10px">
-        <button class="chip" id="btn-trainday-on">🏋️ Entraînement</button>
-        <button class="chip" id="btn-trainday-off">😴 Repos</button>
+      <div class="dtoggle" id="trainday-toggle" style="margin-bottom:10px">
+        <button id="btn-trainday-on">On</button>
+        <span class="dtoggle-lbl">Day</span>
+        <button id="btn-trainday-off">Off</button>
       </div>
       <div class="ring-wrap" id="ring-wrap">
         <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -2485,8 +2491,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
 
       var wchips = el('div', 'chips');
       wchips.style.margin = '10px 0';
-      var bTrain = el('button', 'chip' + (which === 'train' ? ' on' : ''), '🏋️ Jour d’entraînement');
-      var bRest = el('button', 'chip' + (which === 'rest' ? ' on' : ''), '😴 Jour de repos');
+      var bTrain = el('button', 'chip' + (which === 'train' ? ' on' : ''), 'Jour d’entraînement');
+      var bRest = el('button', 'chip' + (which === 'rest' ? ' on' : ''), 'Jour de repos');
       bTrain.onclick = function () { openGoalsSheet('train'); };
       bRest.onclick = function () { openGoalsSheet('rest'); };
       wchips.appendChild(bTrain);
@@ -2602,14 +2608,35 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     });
     return { n: n, k: n ? t.k / n : 0, p: n ? t.p / n : 0, g: n ? t.g / n : 0, l: n ? t.l / n : 0, f: n ? t.f / n : 0, wFirst: wFirst, wLast: wLast, water: waterN ? water / waterN : 0 };
   }
+  /* objectif kcal de chaque jour (tient compte du statut entraînement/repos propre à chaque jour) */
+  function dailyTargetsKcal(keys) {
+    return keys.map(function (k) { var t = targets(k); return t ? t.kcal : 0; });
+  }
+  /* moyenne des objectifs kcal sur une période (ignore les jours sans objectif défini) */
+  function avgTargetKcal(keys) {
+    var vals = dailyTargetsKcal(keys).filter(function (v) { return v > 0; });
+    if (!vals.length) return 0;
+    return vals.reduce(function (a, v) { return a + v; }, 0) / vals.length;
+  }
 
   function barsSVG(vals, labels, target) {
     var W = 340, H = 150, pad = 6, bw = (W - pad * 2) / vals.length;
-    var max = Math.max(target || 0, Math.max.apply(null, vals.concat([1]))) * 1.12;
+    /* target peut être un nombre (ligne plate, ex-comportement) ou un tableau
+       (un objectif par barre, ex : entraînement/repos qui varient jour par jour) */
+    var targetArr = Array.isArray(target) ? target : null;
+    var maxTarget = targetArr ? Math.max.apply(null, targetArr.map(function (t) { return t || 0; }).concat([0])) : (target || 0);
+    var max = Math.max(maxTarget, Math.max.apply(null, vals.concat([1]))) * 1.12;
     var s = '<svg viewBox="0 0 ' + W + ' ' + (H + 22) + '" xmlns="http://www.w3.org/2000/svg">';
     s += '<defs><linearGradient id="barG" x1="0" y1="0" x2="0" y2="1">' +
       '<stop offset="0%" stop-color="#f3dfae"/><stop offset="55%" stop-color="#dca94c"/><stop offset="100%" stop-color="#8a5c10"/></linearGradient></defs>';
-    if (target) {
+    if (targetArr) {
+      targetArr.forEach(function (tv, i) {
+        if (!tv) return;
+        var ty = H - (tv / max) * H;
+        var x1 = pad + i * bw, x2 = pad + (i + 1) * bw;
+        s += '<line x1="' + x1.toFixed(1) + '" y1="' + ty.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + ty.toFixed(1) + '" stroke="oklch(80% 0.06 85 / .55)" stroke-dasharray="5 5" stroke-width="1.4"/>';
+      });
+    } else if (target) {
       var ty = H - (target / max) * H;
       s += '<line x1="0" y1="' + ty.toFixed(1) + '" x2="' + W + '" y2="' + ty.toFixed(1) + '" stroke="oklch(80% 0.06 85 / .55)" stroke-dasharray="5 5" stroke-width="1.4"/>';
     }
@@ -2658,7 +2685,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     body.appendChild(navCard(label, function () { weekOff--; renderHist(); }, function () { weekOff++; renderHist(); }, weekOff >= 0));
 
     var a = avgLine(keys);
-    var tg = targets();
+    var avgTg = avgTargetKcal(keys);
     body.appendChild(statGrid([
       [a.n ? String(round(a.k)) : '—', 'kcal / jour'],
       [a.n ? g1(a.p) + ' g' : '—', 'prot / jour'],
@@ -2668,10 +2695,11 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     var card = el('div', 'card');
     card.appendChild(el('h2', null, 'Calories de la semaine'));
     var vals = keys.map(function (k) { return round(totalsOf(getDay(k)).k); });
+    var dayTargets = dailyTargetsKcal(keys);
     var wrap = el('div', 'chart-wrap');
-    wrap.innerHTML = barsSVG(vals, ['L', 'M', 'M', 'J', 'V', 'S', 'D'], tg ? tg.kcal : 0);
+    wrap.innerHTML = barsSVG(vals, ['L', 'M', 'M', 'J', 'V', 'S', 'D'], dayTargets);
     card.appendChild(wrap);
-    if (tg) card.appendChild(el('div', 'chart-note', 'Ligne pointillée = objectif (' + round(tg.kcal) + ' kcal)'));
+    if (avgTg) card.appendChild(el('div', 'chart-note', 'Pointillé = objectif du jour (entraînement/repos) · moyenne sur la semaine : ' + round(avgTg) + ' kcal'));
     body.appendChild(card);
 
     var det = el('div', 'card');
@@ -2710,23 +2738,25 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     /* moyennes par semaine du mois */
     var card = el('div', 'card');
     card.appendChild(el('h2', null, 'Semaine par semaine'));
-    var vals = [], labels = [];
+    var vals = [], labels = [], weekTargets = [];
     var wStart = mondayOf(keys[0]);
     var wi = 1;
     while (wStart <= keys[keys.length - 1]) {
       var wk = [];
       for (var j = 0; j < 7; j++) wk.push(addDays(wStart, j));
-      var wa = avgLine(wk.filter(function (k) { return k >= keys[0] && k <= keys[keys.length - 1]; }));
+      var wkClipped = wk.filter(function (k) { return k >= keys[0] && k <= keys[keys.length - 1]; });
+      var wa = avgLine(wkClipped);
       vals.push(round(wa.k));
+      weekTargets.push(round(avgTargetKcal(wkClipped)));
       labels.push('S' + wi);
       wStart = addDays(wStart, 7);
       wi++;
     }
-    var tg = targets();
+    var avgTgMonth = avgTargetKcal(keys);
     var wrap = el('div', 'chart-wrap');
-    wrap.innerHTML = barsSVG(vals, labels, tg ? tg.kcal : 0);
+    wrap.innerHTML = barsSVG(vals, labels, weekTargets);
     card.appendChild(wrap);
-    card.appendChild(el('div', 'chart-note', 'Moyenne kcal / jour rempli, par semaine' + (tg ? ' — pointillé = objectif' : '')));
+    card.appendChild(el('div', 'chart-note', 'Moyenne kcal / jour rempli, par semaine' + (avgTgMonth ? ' — pointillé = objectif moyen de chaque semaine (entraînement/repos mélangés)' : '')));
     body.appendChild(card);
 
     var det = el('div', 'card');
