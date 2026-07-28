@@ -1309,9 +1309,18 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   function addFav(f) {
     /* ajoute ou met à jour, sans jamais retirer (re-créer un aliment ne doit pas effacer son favori) */
     var k = foodKey(f);
+    var prev = favs().filter(function (x) { return foodKey(x) === k; })[0];
     var list = favs().filter(function (x) { return foodKey(x) !== k; });
-    list.unshift(f);
+    list.unshift(Object.assign({}, f, { useCount: (prev && prev.useCount) || 0 }));
     store(LS_FAVS, list.slice(0, 60));
+  }
+  /* incrémente le compteur d'usage d'un favori (appelé quand on logue l'aliment dans le journal) */
+  function bumpFavUsage(f) {
+    var k = foodKey(f), list = favs();
+    var i = list.findIndex(function (x) { return foodKey(x) === k; });
+    if (i < 0) return;
+    list[i].useCount = (list[i].useCount || 0) + 1;
+    store(LS_FAVS, list);
   }
   function addRecent(f) {
     var k = foodKey(f);
@@ -1742,8 +1751,15 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
           return;
         }
         if (fv.length) {
-          box.appendChild(el('div', 'src-note', '⭐ Tes favoris'));
-          fv.slice(0, 8).forEach(function (f) { box.appendChild(resRow(f, 'fav')); });
+          var favHead = el('div', 'src-note');
+          var favLink = el('a', null, '⭐ Tes favoris (' + fv.length + ')');
+          favLink.href = '#';
+          favLink.style.color = 'inherit';
+          favLink.onclick = function (e) { e.preventDefault(); openFavListSheet(onPick); };
+          favHead.appendChild(favLink);
+          box.appendChild(favHead);
+          fv.slice().sort(function (a, b) { return (b.useCount || 0) - (a.useCount || 0); })
+            .slice(0, 5).forEach(function (f) { box.appendChild(resRow(f, 'fav')); });
         }
         if (rc.length) {
           box.appendChild(el('div', 'src-note', '🕘 Récents'));
@@ -2166,6 +2182,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
             u: food.u || 0, ul: food.ul || ''
           });
           addRecent(food);
+          bumpFavUsage(food);
         }
         setDay(viewKey, day);
         closeSheet();
@@ -2268,6 +2285,47 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   }
 
   /* ---------- recettes perso : liste (créer / modifier / supprimer) ---------- */
+  /* ---------- favoris : liste dédiée, triée par usage, avec recherche ---------- */
+  function openFavListSheet(onPick) {
+    openSheet(function (sh) {
+      sheetHead(sh, 'Mes favoris');
+      var input = el('input', 'input');
+      input.type = 'search';
+      input.placeholder = 'Filtrer tes favoris…';
+      input.setAttribute('autocomplete', 'off');
+      sh.appendChild(input);
+
+      var box = el('div');
+      sh.appendChild(box);
+
+      function render(q) {
+        box.textContent = '';
+        var nq = norm(q || '');
+        var list = favs()
+          .filter(function (f) { return !nq || norm(f.n + ' ' + (f.b || '')).indexOf(nq) !== -1; })
+          .sort(function (a, b) { return (b.useCount || 0) - (a.useCount || 0); });
+        if (!list.length) {
+          box.appendChild(el('div', 'empty', nq ? 'Aucun favori ne correspond.' : 'Aucun favori pour l’instant — appuie sur ☆ sur un aliment pour l’ajouter.'));
+          return;
+        }
+        list.forEach(function (f) {
+          var row = el('div', 'res');
+          var meta = el('div', 'meta');
+          meta.appendChild(el('strong', null, f.n + (f.b ? ' — ' + f.b : '')));
+          meta.appendChild(el('span', null, round(f.per.k) + ' kcal · P ' + g1(f.per.p) + ' · G ' + g1(f.per.g) + ' · L ' + g1(f.per.l) + ' (pour 100 g)' + (f.useCount ? ' · utilisé ' + f.useCount + ' fois' : '')));
+          row.appendChild(meta);
+          row.onclick = function () { if (onPick) onPick(f); else openQtySheet(f, null); };
+          var del = el('button', 'chip', '✕');
+          del.onclick = function (e) { e.stopPropagation(); toggleFav(f); render(input.value.trim()); };
+          row.appendChild(del);
+          box.appendChild(row);
+        });
+      }
+      input.addEventListener('input', function () { render(input.value.trim()); });
+      render('');
+    });
+  }
+
   function openRecipeListSheet() {
     openSheet(function (sh) {
       sheetHead(sh, 'Mes recettes');
