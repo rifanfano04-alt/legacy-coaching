@@ -541,6 +541,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         <span class="dtoggle-lbl">Day</span>
         <button id="btn-trainday-off">Off</button>
       </div>
+      <div id="streak-note" class="hidden" style="text-align:center;font-size:11px;color:var(--muted);letter-spacing:.04em;margin:-4px 0 8px"></div>
       <div class="ring-wrap" id="ring-wrap">
         <svg viewBox="0 0 120 120" aria-hidden="true">
           <defs>
@@ -578,6 +579,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
 
     <div class="card">
       <h2>Repas <span class="r"><a href="#" id="btn-mealtpl" style="color:var(--gold)">Repas types</a> · <a href="#" id="copy-yday" class="hidden" style="color:var(--gold)">Recopier hier</a></span></h2>
+      <div id="meal-suggest" class="hidden src-note" style="margin:-2px 0 10px;padding:0"></div>
       <div id="meals"></div>
       <div class="empty" id="meals-empty">Rien pour l’instant — ajoute ton premier aliment avec le bouton doré.</div>
     </div>
@@ -1275,6 +1277,20 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     var p = profile();
     return !!(p && p.targets && Number(p.targets.kcal) > 0);
   }
+  /* jours consécutifs (jusqu'à hier) où le total kcal est resté à ±10% de l'objectif du jour */
+  function computeStreak() {
+    var n = 0, k = addDays(todayKey(), -1);
+    while (true) {
+      var day = getDay(k);
+      if (!day.entries || !day.entries.length) break;
+      var tg = targets(k);
+      if (!tg || !tg.kcal) break;
+      if (Math.abs(totalsOf(day).k - tg.kcal) > tg.kcal * 0.1) break;
+      n++;
+      k = addDays(k, -1);
+    }
+    return n;
+  }
 
   /* ---------- favoris & récents ---------- */
   function favs() { return load(LS_FAVS) || []; }
@@ -1424,6 +1440,11 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     $('btn-trainday-on').classList.toggle('on', !!d.trainDay);
     $('btn-trainday-off').classList.toggle('on', !d.trainDay);
 
+    /* série de jours dans l'objectif */
+    var streak = computeStreak();
+    $('streak-note').classList.toggle('hidden', streak < 2);
+    if (streak >= 2) $('streak-note').textContent = 'Série : ' + streak + ' jours dans l’objectif';
+
     /* entête de jour */
     $('d-title').textContent = isToday ? 'Aujourd’hui' : fmtLong(viewKey);
     var sub = $('d-sub');
@@ -1480,6 +1501,22 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     macro('m-gluc', 'b-gluc', t.g, tg && tg.gluc);
     macro('m-lip', 'b-lip', t.l, tg && tg.lip);
     macro('m-fib', 'b-fib', t.f, tg && tg.fib);
+
+    /* suggestion de repas type selon l'heure */
+    var sugBox = $('meal-suggest');
+    sugBox.textContent = '';
+    var curMeal = guessMeal();
+    var alreadyLogged = d.entries.some(function (e) { return e.meal === curMeal; });
+    var sugTpl = !alreadyLogged && mealTpls().filter(function (t) { return t.lastMeal === curMeal; })[0];
+    sugBox.classList.toggle('hidden', !sugTpl);
+    if (sugTpl) {
+      sugBox.appendChild(document.createTextNode('Repas habituel pour ' + MEALS[curMeal].toLowerCase() + ' : '));
+      var sugLink = el('a', null, sugTpl.n);
+      sugLink.href = '#';
+      sugLink.style.color = 'var(--gold)';
+      sugLink.onclick = function (e) { e.preventDefault(); openMealTplApplySheet(sugTpl); };
+      sugBox.appendChild(sugLink);
+    }
 
     /* repas */
     var box = $('meals');
@@ -2474,6 +2511,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
           });
         });
         setDay(viewKey, day);
+        tpl.lastMeal = meal;
+        saveMealTpl(tpl);
         closeSheet();
         renderJournal();
         toast('Repas ajouté ✓ (' + tpl.items.length + ' aliments)');
@@ -2619,6 +2658,35 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     return vals.reduce(function (a, v) { return a + v; }, 0) / vals.length;
   }
 
+  /* courbe de tendance du poids : vals = nombre ou null (pas pesé ce jour-là) */
+  function weightLineSVG(vals, labels) {
+    var known = vals.filter(function (v) { return v != null; });
+    if (known.length < 2) return '';
+    var W = 340, H = 110, pad = 12;
+    var min = Math.min.apply(null, known), max = Math.max.apply(null, known);
+    if (min === max) { min -= 1; max += 1; }
+    var stepX = (W - pad * 2) / (vals.length - 1);
+    var pts = vals.map(function (v, i) {
+      if (v == null) return null;
+      return { x: pad + i * stepX, y: H - pad - ((v - min) / (max - min)) * (H - pad * 2) };
+    });
+    var path = '', started = false;
+    pts.forEach(function (p) {
+      if (!p) { started = false; return; }
+      path += (started ? 'L' : 'M') + p.x.toFixed(1) + ',' + p.y.toFixed(1) + ' ';
+      started = true;
+    });
+    var s = '<svg viewBox="0 0 ' + W + ' ' + (H + 22) + '" xmlns="http://www.w3.org/2000/svg">';
+    s += '<path d="' + path.trim() + '" fill="none" stroke="#dca94c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+    pts.forEach(function (p) { if (p) s += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3" fill="#f3dfae" stroke="#8a5c10" stroke-width="1"/>'; });
+    (labels || []).forEach(function (lb, i) {
+      if (!lb) return;
+      s += '<text x="' + (pad + i * stepX).toFixed(1) + '" y="' + (H + 16) + '" text-anchor="middle" font-size="11" fill="oklch(72% 0.025 80)" font-family="Inter,sans-serif">' + lb + '</text>';
+    });
+    s += '</svg>';
+    return s;
+  }
+
   function barsSVG(vals, labels, target) {
     var W = 340, H = 150, pad = 6, bw = (W - pad * 2) / vals.length;
     /* target peut être un nombre (ligne plate, ex-comportement) ou un tableau
@@ -2702,6 +2770,17 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     if (avgTg) card.appendChild(el('div', 'chart-note', 'Pointillé = objectif du jour (entraînement/repos) · moyenne sur la semaine : ' + round(avgTg) + ' kcal'));
     body.appendChild(card);
 
+    var wVals = keys.map(function (k) { var d = getDay(k); return d.weight != null ? d.weight : null; });
+    var wSvg = weightLineSVG(wVals, ['L', 'M', 'M', 'J', 'V', 'S', 'D']);
+    if (wSvg) {
+      var wCard = el('div', 'card');
+      wCard.appendChild(el('h2', null, 'Tendance du poids'));
+      var wWrap = el('div', 'chart-wrap');
+      wWrap.innerHTML = wSvg;
+      wCard.appendChild(wWrap);
+      body.appendChild(wCard);
+    }
+
     var det = el('div', 'card');
     det.appendChild(el('h2', null, 'Moyennes (jours remplis : ' + a.n + '/7)'));
     det.appendChild(el('div', 'pg', ''));
@@ -2758,6 +2837,18 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     card.appendChild(wrap);
     card.appendChild(el('div', 'chart-note', 'Moyenne kcal / jour rempli, par semaine' + (avgTgMonth ? ' — pointillé = objectif moyen de chaque semaine (entraînement/repos mélangés)' : '')));
     body.appendChild(card);
+
+    var wVals = keys.map(function (k) { var d = getDay(k); return d.weight != null ? d.weight : null; });
+    var wLabels = keys.map(function (k, i) { return (i === 0 || i === keys.length - 1) ? String(keyDate(k).getDate()) : ''; });
+    var wSvg = weightLineSVG(wVals, wLabels);
+    if (wSvg) {
+      var wCard = el('div', 'card');
+      wCard.appendChild(el('h2', null, 'Tendance du poids'));
+      var wWrap = el('div', 'chart-wrap');
+      wWrap.innerHTML = wSvg;
+      wCard.appendChild(wWrap);
+      body.appendChild(wCard);
+    }
 
     var det = el('div', 'card');
     det.appendChild(el('h2', null, 'Moyennes du mois'));
@@ -2928,7 +3019,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
 
   /* recap lisible pour le Sheet */
   function buildRecap(d) {
-    var parts = [];
+    var parts = [d.trainDay ? '[Entraînement]' : '[Repos]'];
     MEALS.forEach(function (mn, mi) {
       var list = (d.entries || []).filter(function (e) { return e.meal === mi; });
       if (!list.length) return;
@@ -2951,6 +3042,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         id: uid(), date: dateKey,
         totals: { k: round(t.k), p: Math.round(t.p * 10) / 10, g: Math.round(t.g * 10) / 10, l: Math.round(t.l * 10) / 10, f: Math.round(t.f * 10) / 10 },
         water: d.water || 0, weight: d.weight, nEntries: (d.entries || []).length,
+        trainDay: !!d.trainDay,
         recap: buildRecap(d)
       });
       store(LS_OUTBOX, ob);
@@ -2967,7 +3059,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     if (!p || !ob.length) { renderFoot(); return; }
     sending = true;
     var item = ob[0];
-    api({ action: 'save', code: p.code, name: p.name, date: item.date, totals: item.totals, water: item.water, weight: item.weight, nEntries: item.nEntries, recap: item.recap })
+    api({ action: 'save', code: p.code, name: p.name, date: item.date, totals: item.totals, water: item.water, weight: item.weight, nEntries: item.nEntries, trainDay: item.trainDay, recap: item.recap })
       .then(function (res) {
         sending = false;
         if (res && res.ok) {
