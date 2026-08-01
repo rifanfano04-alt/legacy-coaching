@@ -2249,10 +2249,10 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   function openQuickEstimateSheet(prefill, onCreate) {
     openSheet(function (sh) {
       sheetHead(sh, 'Estimation rapide');
-      sh.appendChild(el('div', 'src-note', 'Tu ne connais pas les macros ? Donne juste un nom, le poids approximatif de la portion et les calories que tu penses que ça fait — pratique pour un plat maison sans étiquette.'));
+      sh.appendChild(el('div', 'src-note', 'Tu ne connais pas les macros exactes ? Donne un nom, le poids approximatif de la portion et les calories que tu penses que ça fait (obligatoire). Protéines/glucides/lipides/fibres sont facultatifs — remplis-les seulement si tu en as une idée.'));
 
-      function field(label, val) {
-        sh.appendChild(el('label', 'lbl', label));
+      function field(label, val, opt) {
+        sh.appendChild(el('label', 'lbl', label + (opt ? ' (facultatif)' : '')));
         var i = el('input', 'input');
         i.type = label === 'Nom du plat' ? 'text' : 'number';
         if (i.type === 'number') { i.inputMode = 'decimal'; i.min = '0'; i.step = '1'; }
@@ -2263,6 +2263,10 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       var fN = field('Nom du plat', prefill);
       var fW = field('Poids de la portion (g, à vue de nez)', '200');
       var fK = field('Calories estimées pour cette portion', '');
+      var fP = field('Protéines estimées pour cette portion (g)', '', true);
+      var fG = field('Glucides estimés pour cette portion (g)', '', true);
+      var fL = field('Lipides estimés pour cette portion (g)', '', true);
+      var fF = field('Fibres estimées pour cette portion (g)', '', true);
 
       var main = el('button', 'btn btn-chrome btn-block', 'Créer et choisir la quantité');
       main.style.marginTop = '14px';
@@ -2273,8 +2277,16 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         if (!n) { fN.focus(); return; }
         if (!isFinite(w) || w <= 0) { fW.focus(); toast('Indique un poids de portion valide'); return; }
         if (!isFinite(k) || k < 0) { fK.focus(); toast('Indique une estimation de calories'); return; }
+        function optPer100(i) {
+          var v = parseFloat(String(i.value).replace(',', '.'));
+          return (isFinite(v) && v > 0) ? v / w * 100 : 0;
+        }
         var per100 = Math.min(k / w * 100, 950);
-        var f = { n: n, b: '', per: { k: per100, p: 0, g: 0, l: 0, f: 0 }, u: Math.round(w), ul: 'portion', src: 'estimate' };
+        var f = {
+          n: n, b: '',
+          per: { k: per100, p: optPer100(fP), g: optPer100(fG), l: optPer100(fL), f: optPer100(fF) },
+          u: Math.round(w), ul: 'portion', src: 'estimate'
+        };
         addFav(f); /* sauvé (ou mis à jour) en favori pour le retrouver */
         if (onCreate) onCreate(f); else openQtySheet(f, null);
       };
