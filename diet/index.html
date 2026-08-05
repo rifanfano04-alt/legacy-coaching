@@ -3001,6 +3001,14 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     return (a.days || []).filter(function (d) { return d.date >= cut; });
   }
 
+  /* aplati les objectifs coach pour l'affichage résumé : gère {train,rest} ET l'ancien format plat */
+  function flatTargets(tg) {
+    if (!tg) return null;
+    if (tg.kcal != null) return tg;                              // ancien format : objectif unique
+    if (tg.train && Number(tg.train.kcal) > 0) return tg.train;  // nouveau format : priorité entraînement
+    if (tg.rest && Number(tg.rest.kcal) > 0) return tg.rest;     // sinon repos si seul rempli
+    return null;
+  }
   function renderCoachList() {
     var body = $('coach-body');
     body.textContent = '';
@@ -3026,7 +3034,8 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       var w7 = lastNDays(a, 7);
       var filled = w7.filter(function (d) { return d.k > 0; });
       var avg = filled.length ? Math.round(filled.reduce(function (s, d) { return s + d.k; }, 0) / filled.length) : 0;
-      var tgK = a.targets && a.targets.kcal;
+      var ft = flatTargets(a.targets);
+      var tgK = ft && ft.kcal;
       var sp1 = el('span');
       sp1.innerHTML = '7 j : <b>' + (avg || '—') + '</b> kcal/j' + (tgK ? ' / ' + tgK : '');
       line.appendChild(sp1);
@@ -3059,10 +3068,19 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
 
     var card = el('div', 'card');
     card.appendChild(el('h2', null, a.name || a.code));
-    if (a.targets && a.targets.kcal) {
-      card.appendChild(el('div', 'pg', 'Objectifs : ' + a.targets.kcal + ' kcal · P ' + (a.targets.prot || '—') + ' · G ' + (a.targets.gluc || '—') + ' · L ' + (a.targets.lip || '—') + ' · F ' + (a.targets.fib || '—')));
+    var tg = a.targets;
+    function fmtGoal(g) {
+      return g.kcal + ' kcal · P ' + (g.prot || '—') + ' · G ' + (g.gluc || '—') + ' · L ' + (g.lip || '—') + ' · F ' + (g.fib || '—');
+    }
+    var hasTrain = tg && tg.train && Number(tg.train.kcal) > 0;
+    var hasRest = tg && tg.rest && Number(tg.rest.kcal) > 0;
+    if (hasTrain || hasRest) {
+      if (hasTrain) card.appendChild(el('div', 'pg', 'Entraînement : ' + fmtGoal(tg.train)));
+      if (hasRest) card.appendChild(el('div', 'pg', 'Repos : ' + fmtGoal(tg.rest)));
+    } else if (tg && tg.kcal != null && Number(tg.kcal) > 0) {
+      card.appendChild(el('div', 'pg', 'Objectifs : ' + fmtGoal(tg)));
     } else {
-      card.appendChild(el('div', 'pg', 'Pas d’objectifs définis (colonne kcal/P/G/L/F dans l’onglet Accès du Sheet).'));
+      card.appendChild(el('div', 'pg', 'Pas d’objectifs définis (colonnes on/off dans l’onglet Accès du Sheet).'));
     }
     body.appendChild(card);
 
