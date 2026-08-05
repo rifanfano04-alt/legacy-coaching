@@ -277,6 +277,9 @@ h1.title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(34px, 9vw, 44
 .macro.m-gluc i { background: var(--c-gluc); color: var(--c-gluc); }
 .macro.m-lip  i { background: var(--c-lip);  color: var(--c-lip); }
 .macro.m-fib  i { background: var(--c-fib);  color: var(--c-fib); }
+.macro.boostable { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.macro.boostable:active { opacity: .8; }
+.macro.short .head .n::after { content: ' · ＋ idées'; color: var(--gold); font-size: 10px; letter-spacing: 0; text-transform: none; }
 
 /* ===== Repas / entrées ===== */
 .meal-h { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 0 4px; }
@@ -1518,14 +1521,20 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     $('btn-goals').textContent = load(LS_GOALS) ? 'Modifier mes objectifs' : 'Définir mes objectifs';
 
     /* barres macros */
-    function macro(idV, idB, val, goal) {
+    function macro(idV, idB, val, goal, key) {
       $(idV).textContent = goal ? g1(val) + ' / ' + round(goal) + ' g' : g1(val) + ' g';
       $(idB).style.width = goal ? Math.min(100, val / goal * 100) + '%' : (val > 0 ? '100%' : '0%');
+      var cont = $(idB).closest('.macro');
+      if (cont) {
+        cont.classList.add('boostable');
+        cont.classList.toggle('short', !!goal && (goal - val) > 0.5);
+        cont.onclick = function () { openMacroBoostSheet(key); };
+      }
     }
-    macro('m-prot', 'b-prot', t.p, tg && tg.prot);
-    macro('m-gluc', 'b-gluc', t.g, tg && tg.gluc);
-    macro('m-lip', 'b-lip', t.l, tg && tg.lip);
-    macro('m-fib', 'b-fib', t.f, tg && tg.fib);
+    macro('m-prot', 'b-prot', t.p, tg && tg.prot, 'prot');
+    macro('m-gluc', 'b-gluc', t.g, tg && tg.gluc, 'gluc');
+    macro('m-lip', 'b-lip', t.l, tg && tg.lip, 'lip');
+    macro('m-fib', 'b-fib', t.f, tg && tg.fib, 'fib');
 
     /* suggestion de repas type selon l'heure */
     var sugBox = $('meal-suggest');
@@ -2312,6 +2321,83 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
 
   /* ---------- recettes perso : liste (créer / modifier / supprimer) ---------- */
   /* ---------- favoris : liste dédiée, triée par usage, avec recherche ---------- */
+  /* idées d'aliments par macro (valeurs indicatives pour 100 g, cru) */
+  var MACRO_IDEAS = {
+    prot: { label: 'protéines', foods: [
+      { n: 'Blanc de poulet', per: { k: 120, p: 23, g: 0, l: 2, f: 0 } },
+      { n: 'Blanc de dinde', per: { k: 110, p: 24, g: 0, l: 1, f: 0 } },
+      { n: 'Thon au naturel (égoutté)', per: { k: 116, p: 26, g: 0, l: 1, f: 0 } },
+      { n: 'Steak haché 5%', per: { k: 137, p: 21, g: 0, l: 5, f: 0 } },
+      { n: 'Œufs', per: { k: 143, p: 13, g: 1, l: 10, f: 0 } },
+      { n: 'Skyr nature', per: { k: 63, p: 11, g: 4, l: 0.2, f: 0 } },
+      { n: 'Fromage blanc 0%', per: { k: 47, p: 8, g: 4, l: 0.2, f: 0 } },
+      { n: 'Tofu ferme', per: { k: 145, p: 16, g: 3, l: 9, f: 1 } },
+      { n: 'Whey (poudre)', per: { k: 400, p: 80, g: 8, l: 6, f: 0 } }
+    ]},
+    gluc: { label: 'glucides', foods: [
+      { n: 'Riz basmati (cru)', per: { k: 360, p: 7, g: 78, l: 0.9, f: 1.4 } },
+      { n: 'Pâtes (crues)', per: { k: 360, p: 12, g: 72, l: 1.5, f: 3 } },
+      { n: 'Semoule (crue)', per: { k: 360, p: 12, g: 73, l: 1, f: 4 } },
+      { n: 'Flocons d’avoine', per: { k: 370, p: 13, g: 60, l: 7, f: 10 } },
+      { n: 'Pain complet', per: { k: 250, p: 9, g: 45, l: 3, f: 6 } },
+      { n: 'Patate douce (crue)', per: { k: 86, p: 1.6, g: 20, l: 0.1, f: 3 } },
+      { n: 'Pomme de terre (crue)', per: { k: 77, p: 2, g: 17, l: 0.1, f: 2.2 } },
+      { n: 'Banane', per: { k: 90, p: 1.1, g: 23, l: 0.3, f: 2.6 } }
+    ]},
+    lip: { label: 'lipides', foods: [
+      { n: 'Huile d’olive', per: { k: 900, p: 0, g: 0, l: 100, f: 0 } },
+      { n: 'Amandes', per: { k: 600, p: 21, g: 22, l: 50, f: 12 } },
+      { n: 'Beurre de cacahuète', per: { k: 600, p: 25, g: 20, l: 50, f: 6 } },
+      { n: 'Noix', per: { k: 650, p: 15, g: 14, l: 65, f: 7 } },
+      { n: 'Beurre', per: { k: 750, p: 0.9, g: 0.7, l: 83, f: 0 } },
+      { n: 'Avocat', per: { k: 160, p: 2, g: 9, l: 15, f: 7 } },
+      { n: 'Saumon (cru)', per: { k: 180, p: 20, g: 0, l: 11, f: 0 } },
+      { n: 'Œufs', per: { k: 143, p: 13, g: 1, l: 10, f: 0 } }
+    ]},
+    fib: { label: 'fibres', foods: [
+      { n: 'Graines de chia', per: { k: 490, p: 17, g: 42, l: 31, f: 34 } },
+      { n: 'Amandes', per: { k: 600, p: 21, g: 22, l: 50, f: 12 } },
+      { n: 'Flocons d’avoine', per: { k: 370, p: 13, g: 60, l: 7, f: 10 } },
+      { n: 'Lentilles (cuites)', per: { k: 116, p: 9, g: 20, l: 0.4, f: 8 } },
+      { n: 'Pois chiches (cuits)', per: { k: 164, p: 9, g: 27, l: 2.6, f: 8 } },
+      { n: 'Framboises', per: { k: 52, p: 1.2, g: 12, l: 0.7, f: 6.6 } },
+      { n: 'Pain complet', per: { k: 250, p: 9, g: 45, l: 3, f: 6 } },
+      { n: 'Brocoli (cru)', per: { k: 34, p: 2.8, g: 7, l: 0.4, f: 2.6 } }
+    ]}
+  };
+  function openMacroBoostSheet(key) {
+    var info = MACRO_IDEAS[key];
+    if (!info) return;
+    var mk = { prot: 'p', gluc: 'g', lip: 'l', fib: 'f' }[key];
+    var d = getDay(viewKey), t = totalsOf(d), tg = targets(viewKey);
+    var goal = tg ? tg[key] : null, cur = t[mk];
+    openSheet(function (sh) {
+      sheetHead(sh, 'Idées pour tes ' + info.label);
+      var left = (goal != null) ? Math.round(goal - cur) : null;
+      var nd = el('div', 'src-note');
+      nd.innerHTML = (left != null && left > 0)
+        ? 'Il te manque <b>' + left + ' g</b> de ' + info.label + ' aujourd’hui. Des aliments qui en sont riches (pour 100 g, cru) :'
+        : 'Des aliments riches en ' + info.label + ' (pour 100 g, cru) :';
+      sh.appendChild(nd);
+      var box = el('div');
+      sh.appendChild(box);
+      info.foods.slice().sort(function (a, b) { return b.per[mk] - a.per[mk]; }).forEach(function (f) {
+        var row = el('div', 'res');
+        var meta = el('div', 'meta');
+        meta.appendChild(el('strong', null, f.n));
+        var s = el('span');
+        s.innerHTML = '<b>' + g1(f.per[mk]) + ' g</b> de ' + info.label + ' · ' + round(f.per.k) + ' kcal';
+        meta.appendChild(s);
+        row.appendChild(meta);
+        var add = el('div', 'kc');
+        add.innerHTML = '<b>＋</b><span>ajouter</span>';
+        row.appendChild(add);
+        row.onclick = function () { openQtySheet({ n: f.n, per: f.per }, null); };
+        box.appendChild(row);
+      });
+    });
+  }
+
   function openFavListSheet(onPick) {
     openSheet(function (sh) {
       sheetHead(sh, 'Mes favoris');
