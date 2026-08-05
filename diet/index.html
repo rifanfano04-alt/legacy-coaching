@@ -1270,12 +1270,28 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   }
   function targets(dayKey) {
     var p = profile();
-    if (p && p.targets && Number(p.targets.kcal) > 0) return p.targets;
+    if (p && p.targets) {
+      /* nouveau format coach : objectifs séparés jour on / jour off */
+      if (p.targets.train || p.targets.rest) {
+        var isTrain = !!getDay(dayKey || todayKey()).trainDay;
+        var pick = isTrain ? p.targets.train : p.targets.rest;
+        var other = isTrain ? p.targets.rest : p.targets.train;
+        if (pick && Number(pick.kcal) > 0) return pick;
+        if (other && Number(other.kcal) > 0) return other;
+      } else if (Number(p.targets.kcal) > 0) {
+        /* ancien format : un seul objectif fixe, valable pour les deux */
+        return p.targets;
+      }
+    }
     return dayGoals(dayKey || todayKey());
   }
   function coachSetTargets() {
     var p = profile();
-    return !!(p && p.targets && Number(p.targets.kcal) > 0);
+    if (!p || !p.targets) return false;
+    if (p.targets.train || p.targets.rest) {
+      return !!((p.targets.train && Number(p.targets.train.kcal) > 0) || (p.targets.rest && Number(p.targets.rest.kcal) > 0));
+    }
+    return Number(p.targets.kcal) > 0;
   }
   /* jours consécutifs (jusqu'à hier) où le total kcal est resté à ±10% de l'objectif du jour */
   function computeStreak() {
