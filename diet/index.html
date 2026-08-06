@@ -2324,47 +2324,79 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
   /* idées d'aliments par macro (valeurs indicatives pour 100 g, cru) */
   var MACRO_IDEAS = {
     prot: { label: 'protéines', foods: [
-      { n: 'Blanc de poulet', per: { k: 120, p: 23, g: 0, l: 2, f: 0 } },
+      { n: 'Whey (poudre)', per: { k: 400, p: 80, g: 8, l: 6, f: 0 } },
+      { n: 'Protéine de soja texturée', per: { k: 340, p: 50, g: 30, l: 1, f: 18 } },
       { n: 'Blanc de dinde', per: { k: 110, p: 24, g: 0, l: 1, f: 0 } },
+      { n: 'Crevettes', per: { k: 99, p: 24, g: 0, l: 0.3, f: 0 } },
       { n: 'Thon au naturel (égoutté)', per: { k: 116, p: 26, g: 0, l: 1, f: 0 } },
+      { n: 'Blanc de poulet', per: { k: 120, p: 23, g: 0, l: 2, f: 0 } },
       { n: 'Steak haché 5%', per: { k: 137, p: 21, g: 0, l: 5, f: 0 } },
+      { n: 'Cabillaud (cru)', per: { k: 82, p: 18, g: 0, l: 0.7, f: 0 } },
+      { n: 'Saumon (cru)', per: { k: 180, p: 20, g: 0, l: 11, f: 0 } },
+      { n: 'Jambon blanc dégraissé', per: { k: 110, p: 20, g: 1, l: 3, f: 0 } },
       { n: 'Œufs', per: { k: 143, p: 13, g: 1, l: 10, f: 0 } },
       { n: 'Skyr nature', per: { k: 63, p: 11, g: 4, l: 0.2, f: 0 } },
+      { n: 'Yaourt grec nature', per: { k: 97, p: 9, g: 4, l: 5, f: 0 } },
       { n: 'Fromage blanc 0%', per: { k: 47, p: 8, g: 4, l: 0.2, f: 0 } },
       { n: 'Tofu ferme', per: { k: 145, p: 16, g: 3, l: 9, f: 1 } },
-      { n: 'Whey (poudre)', per: { k: 400, p: 80, g: 8, l: 6, f: 0 } }
+      { n: 'Lentilles corail (crues)', per: { k: 350, p: 24, g: 50, l: 1.5, f: 11 } }
     ]},
     gluc: { label: 'glucides', foods: [
       { n: 'Riz basmati (cru)', per: { k: 360, p: 7, g: 78, l: 0.9, f: 1.4 } },
+      { n: 'Riz complet (cru)', per: { k: 355, p: 7, g: 75, l: 2.5, f: 3.5 } },
       { n: 'Pâtes (crues)', per: { k: 360, p: 12, g: 72, l: 1.5, f: 3 } },
       { n: 'Semoule (crue)', per: { k: 360, p: 12, g: 73, l: 1, f: 4 } },
+      { n: 'Boulgour (cru)', per: { k: 342, p: 12, g: 64, l: 1.3, f: 12 } },
+      { n: 'Quinoa (cru)', per: { k: 368, p: 14, g: 57, l: 6, f: 7 } },
       { n: 'Flocons d’avoine', per: { k: 370, p: 13, g: 60, l: 7, f: 10 } },
+      { n: 'Muesli', per: { k: 360, p: 9, g: 60, l: 6, f: 8 } },
       { n: 'Pain complet', per: { k: 250, p: 9, g: 45, l: 3, f: 6 } },
-      { n: 'Patate douce (crue)', per: { k: 86, p: 1.6, g: 20, l: 0.1, f: 3 } },
       { n: 'Pomme de terre (crue)', per: { k: 77, p: 2, g: 17, l: 0.1, f: 2.2 } },
-      { n: 'Banane', per: { k: 90, p: 1.1, g: 23, l: 0.3, f: 2.6 } }
+      { n: 'Patate douce (crue)', per: { k: 86, p: 1.6, g: 20, l: 0.1, f: 3 } },
+      { n: 'Banane', per: { k: 90, p: 1.1, g: 23, l: 0.3, f: 2.6 } },
+      { n: 'Dattes', per: { k: 280, p: 2, g: 75, l: 0.4, f: 8 } },
+      { n: 'Miel', per: { k: 304, p: 0, g: 82, l: 0, f: 0 } },
+      { n: 'Raisins secs', per: { k: 300, p: 3, g: 79, l: 0.5, f: 4 } },
+      { n: 'Flocons de maïs', per: { k: 380, p: 7, g: 84, l: 0.9, f: 3 } }
     ]},
     lip: { label: 'lipides', foods: [
       { n: 'Huile d’olive', per: { k: 900, p: 0, g: 0, l: 100, f: 0 } },
-      { n: 'Amandes', per: { k: 600, p: 21, g: 22, l: 50, f: 12 } },
-      { n: 'Beurre de cacahuète', per: { k: 600, p: 25, g: 20, l: 50, f: 6 } },
-      { n: 'Noix', per: { k: 650, p: 15, g: 14, l: 65, f: 7 } },
+      { n: 'Huile de colza', per: { k: 900, p: 0, g: 0, l: 100, f: 0 } },
       { n: 'Beurre', per: { k: 750, p: 0.9, g: 0.7, l: 83, f: 0 } },
+      { n: 'Noix', per: { k: 650, p: 15, g: 14, l: 65, f: 7 } },
+      { n: 'Noisettes', per: { k: 630, p: 15, g: 17, l: 61, f: 10 } },
+      { n: 'Pistaches', per: { k: 560, p: 20, g: 28, l: 45, f: 10 } },
+      { n: 'Amandes', per: { k: 600, p: 21, g: 22, l: 50, f: 12 } },
+      { n: 'Purée d’amande', per: { k: 630, p: 21, g: 19, l: 55, f: 10 } },
+      { n: 'Cacahuètes', per: { k: 600, p: 26, g: 16, l: 49, f: 8 } },
+      { n: 'Beurre de cacahuète', per: { k: 600, p: 25, g: 20, l: 50, f: 6 } },
+      { n: 'Graines de courge', per: { k: 560, p: 30, g: 11, l: 49, f: 6 } },
+      { n: 'Graines de lin', per: { k: 530, p: 18, g: 29, l: 42, f: 27 } },
+      { n: 'Graines de chia', per: { k: 490, p: 17, g: 42, l: 31, f: 34 } },
       { n: 'Avocat', per: { k: 160, p: 2, g: 9, l: 15, f: 7 } },
       { n: 'Saumon (cru)', per: { k: 180, p: 20, g: 0, l: 11, f: 0 } },
-      { n: 'Œufs', per: { k: 143, p: 13, g: 1, l: 10, f: 0 } }
+      { n: 'Chocolat noir 70%', per: { k: 550, p: 8, g: 45, l: 40, f: 11 } }
     ]},
     fib: { label: 'fibres', foods: [
       { n: 'Graines de chia', per: { k: 490, p: 17, g: 42, l: 31, f: 34 } },
+      { n: 'Graines de lin', per: { k: 530, p: 18, g: 29, l: 42, f: 27 } },
+      { n: 'Son d’avoine', per: { k: 250, p: 17, g: 50, l: 7, f: 15 } },
       { n: 'Amandes', per: { k: 600, p: 21, g: 22, l: 50, f: 12 } },
+      { n: 'Figues séchées', per: { k: 250, p: 3, g: 58, l: 1, f: 10 } },
+      { n: 'Pruneaux', per: { k: 240, p: 2, g: 64, l: 0.5, f: 7 } },
       { n: 'Flocons d’avoine', per: { k: 370, p: 13, g: 60, l: 7, f: 10 } },
       { n: 'Lentilles (cuites)', per: { k: 116, p: 9, g: 20, l: 0.4, f: 8 } },
       { n: 'Pois chiches (cuits)', per: { k: 164, p: 9, g: 27, l: 2.6, f: 8 } },
+      { n: 'Haricots rouges (cuits)', per: { k: 127, p: 9, g: 22, l: 0.5, f: 7 } },
       { n: 'Framboises', per: { k: 52, p: 1.2, g: 12, l: 0.7, f: 6.6 } },
+      { n: 'Petits pois (cuits)', per: { k: 84, p: 5, g: 14, l: 0.4, f: 5 } },
       { n: 'Pain complet', per: { k: 250, p: 9, g: 45, l: 3, f: 6 } },
-      { n: 'Brocoli (cru)', per: { k: 34, p: 2.8, g: 7, l: 0.4, f: 2.6 } }
+      { n: 'Brocoli (cru)', per: { k: 34, p: 2.8, g: 7, l: 0.4, f: 2.6 } },
+      { n: 'Avocat', per: { k: 160, p: 2, g: 9, l: 15, f: 7 } },
+      { n: 'Quinoa (cru)', per: { k: 368, p: 14, g: 57, l: 6, f: 7 } }
     ]}
   };
+
   function openMacroBoostSheet(key) {
     var info = MACRO_IDEAS[key];
     if (!info) return;
