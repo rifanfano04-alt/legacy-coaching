@@ -292,7 +292,23 @@ function apiSave(body) {
   } finally {
     lock.releaseLock();
   }
+  rebuildPR_(a.sheetId);
   return { ok: true };
+}
+
+/**
+ * Reconstruit le TABLEAU DE PR de l'athlète.
+ * Le script du tableau ne se déclenche (onEdit) que sur une saisie humaine :
+ * quand c'est l'app qui écrit, on l'appelle donc nous-mêmes, via la
+ * bibliothèque « TableauPR » (le projet lié à FUTURE PROG).
+ * Jamais bloquant : si ça échoue, la séance est quand même enregistrée.
+ */
+function rebuildPR_(sheetId) {
+  try {
+    TableauPR.construirePourSheet(sheetId);
+  } catch (err) {
+    console.error('Tableau de PR non reconstruit : ' + (err && err.message || err));
+  }
 }
 
 /** RPE : nombre si possible (évite la conversion en date), sinon texte. */
