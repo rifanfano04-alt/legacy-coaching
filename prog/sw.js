@@ -1,6 +1,7 @@
 /* LEGACY — séance : cache l'app pour qu'elle s'ouvre sans réseau à la salle. */
-var CACHE = 'lgcy-prog-v2';
-var ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png'];
+var CACHE = 'lgcy-prog-v3';
+var ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png',
+  './sil-dips.png', './sil-squat.png', './sil-traction.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }).then(function () { return self.skipWaiting(); }));
