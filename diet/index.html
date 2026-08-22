@@ -1357,7 +1357,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
     store(LS_RECIPES, list);
   }
   function deleteRecipe(id) { store(LS_RECIPES, recipes().filter(function (x) { return x.id !== id; })); }
-  function recipeToFood(r) { return { n: r.n, b: '', per: r.per, u: 0, ul: '', src: 'recipe', a: '' }; }
+  function recipeToFood(r) { return { n: r.n, b: '', per: r.per, u: 0, ul: '', src: 'recipe', a: '', cooked: !!r.cookedG }; }
 
   /* ---------- repas types (combo fixe de plusieurs aliments, reloggé d'un coup) ---------- */
   function mealTpls() { return load(LS_TPL) || []; }
@@ -2057,7 +2057,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       var srcTxt = food.src === 'off'
         ? '🏷️ Étiquette du produit (Open Food Facts)'
         : (food.src === 'custom' ? '✍️ Aliment créé (tes valeurs)'
-          : (food.src === 'recipe' ? '🍲 Recette perso (tes ingrédients)'
+          : (food.src === 'recipe' ? (food.cooked ? '🍲 Recette perso (pesée une fois cuite)' : '🍲 Recette perso (tes ingrédients, pesée crue)')
             : (food.src === 'estimate' ? '🤔 Estimation rapide (calories approximatives, à vue de nez)' : '📖 Table officielle CIQUAL — pour 100 g, cru')));
       sh.appendChild(el('div', 'src-note', srcTxt + ' · 100 g = ' + round(food.per.k) + ' kcal · P ' + g1(food.per.p) + ' · G ' + g1(food.per.g) + ' · L ' + g1(food.per.l)));
 
@@ -2065,7 +2065,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       var meal = editEntry ? editEntry.meal : guessMeal();
       var paintUnits = null;
 
-      sh.appendChild(el('label', 'lbl', 'Quantité en grammes — poids cru' + (food.u && food.ul ? ' (1 ' + food.ul + ' ≈ ' + food.u + ' g)' : '')));
+      sh.appendChild(el('label', 'lbl', 'Quantité en grammes — ' + (food.cooked ? 'poids cuit' : 'poids cru') + (food.u && food.ul ? ' (1 ' + food.ul + ' ≈ ' + food.u + ' g)' : '')));
       var qin = el('input', 'input');
       qin.type = 'number';
       qin.inputMode = 'decimal';
@@ -2486,7 +2486,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         var row = el('div', 'entry');
         var meta = el('div', 'meta');
         meta.appendChild(el('strong', null, r.n));
-        meta.appendChild(el('span', null, round(r.per.k) + ' kcal / 100 g · ' + r.ingredients.length + ' ingrédient(s)'));
+        meta.appendChild(el('span', null, round(r.per.k) + ' kcal / 100 g' + (r.cookedG ? ' cuit' : '') + ' · ' + r.ingredients.length + ' ingrédient(s)'));
         row.appendChild(meta);
         row.onclick = function () { openRecipeSheet(JSON.parse(JSON.stringify(r))); };
         var del = el('button', 'chip', '✕');
@@ -2534,7 +2534,7 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
           row.appendChild(del);
           box.appendChild(row);
         });
-        box.appendChild(el('div', 'src-note', 'Total du lot : ' + round(totalK) + ' kcal pour ' + round(draft.ingredients.reduce(function (a, i) { return a + i.qty; }, 0)) + ' g'));
+        box.appendChild(el('div', 'src-note', 'Total du lot (cru) : ' + round(totalK) + ' kcal pour ' + round(draft.ingredients.reduce(function (a, i) { return a + i.qty; }, 0)) + ' g'));
       }
       renderIngs();
 
@@ -2556,6 +2556,15 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
       };
       sh.appendChild(addIng);
 
+      sh.appendChild(el('label', 'lbl', 'Poids une fois cuit (g) — optionnel'));
+      var cookedIn = el('input', 'input');
+      cookedIn.type = 'number';
+      cookedIn.inputMode = 'decimal';
+      cookedIn.placeholder = 'laisse vide si rien ne s’évapore (sauce froide, smoothie…)';
+      cookedIn.value = draft.cookedG || '';
+      sh.appendChild(cookedIn);
+      sh.appendChild(el('div', 'src-note', '⚖️ Renseigne-le si tu comptes peser tes parts une fois cuites (le plat perd du poids en eau à la cuisson, pas ses macros). Laisse vide pour continuer à peser cru.'));
+
       var main = el('button', 'btn btn-chrome btn-block', 'Enregistrer la recette');
       main.style.marginTop = '14px';
       main.onclick = function () {
@@ -2563,16 +2572,18 @@ table.coach-t td.k { color: var(--gold); font-weight: 700; }
         if (!n) { nameIn.focus(); return; }
         if (!draft.ingredients.length) { toast('Ajoute au moins un ingrédient'); return; }
         var totalG = draft.ingredients.reduce(function (a, i) { return a + i.qty; }, 0);
+        var cookedG = Number(cookedIn.value) || 0;
+        var baseG = cookedG > 0 ? cookedG : totalG;
         var sums = draft.ingredients.reduce(function (a, i) {
           var r = i.qty / 100;
           a.k += i.per.k * r; a.p += i.per.p * r; a.g += i.per.g * r; a.l += i.per.l * r; a.f += i.per.f * r;
           return a;
         }, { k: 0, p: 0, g: 0, l: 0, f: 0 });
         var per100 = {
-          k: sums.k / totalG * 100, p: sums.p / totalG * 100, g: sums.g / totalG * 100,
-          l: sums.l / totalG * 100, f: sums.f / totalG * 100
+          k: sums.k / baseG * 100, p: sums.p / baseG * 100, g: sums.g / baseG * 100,
+          l: sums.l / baseG * 100, f: sums.f / baseG * 100
         };
-        var r = { id: draft.id || uid(), n: n, ingredients: draft.ingredients, per: per100, totalG: totalG, src: 'recipe' };
+        var r = { id: draft.id || uid(), n: n, ingredients: draft.ingredients, per: per100, totalG: totalG, cookedG: cookedG > 0 ? cookedG : null, src: 'recipe' };
         saveRecipe(r);
         toast('Recette enregistrée ✓');
         openQtySheet(recipeToFood(r), null);
