@@ -178,7 +178,7 @@ function lireSemaine_(sh, semaine) {
 
   var seances = [];
   SESSION_ROWS.forEach(function (hRow, sIdx) {
-    var exos = [], rempli = 0;
+    var exos = [], rempli = 0, prescrits = 0;
     for (var k = 0; k < EXOS_PER_SESSION; k++) {
       var r = hRow + 2 + k;
       var code = txt_(get(r, OFF.code)).toUpperCase();
@@ -210,17 +210,25 @@ function lireSemaine_(sh, semaine) {
         rpeLast: rpe_(get(r, OFF.rpeLast)),
         note: txt_(get(r, OFF.note))
       };
-      if (e.charge !== null || e.rpe1 || e.rpeLast) rempli++;
+      if (e.charge !== null || e.rpe1 || e.rpeLast || e.note) rempli++;
+      if (e.sets || e.reps) prescrits++;
       exos.push(e);
     }
     if (!exos.length) return;
+    var diff = txt_(get(hRow + 9, OFF_DIFF));
+    // « faite » = la difficulté de séance est renseignée (c'est le marqueur de fin,
+    // écrit par l'app) OU tout ce qui était programmé a été rempli.
+    var faite = !!diff || (prescrits > 0 && rempli >= prescrits);
     seances.push({
       idx: sIdx,
       ligne: hRow,
       jour: txt_(get(hRow - 1, OFF.nom)),
-      difficulte: txt_(get(hRow + 9, OFF_DIFF)),
+      difficulte: diff,
       exos: exos,
-      faite: rempli >= Math.ceil(exos.length / 2)
+      remplis: rempli,
+      total: exos.length,
+      etat: faite ? 'faite' : (rempli > 0 ? 'encours' : 'vide'),
+      faite: faite
     });
   });
 
