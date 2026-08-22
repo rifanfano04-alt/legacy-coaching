@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#0a0a0b">
 <meta name="description" content="Ta séance LEGACY : charges, RPE et notes, directement dans le suivi de ton coach.">
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="favicon-64.png" sizes="64x64" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -63,6 +64,28 @@
   .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--grey-1);}
   .err{color:var(--blood);font-size:13px;min-height:18px;font-weight:600;}
 
+  /* ---------- SILHOUETTES (issues des blocks) ---------- */
+  .sil{
+    position:absolute;pointer-events:none;z-index:0;
+    background-color:currentColor;
+    -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+    -webkit-mask-size:contain;mask-size:contain;
+    -webkit-mask-position:center;mask-position:center;
+    transition:opacity .4s ease;
+  }
+  /* filigrane de la carte exo : prend la couleur du muscle */
+  #r-sil{
+    right:2%;top:104px;width:52%;height:42%;
+    color:var(--exo);opacity:.09;
+    -webkit-mask-position:top right;mask-position:top right;
+  }
+  /* fond de l'écran de code */
+  #gate-sil{
+    left:50%;bottom:-4%;width:min(94vw,420px);height:52%;
+    transform:translateX(-50%);
+    color:#ffffff;opacity:.05;
+  }
+
   /* ---------- TOPBAR ---------- */
   .top{
     display:flex;align-items:center;gap:12px;padding:14px 16px;
@@ -74,7 +97,7 @@
   .top .t2{font-size:11.5px;color:var(--grey-3);text-transform:uppercase;letter-spacing:1.2px;font-weight:700;}
   .icobtn{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);display:grid;place-items:center;font-size:15px;color:var(--grey-2);}
 
-  .body{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 16px 24px;-webkit-overflow-scrolling:touch;}
+  .body{position:relative;z-index:1;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:16px 16px 24px;-webkit-overflow-scrolling:touch;}
 
   /* ---------- SEMAINE / SÉANCES ---------- */
   .weekbar{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
@@ -232,6 +255,7 @@
   <!-- ══════════ CODE ══════════ -->
   <section class="screen on" id="gate">
     <div class="glow"></div>
+    <div class="sil" id="gate-sil"></div>
     <div class="mark u">LEGA<span>CY</span></div>
     <p class="sub">Entre ton code athlète pour charger ta séance du jour.</p>
     <div class="field"><input id="code" inputmode="text" autocomplete="off" placeholder="CODE" maxlength="12"></div>
@@ -271,6 +295,7 @@
       </div>
     </div>
     <div class="prog" id="r-prog"></div>
+    <div class="sil" id="r-sil"></div>
     <div class="body" id="r-body"></div>
     <div class="foot">
       <button class="side" id="r-prev">‹</button>
@@ -337,6 +362,8 @@
   var DIFF = ['TRES FACILE','FACILE','MID','DIFFICILE','TRES DIFFICILE'];
   var DIFF_LBL = ['Très facile','Facile','Mid','Difficile','Très dur'];
   var RECUP = [['sommeil','Sommeil'],['nutrition','Nutrition'],['steps','Steps'],['humeur','Humeur']];
+  // silhouettes reprises des en-têtes de semaine des BLOCK
+  var SIL = { M:'sil-traction.png', P:'sil-traction.png', D:'sil-dips.png', S:'sil-squat.png' };
 
   /* ───── stockage local (tolérant : mode privé, storage bloqué…) ───── */
   function sGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -517,6 +544,12 @@
   function renderExo() {
     var e = seance.exos[idx];
     document.documentElement.style.setProperty('--exo', e.couleur);
+    var sil = $('r-sil'), img = SIL[e.code];
+    sil.style.opacity = img ? '' : '0';
+    if (img) {
+      sil.style.webkitMaskImage = "url('" + img + "')";
+      sil.style.maskImage = "url('" + img + "')";
+    }
     $('r-pos').textContent = 'Exercice ' + (idx + 1) + ' / ' + seance.exos.length;
     $('r-prog').innerHTML = seance.exos.map(function (x, i) {
       var on = (x.charge !== null && x.charge !== '') || x.rpe1 || x.rpeLast;
@@ -708,6 +741,12 @@
   };
 
   /* ───── démarrage ───── */
+  (function () {
+    var g = $('gate-sil');
+    g.style.webkitMaskImage = "url('sil-dips.png')";
+    g.style.maskImage = "url('sil-dips.png')";
+  })();
+
   netState();
   if (code) { $('code').value = code; show('home'); load(null); }
   else show('gate');
