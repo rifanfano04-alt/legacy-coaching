@@ -98,8 +98,10 @@
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .dots{display:flex;gap:4px;margin-top:7px;}
   .dots i{width:14px;height:4px;border-radius:2px;display:block;opacity:.85;}
-  .scard.done{border-color:rgba(74,222,128,.32);}
-  .scard.done .n{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.35);color:var(--ok);}
+  .scard.faite{border-color:rgba(74,222,128,.32);}
+  .scard.faite .n{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.35);color:var(--ok);}
+  .scard.encours{border-color:rgba(255,214,0,.30);}
+  .scard.encours .n{background:rgba(255,214,0,.10);border-color:rgba(255,214,0,.35);color:#ffd600;font-size:12px;}
 
   .banner{
     display:flex;gap:12px;align-items:flex-start;border-radius:14px;padding:13px 14px;margin-bottom:14px;
@@ -486,8 +488,10 @@
     prog.seances.forEach(function (s, i) {
       var dots = s.exos.map(function (e) { return '<i style="background:' + e.couleur + '"></i>'; }).join('');
       var noms = s.exos.map(function (e) { return cap(e.nom); }).join(' · ');
-      h += '<button class="scard' + (s.faite ? ' done' : '') + '" data-s="' + i + '">' +
-             '<div class="n">' + (s.faite ? '✓' : (i + 1)) + '</div>' +
+      var etat = s.etat || (s.faite ? 'faite' : 'vide');
+      var badge = etat === 'faite' ? '✓' : (etat === 'encours' ? (s.remplis + '/' + s.total) : (i + 1));
+      h += '<button class="scard ' + etat + '" data-s="' + i + '">' +
+             '<div class="n">' + badge + '</div>' +
              '<div class="m"><b>' + esc(s.jour || ('Séance ' + (i + 1))) + '</b>' +
                '<i>' + esc(noms) + '</i><div class="dots">' + dots + '</div></div>' +
              '<div style="color:var(--grey-3);font-size:18px">›</div>' +
@@ -636,12 +640,14 @@
     call(payload).then(function () {
       seance.exos.forEach(function (e, i) { prog.seances[seance._i].exos[i] = e; });
       prog.seances[seance._i].faite = true;
+      prog.seances[seance._i].etat = diff ? 'faite' : 'encours';
       prog.seances[seance._i].difficulte = diff;
       try { sSet(LS_PROG, JSON.stringify(prog)); } catch (e) {}
       finish('C\'est envoyé', 'Ta séance est arrivée dans le suivi de ton coach.');
     }).catch(function () {
       queue(payload);
       prog.seances[seance._i].faite = true;
+      prog.seances[seance._i].etat = diff ? 'faite' : 'encours';
       finish('Gardé hors ligne', 'Pas de réseau : ta séance part toute seule dès que tu es reconnecté.');
     }).then(function () { btn.disabled = false; btn.textContent = 'Envoyer au coach'; });
   };
