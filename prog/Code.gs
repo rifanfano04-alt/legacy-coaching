@@ -185,10 +185,13 @@ function lireSemaine_(sh, semaine) {
       var sets = num_(get(r, OFF.sets));
       var nom  = txt_(get(r, OFF.nom));
       var vari = txt_(get(r, OFF.variante));
-      if (!code || (!sets && !vari && !nom)) continue;
+      var reps = num_(get(r, OFF.reps));
+      var chg  = num_(get(r, OFF.charge));
+      // ligne de gabarit (code muscle présent mais rien de programmé) : on l'ignore
+      if (!code || (!sets && !reps && !vari && chg === null)) continue;
       var libelle = (code === 'R') ? (vari || 'Renfo') : nom;
       var sousTitre = (code === 'R') ? '' : vari;
-      var charge = num_(get(r, OFF.charge));
+      var charge = chg;
       var e = {
         row: r,
         code: code,
@@ -198,7 +201,7 @@ function lireSemaine_(sh, semaine) {
         variante: sousTitre,
         tempo: txt_(get(r, OFF.tempo)),
         sets: sets,
-        reps: num_(get(r, OFF.reps)),
+        reps: reps,
         rpeCible: rpe_(get(r, OFF.rpeCible)),
         pct: num_(get(r, OFF.pct)),
         chargeReco: num_(get(r, OFF.chargeReco)),
