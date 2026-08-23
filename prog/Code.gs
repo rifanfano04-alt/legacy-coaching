@@ -59,6 +59,7 @@ function doPost(e) {
     else if (action === 'program') out = apiProgram(body);
     else if (action === 'save')    out = apiSave(body);
     else if (action === 'weekly')  out = apiWeekly(body);
+    else if (action === 'coach')   out = apiCoach(body);
     else out = { ok: false, error: 'action inconnue : ' + action };
   } catch (err) {
     out = { ok: false, error: String(err && err.message || err) };
@@ -102,12 +103,12 @@ function athleteFromCode_(code) {
     if (!c || c !== code) continue;
     var actif = String(rows[i][2] || 'oui').trim().toLowerCase();
     if (actif === 'non' || actif === 'no' || actif === 'faux') throw new Error('Accès désactivé.');
+    var role = /coach/i.test(String(rows[i][4] || '')) ? 'coach' : 'athlete';
     var id = String(rows[i][3] || '').trim();
-    if (!id) throw new Error('Aucun Sheet associé à ce code.');
-    // accepte aussi une URL complète collée dans la colonne
     var m = id.match(/\/d\/([a-zA-Z0-9-_]+)/);
     if (m) id = m[1];
-    return { code: c, prenom: String(rows[i][1] || '').trim(), sheetId: id };
+    if (!id && role !== 'coach') throw new Error('Aucun Sheet associé à ce code.');
+    return { code: c, prenom: String(rows[i][1] || '').trim(), sheetId: id, role: role };
   }
   throw new Error('Code inconnu.');
 }
@@ -244,12 +245,14 @@ function lireSemaine_(sh, semaine) {
 
 function apiLogin(body) {
   var a = athleteFromCode_(body.code);
+  if (a.role === 'coach') return { ok: true, role: 'coach', prenom: a.prenom };
   var ss = SpreadsheetApp.openById(a.sheetId);
-  return { ok: true, prenom: a.prenom, sheet: ss.getName() };
+  return { ok: true, role: 'athlete', prenom: a.prenom, sheet: ss.getName() };
 }
 
 function apiProgram(body) {
   var a  = athleteFromCode_(body.code);
+  if (a.role === 'coach') return { ok: true, role: 'coach', prenom: a.prenom };
   var ss = SpreadsheetApp.openById(a.sheetId);
   var sit = situation_(ss);
   var semaine = Number(body.semaine) || sit.semaine;
@@ -258,6 +261,7 @@ function apiProgram(body) {
   var w = lireSemaine_(sit.sheet, semaine);
   return {
     ok: true,
+    role: 'athlete',
     prenom: a.prenom,
     block: sit.sheet.getName(),
     blockDebut: sit.debut ? Utilities.formatDate(sit.debut, Session.getScriptTimeZone(), 'dd/MM/yy') : '',
@@ -347,4 +351,78 @@ function apiWeekly(body) {
     lock.releaseLock();
   }
   return { ok: true };
+}
+
+/* ───────────────────────── VUE COACH ───────────────────────── */
+
+/** Un exercice mérite l'attention du coach ? */
+function alertesExo_(e) {
+  var out = [];
+  var dur = function (v) {
+    var s = String(v || '').toLowerCase();
+    if (s.indexOf('échec') > -1 || s.indexOf('echec') > -1) return true;
+    var n = Number(s.replace(',', '.'));
+    return !isNaN(n) && n >= 9.5;
+  };
+  if (dur(e.rpeLast) || dur(e.rpe1)) {
+    out.push({ type: 'rpe', exo: e.nom, texte: 'RPE ' + (e.rpeLast || e.rpe1) });
+  }
+  if (e.note) out.push({ type: 'note', exo: e.nom, texte: e.note });
+  return out;
+}
+
+function apiCoach(body) {
+  var a = athleteFromCode_(body.code);
+  if (a.role !== 'coach') throw new Error('Réservé au coach.');
+
+  var rows = registreSheet_().getDataRange().getValues();
+  var athletes = [];
+
+  for (var i = 1; i < rows.length; i++) {
+    var code = String(rows[i][0] || '').trim();
+    if (!code) continue;
+    if (/coach/i.test(String(rows[i][4] || ''))) continue;
+    if (String(rows[i][2] || 'oui').trim().toLowerCase() === 'non') continue;
+    var id = String(rows[i][3] || '').trim();
+    var m = id.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (m) id = m[1];
+    if (!id) continue;
+
+    var fiche = { code: code, prenom: String(rows[i][1] || '').trim() || code };
+    try {
+      var ss  = SpreadsheetApp.openById(id);
+      var sit = situation_(ss);
+      var w   = lireSemaine_(sit.sheet, sit.semaine);
+
+      var faites = 0, alertes = [];
+      w.seances.forEach(function (s) {
+        if (s.etat === 'faite') faites++;
+        s.exos.forEach(function (e) {
+          alertesExo_(e).forEach(function (al) { al.jour = s.jour; alertes.push(al); });
+        });
+      });
+
+      var notes = [], somme = 0, n = 0;
+      ['sommeil', 'nutrition', 'steps', 'humeur'].forEach(function (k) {
+        var v = w.recup[k];
+        if (v !== null && v !== undefined) { somme += v; n++; notes.push(k + ' ' + v); }
+      });
+      var moyenne = n ? Math.round((somme / n) * 10) / 10 : null;
+
+      fiche.block    = sit.sheet.getName();
+      fiche.semaine  = sit.semaine;
+      fiche.nbSem    = sit.nbSem;
+      fiche.faites   = faites;
+      fiche.total    = w.seances.length;
+      fiche.seances  = w.seances.map(function (s) {
+        return { jour: s.jour, etat: s.etat, remplis: s.remplis, total: s.total, difficulte: s.difficulte };
+      });
+      fiche.alertes  = alertes.slice(0, 12);
+      fiche.recup    = { moyenne: moyenne, detail: notes.join(' · '), poids: w.recup.poids };
+    } catch (err) {
+      fiche.erreur = String(err && err.message || err);
+    }
+    athletes.push(fiche);
+  }
+  return { ok: true, prenom: a.prenom, athletes: athletes };
 }
