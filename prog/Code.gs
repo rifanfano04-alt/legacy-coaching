@@ -103,12 +103,14 @@ function athleteFromCode_(code) {
     if (!c || c !== code) continue;
     var actif = String(rows[i][2] || 'oui').trim().toLowerCase();
     if (actif === 'non' || actif === 'no' || actif === 'faux') throw new Error('Accès désactivé.');
-    var role = /coach/i.test(String(rows[i][4] || '')) ? 'coach' : 'athlete';
+    var coach = /coach/i.test(String(rows[i][4] || ''));
     var id = String(rows[i][3] || '').trim();
     var m = id.match(/\/d\/([a-zA-Z0-9-_]+)/);
     if (m) id = m[1];
-    if (!id && role !== 'coach') throw new Error('Aucun Sheet associé à ce code.');
-    return { code: c, prenom: String(rows[i][1] || '').trim(), sheetId: id, role: role };
+    if (!id && !coach) throw new Error('Aucun Sheet associé à ce code.');
+    // avec un Sheet -> athlète (et coach en plus si la remarque le dit) ; sans Sheet -> coach seul
+    return { code: c, prenom: String(rows[i][1] || '').trim(), sheetId: id,
+             coach: coach, role: id ? 'athlete' : 'coach' };
   }
   throw new Error('Code inconnu.');
 }
@@ -245,14 +247,14 @@ function lireSemaine_(sh, semaine) {
 
 function apiLogin(body) {
   var a = athleteFromCode_(body.code);
-  if (a.role === 'coach') return { ok: true, role: 'coach', prenom: a.prenom };
+  if (!a.sheetId) return { ok: true, role: 'coach', coach: true, prenom: a.prenom };
   var ss = SpreadsheetApp.openById(a.sheetId);
-  return { ok: true, role: 'athlete', prenom: a.prenom, sheet: ss.getName() };
+  return { ok: true, role: 'athlete', coach: a.coach, prenom: a.prenom, sheet: ss.getName() };
 }
 
 function apiProgram(body) {
   var a  = athleteFromCode_(body.code);
-  if (a.role === 'coach') return { ok: true, role: 'coach', prenom: a.prenom };
+  if (!a.sheetId) return { ok: true, role: 'coach', coach: true, prenom: a.prenom };
   var ss = SpreadsheetApp.openById(a.sheetId);
   var sit = situation_(ss);
   var semaine = Number(body.semaine) || sit.semaine;
@@ -262,6 +264,7 @@ function apiProgram(body) {
   return {
     ok: true,
     role: 'athlete',
+    coach: a.coach,
     prenom: a.prenom,
     block: sit.sheet.getName(),
     blockDebut: sit.debut ? Utilities.formatDate(sit.debut, Session.getScriptTimeZone(), 'dd/MM/yy') : '',
@@ -373,7 +376,7 @@ function alertesExo_(e) {
 
 function apiCoach(body) {
   var a = athleteFromCode_(body.code);
-  if (a.role !== 'coach') throw new Error('Réservé au coach.');
+  if (!a.coach) throw new Error('Réservé au coach.');
 
   var rows = registreSheet_().getDataRange().getValues();
   var athletes = [];
@@ -381,7 +384,6 @@ function apiCoach(body) {
   for (var i = 1; i < rows.length; i++) {
     var code = String(rows[i][0] || '').trim();
     if (!code) continue;
-    if (/coach/i.test(String(rows[i][4] || ''))) continue;
     if (String(rows[i][2] || 'oui').trim().toLowerCase() === 'non') continue;
     var id = String(rows[i][3] || '').trim();
     var m = id.match(/\/d\/([a-zA-Z0-9-_]+)/);
