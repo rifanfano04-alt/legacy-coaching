@@ -244,6 +244,13 @@
   .spin{width:22px;height:22px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--blood);border-radius:50%;
     animation:sp .7s linear infinite;margin:40px auto;}
   @keyframes sp{to{transform:rotate(360deg);}}
+  .prete{
+    display:none;align-items:center;gap:6px;justify-content:center;
+    background:rgba(74,222,128,.10);border-bottom:1px solid rgba(74,222,128,.25);
+    color:#9ff0bd;font-size:11.5px;font-weight:700;padding:5px;
+    letter-spacing:.3px;
+  }
+  .prete.on{display:flex;}
   .offline{background:rgba(255,59,59,.12);border-bottom:1px solid rgba(255,59,59,.3);color:#ffb4b4;
     font-size:12px;font-weight:600;text-align:center;padding:6px;display:none;}
   .offline.on{display:block;}
@@ -266,6 +273,7 @@
   <!-- ══════════ SEMAINE ══════════ -->
   <section class="screen" id="home">
     <div class="offline" id="off-1">Hors ligne — tes saisies sont gardées et envoyées au retour du réseau</div>
+    <div class="prete" id="prete">✓ Prête pour la salle — cette séance s'ouvrira même sans réseau</div>
     <div class="top">
       <div class="who">
         <div class="t1" id="h-name">—</div>
@@ -754,6 +762,16 @@
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function () {});
+    // témoin : l'app est réellement utilisable hors ligne (worker actif + séance en cache)
+    navigator.serviceWorker.ready.then(function () {
+      var voir = function () {
+        $('prete').classList.toggle('on', !!sGet(LS_PROG) && navigator.onLine);
+      };
+      voir();
+      setInterval(voir, 4000);
+      window.addEventListener('online', voir);
+      window.addEventListener('offline', voir);
+    }).catch(function () {});
   }
 })();
 </script>
