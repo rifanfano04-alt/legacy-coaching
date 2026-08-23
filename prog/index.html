@@ -240,17 +240,47 @@
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
   .toast.bad{border-color:rgba(255,59,59,.5);color:#ffb4b4;}
 
+  /* ---------- VUE COACH ---------- */
+  .ath{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:15px 16px;margin-bottom:12px;
+  }
+  .ath .haut{display:flex;align-items:center;gap:12px;}
+  .ath .nom{flex:1;min-width:0;}
+  .ath .nom b{display:block;font-family:'Unbounded';font-weight:700;font-size:15px;}
+  .ath .nom i{display:block;font-style:normal;font-size:11.5px;color:var(--grey-3);
+    text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:2px;}
+  .ath .score{
+    flex:0 0 auto;font-family:'Unbounded';font-weight:800;font-size:13px;
+    padding:6px 11px;border-radius:999px;border:1px solid var(--line);color:var(--grey-2);
+  }
+  .ath .score.ok{color:var(--ok);border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.10);}
+  .ath .score.mid{color:#ffd600;border-color:rgba(255,214,0,.35);background:rgba(255,214,0,.08);}
+  .jours{display:flex;gap:5px;margin-top:12px;}
+  .jours i{
+    flex:1;height:6px;border-radius:3px;display:block;background:rgba(255,255,255,.10);
+  }
+  .jours i.faite{background:var(--ok);}
+  .jours i.encours{background:#ffd600;}
+  .al{margin-top:12px;display:flex;flex-direction:column;gap:6px;}
+  .al div{
+    font-size:12.5px;line-height:1.35;padding:8px 10px;border-radius:10px;
+    background:rgba(255,255,255,.04);border-left:2px solid var(--grey-3);color:var(--grey-2);
+  }
+  .al div.rpe{border-left-color:var(--blood);color:#ffc9c9;background:rgba(255,59,59,.07);}
+  .al div b{color:var(--grey-1);font-weight:700;}
+  .recup{
+    margin-top:12px;font-size:12px;color:var(--grey-3);
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  }
+  .recup .pill{padding:4px 9px;border-radius:999px;border:1px solid var(--line);}
+  .recup .pill.bas{color:#ffb4b4;border-color:rgba(255,59,59,.35);}
+  .recup .pill.haut{color:#9ff0bd;border-color:rgba(74,222,128,.30);}
+
   .empty{text-align:center;color:var(--grey-3);padding:44px 20px;font-size:14px;}
   .spin{width:22px;height:22px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--blood);border-radius:50%;
     animation:sp .7s linear infinite;margin:40px auto;}
   @keyframes sp{to{transform:rotate(360deg);}}
-  .prete{
-    display:none;align-items:center;gap:6px;justify-content:center;
-    background:rgba(74,222,128,.10);border-bottom:1px solid rgba(74,222,128,.25);
-    color:#9ff0bd;font-size:11.5px;font-weight:700;padding:5px;
-    letter-spacing:.3px;
-  }
-  .prete.on{display:flex;}
   .offline{background:rgba(255,59,59,.12);border-bottom:1px solid rgba(255,59,59,.3);color:#ffb4b4;
     font-size:12px;font-weight:600;text-align:center;padding:6px;display:none;}
   .offline.on{display:block;}
@@ -273,7 +303,6 @@
   <!-- ══════════ SEMAINE ══════════ -->
   <section class="screen" id="home">
     <div class="offline" id="off-1">Hors ligne — tes saisies sont gardées et envoyées au retour du réseau</div>
-    <div class="prete" id="prete">✓ Prête pour la salle — cette séance s'ouvrira même sans réseau</div>
     <div class="top">
       <div class="who">
         <div class="t1" id="h-name">—</div>
@@ -346,6 +375,19 @@
     <div class="foot"><button class="btn" id="k-send">Envoyer le bilan</button></div>
   </section>
 
+  <!-- ══════════ VUE COACH ══════════ -->
+  <section class="screen" id="coach">
+    <div class="top">
+      <div class="who">
+        <div class="t1" id="c-name">Mes athlètes</div>
+        <div class="t2" id="c-sub">semaine en cours</div>
+      </div>
+      <button class="icobtn" id="c-reload">↻</button>
+      <button class="icobtn" id="c-out">⏻</button>
+    </div>
+    <div class="body" id="c-body"></div>
+  </section>
+
   <!-- ══════════ OK ══════════ -->
   <section class="screen" id="ok">
     <div class="done-wrap">
@@ -366,6 +408,7 @@
   /* ───── config ───── */
   var SYNC_URL = 'https://script.google.com/macros/s/AKfycbzWNM8ExWtsNQLhPpsaxJePhaVwyKcLCtcx5O3aBFbO_bC5RgEb76IYgLVRgWzOzZll/exec';
   var LS_CODE = 'lgcy-prog-code', LS_PROG = 'lgcy-prog-cache', LS_OUT = 'lgcy-prog-outbox';
+  var LS_ROLE = 'lgcy-prog-role';
   var RPE = ['sub5','5','6','6.5','7','7.5','8','8.5','9','9.5','10','échec'];
   var DIFF = ['TRES FACILE','FACILE','MID','DIFFICILE','TRES DIFFICILE'];
   var DIFF_LBL = ['Très facile','Facile','Mid','Difficile','Très dur'];
@@ -389,7 +432,7 @@
   /* ───── helpers ───── */
   var $ = function (id) { return document.getElementById(id); };
   function show(id) {
-    ['gate','home','run','end','week','ok'].forEach(function (s) { $(s).classList.toggle('on', s === id); });
+    ['gate','home','run','end','week','ok','coach'].forEach(function (s) { $(s).classList.toggle('on', s === id); });
     var b = document.querySelector('#' + id + ' .body'); if (b) b.scrollTop = 0;
   }
   function toast(msg, bad) {
@@ -466,6 +509,8 @@
     $('gate-err').textContent = ''; $('gate-go').disabled = true; $('gate-go').textContent = 'Connexion…';
     call({ action: 'program', code: c }).then(function (j) {
       code = c; sSet(LS_CODE, c);
+      if (j.role === 'coach') { sSet(LS_ROLE, 'coach'); loadCoach(); return; }
+      sSet(LS_ROLE, 'athlete');
       applyProg(j); show('home'); flush();
     }).catch(function (e) {
       $('gate-err').textContent = e.message || 'Impossible de se connecter.';
@@ -748,6 +793,64 @@
     }).then(function () { btn.disabled = false; btn.textContent = 'Envoyer le bilan'; });
   };
 
+  /* ───── vue coach ───── */
+  function loadCoach() {
+    show('coach');
+    $('c-body').innerHTML = '<div class="spin"></div>';
+    return call({ action: 'coach', code: code }).then(function (j) {
+      $('c-name').textContent = j.prenom ? ('Athlètes de ' + j.prenom) : 'Mes athlètes';
+      renderCoach(j.athletes || []);
+    }).catch(function (e) {
+      $('c-body').innerHTML = '<div class="empty">' + esc(e.message) + '</div>';
+    });
+  }
+
+  function renderCoach(list) {
+    if (!list.length) {
+      $('c-body').innerHTML = '<div class="empty">Aucun athlète actif dans l\'onglet ATHLÈTES.</div>';
+      return;
+    }
+    var total = 0, faits = 0;
+    var h = list.map(function (a) {
+      if (a.erreur) {
+        return '<div class="ath"><div class="haut"><div class="nom"><b>' + esc(a.prenom) +
+               '</b><i>illisible</i></div></div><div class="al"><div>' + esc(a.erreur) + '</div></div></div>';
+      }
+      total += a.total; faits += a.faites;
+      var pct = a.total ? a.faites / a.total : 0;
+      var cls = pct >= 1 ? 'ok' : (pct > 0 ? 'mid' : '');
+      var jours = a.seances.map(function (s) {
+        return '<i class="' + (s.etat || '') + '" title="' + esc(s.jour) + '"></i>';
+      }).join('');
+      var al = a.alertes.map(function (x) {
+        return '<div class="' + (x.type === 'rpe' ? 'rpe' : '') + '"><b>' + esc(x.exo) + '</b> · ' + esc(x.texte) + '</div>';
+      }).join('');
+      var r = '';
+      if (a.recup.moyenne !== null) {
+        var c2 = a.recup.moyenne < 2.5 ? 'bas' : (a.recup.moyenne >= 4 ? 'haut' : '');
+        r = '<div class="recup"><span class="pill ' + c2 + '">Récup ' + a.recup.moyenne + '/5</span>' +
+            '<span>' + esc(a.recup.detail) + '</span>' +
+            (a.recup.poids ? '<span class="pill">' + fmt(a.recup.poids) + ' kg</span>' : '') + '</div>';
+      }
+      return '<div class="ath">' +
+        '<div class="haut"><div class="nom"><b>' + esc(a.prenom) + '</b>' +
+          '<i>' + esc(a.block) + ' · semaine ' + a.semaine + '/' + a.nbSem + '</i></div>' +
+          '<div class="score ' + cls + '">' + a.faites + '/' + a.total + '</div></div>' +
+        '<div class="jours">' + jours + '</div>' + (al ? '<div class="al">' + al + '</div>' : '') + r +
+      '</div>';
+    }).join('');
+    $('c-sub').textContent = faits + ' séance' + (faits > 1 ? 's' : '') + ' faite' + (faits > 1 ? 's' : '') +
+                             ' sur ' + total + ' cette semaine';
+    $('c-body').innerHTML = h;
+  }
+
+  $('c-reload').onclick = loadCoach;
+  $('c-out').onclick = function () {
+    if (!confirm('Se déconnecter ?')) return;
+    sDel(LS_CODE); sDel(LS_PROG); sDel(LS_ROLE);
+    code = ''; prog = null; $('code').value = ''; show('gate');
+  };
+
   /* ───── démarrage ───── */
   (function () {
     var g = $('gate-sil');
@@ -756,22 +859,13 @@
   })();
 
   netState();
-  if (code) { $('code').value = code; show('home'); load(null); }
+  if (code && sGet(LS_ROLE) === 'coach') { $('code').value = code; loadCoach(); }
+  else if (code) { $('code').value = code; show('home'); load(null); }
   else show('gate');
   flush();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function () {});
-    // témoin : l'app est réellement utilisable hors ligne (worker actif + séance en cache)
-    navigator.serviceWorker.ready.then(function () {
-      var voir = function () {
-        $('prete').classList.toggle('on', !!sGet(LS_PROG) && navigator.onLine);
-      };
-      voir();
-      setInterval(voir, 4000);
-      window.addEventListener('online', voir);
-      window.addEventListener('offline', voir);
-    }).catch(function () {});
   }
 })();
 </script>
