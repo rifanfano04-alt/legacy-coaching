@@ -308,6 +308,7 @@
         <div class="t1" id="h-name">—</div>
         <div class="t2" id="h-block">—</div>
       </div>
+      <button class="icobtn" id="h-coach" style="display:none">👥</button>
       <button class="icobtn" id="h-reload">↻</button>
       <button class="icobtn" id="h-out">⏻</button>
     </div>
@@ -378,6 +379,7 @@
   <!-- ══════════ VUE COACH ══════════ -->
   <section class="screen" id="coach">
     <div class="top">
+      <button class="icobtn" id="c-back" style="display:none">‹</button>
       <div class="who">
         <div class="t1" id="c-name">Mes athlètes</div>
         <div class="t2" id="c-sub">semaine en cours</div>
@@ -510,7 +512,7 @@
     call({ action: 'program', code: c }).then(function (j) {
       code = c; sSet(LS_CODE, c);
       if (j.role === 'coach') { sSet(LS_ROLE, 'coach'); loadCoach(); return; }
-      sSet(LS_ROLE, 'athlete');
+      sSet(LS_ROLE, j.coach ? 'duo' : 'athlete');
       applyProg(j); show('home'); flush();
     }).catch(function (e) {
       $('gate-err').textContent = e.message || 'Impossible de se connecter.';
@@ -546,6 +548,8 @@
     $('h-name').textContent = j.prenom ? j.prenom : 'Ma séance';
     $('h-block').textContent = (j.block || '') + (j.blockDebut ? ' · depuis le ' + j.blockDebut : '');
     $('w-lbl').textContent = 'Semaine ' + j.semaine + ' / ' + j.nbSemaines;
+    $('h-coach').style.display = j.coach ? '' : 'none';
+    $('c-back').style.display = j.coach ? '' : 'none';
     $('w-prev').disabled = j.semaine <= 1;
     $('w-next').disabled = j.semaine >= j.nbSemaines;
     renderHome();
@@ -845,6 +849,8 @@
   }
 
   $('c-reload').onclick = loadCoach;
+  $('h-coach').onclick = loadCoach;
+  $('c-back').onclick = function () { renderHome(); show('home'); };
   $('c-out').onclick = function () {
     if (!confirm('Se déconnecter ?')) return;
     sDel(LS_CODE); sDel(LS_PROG); sDel(LS_ROLE);
