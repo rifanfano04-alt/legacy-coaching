@@ -608,8 +608,14 @@
 
   /* ───── séance ───── */
   function openSeance(i) {
-    seance = JSON.parse(JSON.stringify(prog.seances[i]));
-    seance._i = i; idx = 0; diff = seance.difficulte || '';
+    var r = savedRun();
+    if (r && prog && r.block === prog.block && r.semaine === prog.semaine && r.i === i) {
+      /* on revient sur une séance déjà en cours (via ‹ puis re-clic) : on reprend les saisies, pas une copie vierge */
+      seance = r.seance; seance._i = i; idx = r.idx || 0; diff = r.diff || '';
+    } else {
+      seance = JSON.parse(JSON.stringify(prog.seances[i]));
+      seance._i = i; idx = 0; diff = seance.difficulte || '';
+    }
     $('r-day').textContent = seance.jour || ('Séance ' + (i + 1));
     saveRun();
     show('run'); renderExo();
