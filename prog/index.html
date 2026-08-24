@@ -410,7 +410,7 @@
   /* ───── config ───── */
   var SYNC_URL = 'https://script.google.com/macros/s/AKfycbzWNM8ExWtsNQLhPpsaxJePhaVwyKcLCtcx5O3aBFbO_bC5RgEb76IYgLVRgWzOzZll/exec';
   var LS_CODE = 'lgcy-prog-code', LS_PROG = 'lgcy-prog-cache', LS_OUT = 'lgcy-prog-outbox';
-  var LS_ROLE = 'lgcy-prog-role';
+  var LS_ROLE = 'lgcy-prog-role', LS_RUN = 'lgcy-prog-run';
   var RPE = ['sub5','5','6','6.5','7','7.5','8','8.5','9','9.5','10','échec'];
   var DIFF = ['TRES FACILE','FACILE','MID','DIFFICILE','TRES DIFFICILE'];
   var DIFF_LBL = ['Très facile','Facile','Mid','Difficile','Très dur'];
@@ -422,6 +422,23 @@
   function sGet(k){ try { return localStorage.getItem(k); } catch (e) { return null; } }
   function sSet(k,v){ try { localStorage.setItem(k,v); } catch (e) {} }
   function sDel(k){ try { localStorage.removeItem(k); } catch (e) {} }
+
+  /* ───── séance en cours : sauvegardée à chaque saisie pour survivre à une fermeture ───── */
+  function saveRun() {
+    if (!seance || !prog) return;
+    try { sSet(LS_RUN, JSON.stringify({ block: prog.block, semaine: prog.semaine, i: seance._i, idx: idx, diff: diff, seance: seance })); } catch (e) {}
+  }
+  function savedRun() { try { return JSON.parse(sGet(LS_RUN)); } catch (e) { return null; } }
+  function clearRun() { sDel(LS_RUN); }
+  function resumeRunIfAny() {
+    var r = savedRun();
+    if (!r) return;
+    if (!prog || r.block !== prog.block || r.semaine !== prog.semaine) { clearRun(); return; }
+    seance = r.seance; seance._i = r.i; idx = r.idx || 0; diff = r.diff || '';
+    $('r-day').textContent = seance.jour || ('Séance ' + (r.i + 1));
+    show('run'); renderExo();
+    toast('Séance reprise là où tu t\'étais arrêté ✓');
+  }
 
   /* ───── state ───── */
   var code = sGet(LS_CODE) || '';
@@ -513,7 +530,7 @@
       code = c; sSet(LS_CODE, c);
       if (j.role === 'coach') { sSet(LS_ROLE, 'coach'); loadCoach(); return; }
       sSet(LS_ROLE, j.coach ? 'duo' : 'athlete');
-      applyProg(j); show('home'); flush();
+      applyProg(j); show('home'); flush(); resumeRunIfAny();
     }).catch(function (e) {
       $('gate-err').textContent = e.message || 'Impossible de se connecter.';
     }).then(function () {
@@ -524,7 +541,7 @@
 
   $('h-out').onclick = function () {
     if (!confirm('Se déconnecter ?')) return;
-    sDel(LS_CODE); sDel(LS_PROG);
+    sDel(LS_CODE); sDel(LS_PROG); clearRun();
     code = ''; prog = null; $('code').value = ''; show('gate');
   };
   $('h-reload').onclick = function () { load(prog ? prog.semaine : null, true); };
@@ -594,6 +611,7 @@
     seance = JSON.parse(JSON.stringify(prog.seances[i]));
     seance._i = i; idx = 0; diff = seance.difficulte || '';
     $('r-day').textContent = seance.jour || ('Séance ' + (i + 1));
+    saveRun();
     show('run'); renderExo();
   }
   $('r-back').onclick = function () { show('home'); };
@@ -651,10 +669,10 @@
 
     var inp = $('f-charge');
     inp.value = e.charge !== null && e.charge !== '' ? String(e.charge).replace('.', ',') : '';
-    inp.oninput = function () { e.charge = nb(inp.value); };
+    inp.oninput = function () { e.charge = nb(inp.value); saveRun(); };
     var bump = function (d) {
       var v = nb(inp.value) || 0; v = Math.round((v + d) * 1000) / 1000;
-      if (v < 0) v = 0; inp.value = String(v).replace('.', ','); e.charge = v;
+      if (v < 0) v = 0; inp.value = String(v).replace('.', ','); e.charge = v; saveRun();
     };
     Array.prototype.forEach.call($('r-body').querySelectorAll('.stp'), function (b) {
       b.onclick = function () { bump(Number(b.getAttribute('data-d')) * 1.25); };
@@ -665,11 +683,11 @@
     var take = $('f-take');
     if (take) take.onclick = function () {
       var v = Math.round(e.chargeReco * 100) / 100;
-      inp.value = String(v).replace('.', ','); e.charge = v;
+      inp.value = String(v).replace('.', ','); e.charge = v; saveRun();
     };
-    chips($('f-rpe1'), e.rpe1, function (v) { e.rpe1 = v; });
-    chips($('f-rpe2'), e.rpeLast, function (v) { e.rpeLast = v; });
-    $('f-note').oninput = function () { e.note = $('f-note').value; };
+    chips($('f-rpe1'), e.rpe1, function (v) { e.rpe1 = v; saveRun(); });
+    chips($('f-rpe2'), e.rpeLast, function (v) { e.rpeLast = v; saveRun(); });
+    $('f-note').oninput = function () { e.note = $('f-note').value; saveRun(); };
   }
 
   function chips(box, cur, cb) {
@@ -686,9 +704,9 @@
     });
   }
 
-  $('r-prev').onclick = function () { if (idx > 0) { idx--; renderExo(); } };
+  $('r-prev').onclick = function () { if (idx > 0) { idx--; saveRun(); renderExo(); } };
   $('r-next').onclick = function () {
-    if (idx < seance.exos.length - 1) { idx++; renderExo(); return; }
+    if (idx < seance.exos.length - 1) { idx++; saveRun(); renderExo(); return; }
     openEnd();
   };
 
@@ -709,7 +727,7 @@
     Array.prototype.forEach.call($('e-diff').querySelectorAll('.chip'), function (b) {
       b.onclick = function () {
         Array.prototype.forEach.call($('e-diff').querySelectorAll('.chip'), function (x) { x.classList.remove('sel'); });
-        b.classList.add('sel'); diff = b.getAttribute('data-d');
+        b.classList.add('sel'); diff = b.getAttribute('data-d'); saveRun();
       };
     });
     show('end');
@@ -734,11 +752,13 @@
       prog.seances[seance._i].etat = diff ? 'faite' : 'encours';
       prog.seances[seance._i].difficulte = diff;
       try { sSet(LS_PROG, JSON.stringify(prog)); } catch (e) {}
+      clearRun();
       finish('C\'est envoyé', 'Ta séance est arrivée dans le suivi de ton coach.');
     }).catch(function () {
       queue(payload);
       prog.seances[seance._i].faite = true;
       prog.seances[seance._i].etat = diff ? 'faite' : 'encours';
+      clearRun();
       finish('Gardé hors ligne', 'Pas de réseau : ta séance part toute seule dès que tu es reconnecté.');
     }).then(function () { btn.disabled = false; btn.textContent = 'Envoyer au coach'; });
   };
@@ -853,7 +873,7 @@
   $('c-back').onclick = function () { renderHome(); show('home'); };
   $('c-out').onclick = function () {
     if (!confirm('Se déconnecter ?')) return;
-    sDel(LS_CODE); sDel(LS_PROG); sDel(LS_ROLE);
+    sDel(LS_CODE); sDel(LS_PROG); sDel(LS_ROLE); clearRun();
     code = ''; prog = null; $('code').value = ''; show('gate');
   };
 
@@ -866,7 +886,7 @@
 
   netState();
   if (code && sGet(LS_ROLE) === 'coach') { $('code').value = code; loadCoach(); }
-  else if (code) { $('code').value = code; show('home'); load(null); }
+  else if (code) { $('code').value = code; show('home'); load(null).then(resumeRunIfAny); }
   else show('gate');
   flush();
 
