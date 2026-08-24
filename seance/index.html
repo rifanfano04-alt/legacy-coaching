@@ -450,6 +450,13 @@ pre.notes {
 .footer-note { text-align: center; color: oklch(52% 0.015 264); font-size: 12.5px; margin-top: 22px; }
 .footer-note a { color: var(--muted); }
 
+.storage-warn {
+  position: relative; z-index: 1; max-width: 560px; margin: 0 auto 14px; padding: 12px 14px;
+  border-radius: 12px; font-size: 13.5px; font-weight: 600; line-height: 1.4;
+  background: oklch(30% 0.05 25 / .28); color: oklch(85% 0.09 30);
+  box-shadow: inset 0 0 0 1px oklch(70% 0.14 25 / .4);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .logo .cy, .btn-chrome, .chip.on, .exo-title { animation: none; }
   .sheet, .set-dot.done, .toast { transition-duration: 1ms; }
@@ -470,6 +477,10 @@ pre.notes {
     </a>
     <div class="eyebrow">SÉANCE</div>
   </header>
+
+  <div class="storage-warn hidden" id="storage-warn">
+    ⚠️ Ton téléphone bloque l’enregistrement (navigation privée, ou lien ouvert dans Instagram/Messenger/TikTok au lieu de Safari/Chrome). Rien ne sera sauvegardé si tu quittes l’appli. Ouvre ce lien directement dans ton navigateur, hors navigation privée.
+  </div>
 
   <!-- ============ GATE (code d'accès) ============ -->
   <section id="scr-gate" class="hidden">
@@ -661,10 +672,25 @@ pre.notes {
     return { status: 'setup', startedAt: null, endedAt: null, exercises: [], cur: 0, timer: null };
   }
   function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
-  function save() { try { localStorage.setItem(LS_CUR, JSON.stringify(state)); } catch (e) {} }
+  function save() { try { localStorage.setItem(LS_CUR, JSON.stringify(state)); } catch (e) { warnStorage(); } }
   function history() { return load(LS_HIST) || []; }
-  function saveHistory(h) { try { localStorage.setItem(LS_HIST, JSON.stringify(h.slice(0, 30))); } catch (e) {} }
+  function saveHistory(h) { try { localStorage.setItem(LS_HIST, JSON.stringify(h.slice(0, 30))); } catch (e) { warnStorage(); } }
   function uid() { return Math.random().toString(36).slice(2, 9); }
+
+  /* Certains navigateurs (navigation privée, WebView Instagram/Messenger/TikTok, quota plein)
+     acceptent localStorage.setItem() sans erreur mais ne persistent rien après fermeture,
+     ou le bloquent carrément : on prévient l'utilisateur au lieu de le laisser perdre sa séance en silence. */
+  function checkStorageWritable() {
+    try {
+      var k = '__legacy_storage_test__';
+      localStorage.setItem(k, '1');
+      var ok = localStorage.getItem(k) === '1';
+      localStorage.removeItem(k);
+      return ok;
+    } catch (e) { return false; }
+  }
+  function warnStorage() { $('storage-warn').classList.remove('hidden'); }
+  if (!checkStorageWritable()) warnStorage();
 
   /* ---------- helpers ---------- */
   function $(id) { return document.getElementById(id); }
