@@ -672,9 +672,9 @@ pre.notes {
     return { status: 'setup', startedAt: null, endedAt: null, exercises: [], cur: 0, timer: null };
   }
   function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
-  function save() { try { localStorage.setItem(LS_CUR, JSON.stringify(state)); } catch (e) { warnStorage(); } }
+  function save() { state.updatedAt = Date.now(); try { localStorage.setItem(LS_CUR, JSON.stringify(state)); } catch (e) { warnStorage(); } idbSet('cur', state); }
   function history() { return load(LS_HIST) || []; }
-  function saveHistory(h) { try { localStorage.setItem(LS_HIST, JSON.stringify(h.slice(0, 30))); } catch (e) { warnStorage(); } }
+  function saveHistory(h) { var trimmed = h.slice(0, 30); try { localStorage.setItem(LS_HIST, JSON.stringify(trimmed)); } catch (e) { warnStorage(); } idbSet('hist', trimmed); }
   function uid() { return Math.random().toString(36).slice(2, 9); }
 
   /* Certains navigateurs (navigation privée, WebView Instagram/Messenger/TikTok, quota plein)
@@ -691,6 +691,58 @@ pre.notes {
   }
   function warnStorage() { $('storage-warn').classList.remove('hidden'); }
   if (!checkStorageWritable()) warnStorage();
+
+  /* ---------- backup en IndexedDB ---------- */
+  /* Sur iPhone, une appli ajoutée à l'écran d'accueil (mode plein écran) peut être tuée par
+     iOS en arrière-plan ; un bug connu de WebKit fait qu'au relancement le localStorage de
+     l'appli revient parfois vide sans qu'aucune erreur ne se produise (donc invisible pour
+     checkStorageWritable ci-dessus). IndexedDB est nettement moins sujet à ce problème : on y
+     duplique l'état à chaque sauvegarde, et on restaure depuis là si jamais le localStorage
+     revient vide alors que la copie IndexedDB est plus récente. */
+  var IDB_NAME = 'legacy-seance-idb';
+  var IDB_STORE = 'kv';
+  var idbDbPromise = null;
+  function idbOpen() {
+    if (!window.indexedDB) return Promise.reject(new Error('no-idb'));
+    if (idbDbPromise) return idbDbPromise;
+    idbDbPromise = new Promise(function (resolve, reject) {
+      var req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = function () { req.result.createObjectStore(IDB_STORE); };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error); };
+    });
+    return idbDbPromise;
+  }
+  function idbSet(key, value) {
+    idbOpen().then(function (db) {
+      db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(value, key);
+    }).catch(function () {});
+  }
+  function idbGet(key) {
+    return idbOpen().then(function (db) {
+      return new Promise(function (resolve) {
+        var req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+        req.onsuccess = function () { resolve(req.result); };
+        req.onerror = function () { resolve(undefined); };
+      });
+    }).catch(function () { return undefined; });
+  }
+  /* n'écrase l'état courant que si la copie de secours est strictement plus récente */
+  function recoverCurFromIdb() {
+    return idbGet('cur').then(function (backup) {
+      if (backup && (backup.updatedAt || 0) > (state.updatedAt || 0)) {
+        state = backup;
+        save();
+        toast('Séance restaurée depuis la sauvegarde de secours ✓');
+      }
+    }).catch(function () {});
+  }
+  function recoverHistFromIdb() {
+    return idbGet('hist').then(function (backup) {
+      var local = history();
+      if (backup && backup.length > local.length) saveHistory(backup);
+    }).catch(function () {});
+  }
 
   /* ---------- helpers ---------- */
   function $(id) { return document.getElementById(id); }
@@ -1572,7 +1624,9 @@ pre.notes {
     recheckAccess();
     trySendOutbox();
   }
-  if (SYNC_URL && !profile()) { show('gate'); } else { boot(); }
+  Promise.all([recoverCurFromIdb(), recoverHistFromIdb()]).then(function () {
+    if (SYNC_URL && !profile()) { show('gate'); } else { boot(); }
+  });
 
   /* PWA : hors ligne une fois installée */
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
