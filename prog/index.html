@@ -433,7 +433,7 @@
   function resumeRunIfAny() {
     var r = savedRun();
     if (!r) return;
-    if (!prog || r.block !== prog.block || r.semaine !== prog.semaine) { clearRun(); return; }
+    if (!prog || r.block !== prog.block || r.semaine !== prog.semaine) return;   // autre semaine : on ignore le brouillon, on ne le supprime pas
     seance = r.seance; seance._i = r.i; idx = r.idx || 0; diff = r.diff || '';
     $('r-day').textContent = seance.jour || ('Séance ' + (r.i + 1));
     show('run'); renderExo();
