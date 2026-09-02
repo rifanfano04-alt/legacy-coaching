@@ -469,7 +469,7 @@ function soucisDuBloc_(semaines, jusqua) {
     var c = t.charges;
     if (c.length >= 3) {
       var d = c.slice(c.length - 3);
-      if (d[2].val <= d[0].val) {
+      if (d[2].val <= d[0].val && d[2].val > 0) {   // 0 = poids du corps, rien a progresser
         out.push({ exo: t.nom, variante: t.variante, jour: t.jour, type: 'stagne',
                    texte: 'charge bloquée à ' + d[2].val + ' kg depuis la semaine ' + d[0].sem,
                    semaines: [d[0].sem, d[2].sem] });
@@ -544,10 +544,12 @@ function apiCoach(body) {
       fiche.nbSem    = sit.nbSem;
       fiche.faites   = faites;
       fiche.total    = w.seances.length;
-      var trous = 0;
+      var trous = 0, aVenir = 0;
       fiche.seances  = w.seances.map(function (s) {
+        var commencee = (s.etat !== 'vide');
+        if (!commencee) aVenir++;
         var exos = s.exos.map(function (e) {
-          var mq = manque_(e);
+          var mq = commencee ? manque_(e) : '';
           if (mq) trous++;
           return {
             nom: e.nom, variante: e.variante, tempo: e.tempo,
@@ -561,6 +563,7 @@ function apiCoach(body) {
                  difficulte: s.difficulte, exos: exos };
       });
       fiche.trous    = trous;
+      fiche.aVenir   = aVenir;
       fiche.soucis   = soucisDuBloc_(semaines, sit.semaine);
       fiche.alertes  = alertes.slice(0, 12);
       fiche.recup    = { moyenne: moyenne, detail: notes.join(' · '), poids: w.recup.poids };
