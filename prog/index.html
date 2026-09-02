@@ -120,6 +120,10 @@
   .scard .m b{display:block;font-family:'Unbounded';font-weight:700;font-size:14.5px;}
   .scard .m i{display:block;font-style:normal;font-size:12px;color:var(--grey-3);margin-top:2px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .plan{display:grid;grid-template-columns:1fr auto;gap:3px 12px;margin-top:7px;}
+  .plan .px{font-size:12px;color:var(--grey-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .plan .px em{font-style:normal;color:var(--grey-3);}
+  .plan .py{font-size:12px;color:var(--grey-2);font-variant-numeric:tabular-nums;white-space:nowrap;}
   .dots{display:flex;gap:4px;margin-top:7px;}
   .dots i{width:14px;height:4px;border-radius:2px;display:block;opacity:.85;}
   .scard.faite{border-color:rgba(74,222,128,.32);}
@@ -642,13 +646,19 @@
     }
     prog.seances.forEach(function (s, i) {
       var dots = s.exos.map(function (e) { return '<i style="background:' + e.couleur + '"></i>'; }).join('');
-      var noms = s.exos.map(function (e) { return cap(e.nom); }).join(' · ');
+      var plan = s.exos.map(function (e) {
+        var det = [e.variante, e.tempo].filter(function (x) { return x && String(x).trim() !== ''; }).join(' · ');
+        var sch = (e.sets === '' || e.sets === null || e.sets === undefined ? '?' : e.sets) + ' × ' +
+                  (e.reps === '' || e.reps === null || e.reps === undefined ? '?' : e.reps);
+        return '<span class="px">' + esc(cap(e.nom)) + (det ? ' <em>' + esc(det) + '</em>' : '') + '</span>' +
+               '<span class="py">' + esc(sch) + '</span>';
+      }).join('');
       var etat = s.etat || (s.faite ? 'faite' : 'vide');
       var badge = etat === 'faite' ? '✓' : (etat === 'encours' ? (s.remplis + '/' + s.total) : (i + 1));
       h += '<button class="scard ' + etat + '" data-s="' + i + '">' +
              '<div class="n">' + badge + '</div>' +
              '<div class="m"><b>' + esc(s.jour || ('Séance ' + (i + 1))) + '</b>' +
-               '<i>' + esc(noms) + '</i><div class="dots">' + dots + '</div></div>' +
+               '<div class="plan">' + plan + '</div><div class="dots">' + dots + '</div></div>' +
              '<div style="color:var(--grey-3);font-size:18px">›</div>' +
            '</button>';
     });
