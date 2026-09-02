@@ -305,6 +305,30 @@ function grille_(sh, nbCol) {
 
 /* ───────────────────────── API ───────────────────────── */
 
+/**
+ * Valeurs de RPE acceptees par le Sheet (validation de donnees de la colonne K).
+ * L'app construit ses boutons avec CETTE liste : sans ca elle peut proposer un choix
+ * que Google refuse a l'ecriture, et la seance entiere est perdue.
+ */
+function optionsRpe_(sh, col) {
+  try {
+    var dv = sh.getRange(SESSION_ROWS[0] + 2, col + OFF.rpe1).getDataValidation();
+    if (!dv) return null;
+    var type = dv.getCriteriaType();
+    var args = dv.getCriteriaValues();
+    var brut = null;
+    if (type === SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST) {
+      brut = args[0];
+    } else if (type === SpreadsheetApp.DataValidationCriteria.VALUE_IN_RANGE) {
+      brut = args[0].getValues().map(function (l) { return l[0]; });
+    }
+    if (!brut || !brut.length) return null;
+    var out = [];
+    brut.forEach(function (x) { var t = rpe_(x); if (t !== '' && out.indexOf(t) < 0) out.push(t); });
+    return out.length ? out : null;
+  } catch (e) { return null; }
+}
+
 function apiLogin(body) {
   var a = athleteFromCode_(body.code);
   if (!a.sheetId) return { ok: true, role: 'coach', coach: true, prenom: a.prenom };
@@ -331,6 +355,7 @@ function apiProgram(body) {
     semaine: semaine,
     nbSemaines: sit.nbSem,
     semaineAuto: sit.semaine,
+    rpeOptions: optionsRpe_(sit.sheet, WEEK_COLS[semaine - 1]),
     seances: w.seances,
     recup: w.recup
   };
@@ -346,29 +371,39 @@ function apiSave(body) {
 
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
+  // Une cellule refusee (validation de donnees) ne doit PAS faire perdre le reste de la seance :
+  // on ecrit case par case et on renvoie la liste de ce qui n'est pas passe.
+  var refus = [];
+  var ecrire = function (r, c, valeur, champ) {
+    try { sh.getRange(r, c).setValue(valeur); }
+    catch (e) {
+      refus.push({ row: r, champ: champ, valeur: String(valeur),
+                   raison: String((e && e.message) || e).slice(0, 200) });
+    }
+  };
   try {
     (body.entries || []).forEach(function (en) {
       var r = Number(en.row);
       if (!r) return;
-      if (en.rpe1     !== undefined && en.rpe1    !== '') sh.getRange(r, col + OFF.rpe1   ).setValue(valRpe_(en.rpe1));
-      if (en.rpeLast  !== undefined && en.rpeLast !== '') sh.getRange(r, col + OFF.rpeLast).setValue(valRpe_(en.rpeLast));
+      if (en.rpe1     !== undefined && en.rpe1    !== '') ecrire(r, col + OFF.rpe1,    valRpe_(en.rpe1),    'RPE 1re serie');
+      if (en.rpeLast  !== undefined && en.rpeLast !== '') ecrire(r, col + OFF.rpeLast, valRpe_(en.rpeLast), 'RPE derniere serie');
       if (en.charge   !== undefined && en.charge  !== '' && en.charge !== null) {
-        sh.getRange(r, col + OFF.charge).setValue(Number(en.charge));
+        ecrire(r, col + OFF.charge, Number(en.charge), 'charge');
       }
       if (en.note !== undefined && String(en.note).trim() !== '') {
-        sh.getRange(r, col + OFF.note).setValue(String(en.note).trim());
+        ecrire(r, col + OFF.note, String(en.note).trim(), 'note');
       }
     });
     if (body.difficulte) {
       var hRow = SESSION_ROWS[Number(body.seance)];
-      if (hRow) sh.getRange(hRow + 9, col + OFF_DIFF).setValue(String(body.difficulte));
+      if (hRow) ecrire(hRow + 9, col + OFF_DIFF, String(body.difficulte), 'difficulte');
     }
     SpreadsheetApp.flush();
   } finally {
     lock.releaseLock();
   }
   rebuildPR_(a.sheetId);
-  return { ok: true };
+  return { ok: true, refus: refus };
 }
 
 /**
