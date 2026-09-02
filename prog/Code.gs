@@ -190,9 +190,9 @@ function situation_(ss) {
   return best;
 }
 
-function lireSemaine_(sh, semaine) {
+/** Lit une semaine dans un tableau deja charge (colonne A -> fin de la semaine). */
+function lireSemaineDe_(vals, semaine) {
   var col = WEEK_COLS[semaine - 1];
-  var vals = sh.getRange(1, 1, 110, col + 16).getValues();
   var get = function (r, off) { return vals[r - 1][col - 1 + off]; };
 
   var seances = [];
@@ -274,6 +274,33 @@ function lireSemaine_(sh, semaine) {
   });
 
   return { seances: seances, recup: recup };
+}
+
+/** Une semaine : lecture bornee a cette semaine. */
+function lireSemaine_(sh, semaine) {
+  return lireSemaineDe_(grille_(sh, WEEK_COLS[semaine - 1] + 16), semaine);
+}
+
+/** Tout le bloc en UNE lecture : indispensable pour reperer ce qui traine d'une semaine a l'autre. */
+function lireBloc_(sh, nbSem) {
+  if (!nbSem || nbSem < 1) nbSem = 1;
+  if (nbSem > WEEK_COLS.length) nbSem = WEEK_COLS.length;
+  var vals = grille_(sh, WEEK_COLS[nbSem - 1] + 16);
+  var out = [];
+  for (var s = 1; s <= nbSem; s++) out.push(lireSemaineDe_(vals, s));
+  return out;
+}
+
+/** Lecture bornee aux dimensions reelles de l'onglet : un Sheet plus etroit ne doit pas planter. */
+function grille_(sh, nbCol) {
+  var maxL = sh.getMaxRows(), maxC = sh.getMaxColumns();
+  var vals = sh.getRange(1, 1, Math.min(110, maxL), Math.min(nbCol, maxC)).getValues();
+  var large = Math.max(nbCol, maxC);
+  for (var i = 0; i < vals.length; i++) {
+    while (vals[i].length < large) vals[i].push('');
+  }
+  while (vals.length < 110) vals.push(new Array(large).join('.').split('.'));
+  return vals;
 }
 
 /* ───────────────────────── API ───────────────────────── */
@@ -391,6 +418,73 @@ function apiWeekly(body) {
 
 /* ───────────────────────── VUE COACH ───────────────────────── */
 
+/** RPE au plafond : 9.5 et plus, ou « échec ». */
+function estDur_(v) {
+  var t = String(v || '').toLowerCase();
+  if (t.indexOf('échec') > -1 || t.indexOf('echec') > -1) return true;
+  var n = Number(t.replace(',', '.'));
+  return !isNaN(n) && n >= 9.5;
+}
+
+/** Ce qui n'a pas ete saisi sur un exercice programme. */
+function manque_(e) {
+  if (!e.sets && !e.reps) return '';                 // rien n'etait programme
+  var sansCharge = (e.charge === null);
+  var sansRpe    = (!e.rpe1 && !e.rpeLast);
+  if (sansCharge && sansRpe) return 'tout';
+  if (sansCharge) return 'charge';
+  if (sansRpe)    return 'rpe';
+  return '';
+}
+
+/**
+ * Ce qui traine sur l'ensemble du bloc, exercice par exercice (meme ligne, semaine apres semaine) :
+ *  - dur      : RPE au plafond une fois -> recurrent si plusieurs semaines
+ *  - stagne   : 3 charges relevees sans la moindre progression
+ *  - note     : la derniere note laissee par l'athlete
+ */
+function soucisDuBloc_(semaines, jusqua) {
+  var suivi = {}, ordre = [];
+  for (var s = 0; s < jusqua && s < semaines.length; s++) {
+    semaines[s].seances.forEach(function (se) {
+      se.exos.forEach(function (e) {
+        var k = se.idx + ':' + e.row;
+        if (!suivi[k]) { suivi[k] = { nom: e.nom, variante: e.variante, jour: se.jour, dur: [], charges: [], note: null }; ordre.push(k); }
+        var t = suivi[k];
+        if (estDur_(e.rpeLast) || estDur_(e.rpe1)) t.dur.push(s + 1);
+        if (e.charge !== null) t.charges.push({ sem: s + 1, val: e.charge });
+        if (e.note) t.note = { sem: s + 1, texte: e.note };
+      });
+    });
+  }
+  var out = [];
+  ordre.forEach(function (k) {
+    var t = suivi[k];
+    if (t.dur.length) {
+      out.push({ exo: t.nom, variante: t.variante, jour: t.jour,
+                 type: t.dur.length > 1 ? 'recurrent' : 'dur',
+                 texte: t.dur.length > 1 ? 'RPE au plafond ' + t.dur.length + ' semaines' : 'RPE au plafond',
+                 semaines: t.dur });
+    }
+    var c = t.charges;
+    if (c.length >= 3) {
+      var d = c.slice(c.length - 3);
+      if (d[2].val <= d[0].val) {
+        out.push({ exo: t.nom, variante: t.variante, jour: t.jour, type: 'stagne',
+                   texte: 'charge bloquée à ' + d[2].val + ' kg depuis la semaine ' + d[0].sem,
+                   semaines: [d[0].sem, d[2].sem] });
+      }
+    }
+    if (t.note) {
+      out.push({ exo: t.nom, variante: t.variante, jour: t.jour, type: 'note',
+                 texte: t.note.texte, semaines: [t.note.sem] });
+    }
+  });
+  var rang = { recurrent: 0, stagne: 1, dur: 2, note: 3 };
+  out.sort(function (a, b) { return rang[a.type] - rang[b.type]; });
+  return out.slice(0, 12);
+}
+
 /** Un exercice mérite l'attention du coach ? */
 function alertesExo_(e) {
   var out = [];
@@ -427,7 +521,8 @@ function apiCoach(body) {
     try {
       var ss  = SpreadsheetApp.openById(id);
       var sit = situation_(ss);
-      var w   = lireSemaine_(sit.sheet, sit.semaine);
+      var semaines = lireBloc_(sit.sheet, sit.nbSem);   // une seule lecture pour tout le bloc
+      var w   = semaines[sit.semaine - 1] || semaines[semaines.length - 1];
 
       var faites = 0, alertes = [];
       w.seances.forEach(function (s) {
@@ -449,9 +544,24 @@ function apiCoach(body) {
       fiche.nbSem    = sit.nbSem;
       fiche.faites   = faites;
       fiche.total    = w.seances.length;
+      var trous = 0;
       fiche.seances  = w.seances.map(function (s) {
-        return { jour: s.jour, etat: s.etat, remplis: s.remplis, total: s.total, difficulte: s.difficulte };
+        var exos = s.exos.map(function (e) {
+          var mq = manque_(e);
+          if (mq) trous++;
+          return {
+            nom: e.nom, variante: e.variante, tempo: e.tempo,
+            sets: e.sets, reps: e.reps,
+            rpeCible: e.rpeCible, rpe1: e.rpe1, rpeLast: e.rpeLast,
+            chargeReco: e.chargeReco, charge: e.charge,
+            note: e.note, manque: mq, dur: estDur_(e.rpeLast) || estDur_(e.rpe1)
+          };
+        });
+        return { jour: s.jour, etat: s.etat, remplis: s.remplis, total: s.total,
+                 difficulte: s.difficulte, exos: exos };
       });
+      fiche.trous    = trous;
+      fiche.soucis   = soucisDuBloc_(semaines, sit.semaine);
       fiche.alertes  = alertes.slice(0, 12);
       fiche.recup    = { moyenne: moyenne, detail: notes.join(' · '), poids: w.recup.poids };
     } catch (err) {
