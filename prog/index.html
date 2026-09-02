@@ -578,7 +578,13 @@
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     }).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) throw new Error((j && j.error) || 'Erreur serveur');
+      if (!j || !j.ok) {
+        /* la requête a bien atteint le serveur : ce n'est pas un problème de réseau,
+           donc pas la peine de faire croire à l'athlète que ça repartira tout seul. */
+        var err = new Error((j && j.error) || 'Erreur serveur');
+        err.serverError = true;
+        throw err;
+      }
       return j;
     });
   }
@@ -594,7 +600,10 @@
       return call(q2[0]).then(function () {
         var r = outbox(); r.shift(); sSet(LS_OUT, JSON.stringify(r));
         return next();
-      }).catch(function () { return 0; });
+      }).catch(function (e) {
+        if (e && e.serverError) toast(e.message || 'Erreur du serveur sur une saisie en attente — préviens ton coach.', true);
+        return 0;
+      });
     };
     return next().then(function () {
       if (!outbox().length) toast('Saisies en attente envoyées ✓');
@@ -907,7 +916,13 @@
       progSet(prog);
       clearRun(seance._i);
       finish('C\'est envoyé', 'Ta séance est arrivée dans le suivi de ton coach.');
-    }).catch(function () {
+    }).catch(function (e) {
+      if (e && e.serverError) {
+        /* le serveur a répondu mais a refusé la requête : réessayer tout seul ne réglera rien,
+           il faut le dire clairement plutôt que de faire croire à un simple souci de réseau. */
+        toast(e.message || 'Erreur du serveur — préviens ton coach.', true);
+        return;
+      }
       queue(payload);
       prog.seances[seance._i].faite = true;
       prog.seances[seance._i].etat = diff ? 'faite' : 'encours';
@@ -963,7 +978,8 @@
       $('ok-go').textContent = 'Retour aux séances';
       $('ok-go').onclick = function () { renderHome(); show('home'); };
       show('ok');
-    }).catch(function () {
+    }).catch(function (e) {
+      if (e && e.serverError) { toast(e.message || 'Erreur du serveur — préviens ton coach.', true); return; }
       queue(payload);
       toast('Hors ligne — bilan gardé, il partira tout seul');
       renderHome(); show('home');
