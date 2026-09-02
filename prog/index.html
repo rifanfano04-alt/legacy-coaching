@@ -1038,6 +1038,7 @@
       var tags = '';
       if (nCh) tags += '<span class="badge hot">' + nCh + ' à regarder</span>';
       if (nTr) tags += '<span class="badge warn">' + nTr + ' non rempli' + (nTr > 1 ? 's' : '') + '</span>';
+      if (a.aVenir) tags += '<span class="badge">' + a.aVenir + ' séance' + (a.aVenir > 1 ? 's' : '') + ' à venir</span>';
       if (!nCh && !nTr && pct >= 1) tags += '<span class="badge good">semaine complète</span>';
       return '<div class="ath clic" data-i="' + i + '">' +
         '<div class="haut"><div class="nom"><b>' + esc(a.prenom) + '</b>' +
