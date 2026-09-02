@@ -898,7 +898,7 @@
       seance = JSON.parse(JSON.stringify(prog.seances[i]));
       seance._i = i; idx = 0; diff = seance.difficulte || '';
     }
-    injecterRecords();
+    rafraichirExos();
     $('r-day').textContent = seance.jour || ('Séance ' + (i + 1));
     saveRun();
     show('run'); renderExo();
@@ -1258,7 +1258,7 @@
       });
       prog.recordsPrets = true;
       progSet(prog);
-      injecterRecords();
+      rafraichirExos();
       if (seance && $('run').classList.contains('on')) renderExo();
     }).catch(function () { prog._recDemandes = false; });
   }
@@ -1268,9 +1268,13 @@
   function recordConnu(e) { return e && e.prSchema !== undefined && e.prSchema !== null; }
 
   /* La séance en cours est une COPIE du programme — et pour une séance déjà commencée,
-     elle est relue depuis le brouillon du téléphone. Les records arrivent après : sans
-     cette réinjection ils n'atteignent jamais la copie et le mode record reste éteint. */
-  function injecterRecords() {
+     elle est relue depuis le brouillon gardé dans le téléphone. Ce brouillon peut dater
+     d'une version plus ancienne de l'app : tout ce qui vient du programme (record, semaine
+     dernière, charge conseillée…) doit donc être rafraîchi, sinon il manque à l'écran.
+     Seules les quatre valeurs saisies par l'athlète sont préservées. */
+  var SAISIE = { charge: 1, rpe1: 1, rpeLast: 1, note: 1 };
+
+  function rafraichirExos() {
     if (!prog || !seance || seance._i === undefined || seance._i === null) return;
     var src = prog.seances[seance._i];
     if (!src || !src.exos) return;
@@ -1279,8 +1283,7 @@
     seance.exos.forEach(function (e) {
       var x = par[e.row];
       if (!x) return;
-      e.record = x.record; e.prFormat = x.prFormat; e.prSchema = x.prSchema;
-      e.chargeReco = x.chargeReco;      // vient du coach, jamais de l'athlète
+      Object.keys(x).forEach(function (k) { if (!SAISIE[k]) e[k] = x[k]; });
     });
   }
   function estPr(e, charge) {
