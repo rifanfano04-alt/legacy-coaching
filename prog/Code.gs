@@ -45,6 +45,11 @@ var RECUP_ROWS = { sommeil: 94, nutrition: 95, steps: 96, humeur: 97, poids: 99 
 var OFF_RECUP  = 12;        // valeurs du tableau jaune (même colonne que la charge)
 var OFF_1RM    = 1;         // 1RM de la semaine : lignes 96..99, colonne N+1
 
+// Les seances etaient lues a des lignes figees (SESSION_ROWS). Un bloc peut desormais
+// contenir plus ou moins d'exercices : on deduit le plan du contenu, et les constantes
+// ci-dessus ne servent plus que de secours si la detection echoue.
+var HAUTEUR_MAX = 200;
+
 var COULEURS = { M:'#9FC5E8', P:'#76A5AF', D:'#8E7CC3', S:'#45818E', R:'#D9D9D9' };
 var LIB_MUSCLE = { M:'Muscle-up', P:'Pull-up', D:'Dips', S:'Squat', R:'Renfo' };
 
@@ -191,16 +196,70 @@ function situation_(ss) {
   return best;
 }
 
+/**
+ * Plan de l'onglet, deduit du contenu et non de lignes figees.
+ * Une seance commence a l'en-tete « mouvement » (colonne du nom, semaine 1),
+ * ses exercices vont de +2 jusqu'a la ligne « total serie », qui porte la difficulte.
+ * Les lignes sont identiques d'une semaine a l'autre : on ne detecte que sur la semaine 1.
+ */
+function plan_(vals) {
+  var colNom = WEEK_COLS[0] + OFF.nom;
+  var txt = function (r, c) {
+    var l = vals[r - 1] || [];
+    return String(l[c - 1] === undefined || l[c - 1] === null ? '' : l[c - 1]).trim().toLowerCase();
+  };
+  var seances = [];
+  for (var r = 1; r <= vals.length; r++) {
+    if (txt(r, colNom) !== 'mouvement') continue;
+    var premier = r + 2, dernier = premier - 1, total = 0;
+    for (var k = premier; k <= vals.length; k++) {
+      var t = txt(k, colNom);
+      if (t.indexOf('total s') === 0) { total = k; break; }
+      if (t === 'mouvement') break;
+      dernier = k;
+    }
+    if (dernier >= premier) seances.push({ head: r, premier: premier, dernier: dernier, total: total || (dernier + 1) });
+  }
+  // secours : on retombe sur l'ancienne disposition plutot que de ne rien lire
+  if (!seances.length) {
+    seances = SESSION_ROWS.map(function (h) {
+      return { head: h, premier: h + 2, dernier: h + 1 + EXOS_PER_SESSION, total: h + 9 };
+    });
+  }
+  // Les libelles du tableau jaune se suivent dans l'ordre : on cherche chacun a partir
+  // du precedent. Sans cette contrainte, un mot croise plus haut ferait viser la mauvaise
+  // ligne — et apiWeekly ECRIT dedans.
+  var recup = {}, c0 = WEEK_COLS[0];
+  var depart = seances[seances.length - 1].total + 1;
+  var chercher = function (mot, apres) {
+    for (var rr = apres; rr <= vals.length; rr++) {
+      for (var cc = c0; cc <= c0 + 16; cc++) {
+        var s = txt(rr, cc);
+        if (s && s.indexOf(mot) === 0) return rr;
+      }
+    }
+    return 0;
+  };
+  var apres = depart;
+  ['sommeil', 'nutrition', 'steps', 'humeur', 'poids'].forEach(function (mot) {
+    var l = chercher(mot, apres);
+    recup[mot] = l || RECUP_ROWS[mot];
+    if (l) apres = l;
+  });
+  return { seances: seances, recup: recup };
+}
+
 /** Lit une semaine dans un tableau deja charge (colonne A -> fin de la semaine). */
 function lireSemaineDe_(vals, semaine) {
   var col = WEEK_COLS[semaine - 1];
   var get = function (r, off) { return vals[r - 1][col - 1 + off]; };
 
+  var pl = plan_(vals);
   var seances = [];
-  SESSION_ROWS.forEach(function (hRow, sIdx) {
+  pl.seances.forEach(function (S, sIdx) {
+    var hRow = S.head;
     var exos = [], rempli = 0, prescrits = 0;
-    for (var k = 0; k < EXOS_PER_SESSION; k++) {
-      var r = hRow + 2 + k;
+    for (var r = S.premier; r <= S.dernier; r++) {
       var code = txt_(get(r, OFF.code)).toUpperCase();
       var sets = num_(get(r, OFF.sets));
       var nom  = txt_(get(r, OFF.nom));
@@ -254,13 +313,14 @@ function lireSemaineDe_(vals, semaine) {
       exos.push(e);
     }
     if (!exos.length) return;
-    var diff = txt_(get(hRow + 9, OFF_DIFF));
+    var diff = txt_(get(S.total, OFF_DIFF));
     // « faite » = la difficulté de séance est renseignée (c'est le marqueur de fin,
     // écrit par l'app) OU tout ce qui était programmé a été rempli.
     var faite = !!diff || (prescrits > 0 && rempli >= prescrits);
     seances.push({
       idx: sIdx,
       ligne: hRow,
+      ligneTotal: S.total,
       jour: txt_(get(hRow - 1, OFF.nom)),
       difficulte: diff,
       exos: exos,
@@ -272,11 +332,17 @@ function lireSemaineDe_(vals, semaine) {
   });
 
   var recup = {};
-  Object.keys(RECUP_ROWS).forEach(function (k) {
-    recup[k] = num_(vals[RECUP_ROWS[k] - 1][col - 1 + OFF_RECUP]);
+  Object.keys(pl.recup).forEach(function (k) {
+    var l = vals[pl.recup[k] - 1];
+    recup[k] = l ? num_(l[col - 1 + OFF_RECUP]) : null;
   });
 
   return { seances: seances, recup: recup };
+}
+
+/** Plan de l'onglet pour les ecritures : une lecture etroite suffit (colonnes A a T). */
+function planDuSheet_(sh) {
+  return plan_(grille_(sh, WEEK_COLS[0] + 16));
 }
 
 /** Une semaine : lecture bornee a cette semaine. */
@@ -297,12 +363,12 @@ function lireBloc_(sh, nbSem) {
 /** Lecture bornee aux dimensions reelles de l'onglet : un Sheet plus etroit ne doit pas planter. */
 function grille_(sh, nbCol) {
   var maxL = sh.getMaxRows(), maxC = sh.getMaxColumns();
-  var vals = sh.getRange(1, 1, Math.min(110, maxL), Math.min(nbCol, maxC)).getValues();
+  var vals = sh.getRange(1, 1, Math.min(HAUTEUR_MAX, maxL), Math.min(nbCol, maxC)).getValues();
   var large = Math.max(nbCol, maxC);
   for (var i = 0; i < vals.length; i++) {
     while (vals[i].length < large) vals[i].push('');
   }
-  while (vals.length < 110) vals.push(new Array(large).join('.').split('.'));
+  while (vals.length < HAUTEUR_MAX) vals.push(new Array(large).join('.').split('.'));
   return vals;
 }
 
@@ -313,9 +379,9 @@ function grille_(sh, nbCol) {
  * L'app construit ses boutons avec CETTE liste : sans ca elle peut proposer un choix
  * que Google refuse a l'ecriture, et la seance entiere est perdue.
  */
-function optionsRpe_(sh, col) {
+function optionsRpe_(sh, col, ligne) {
   try {
-    var dv = sh.getRange(SESSION_ROWS[0] + 2, col + OFF.rpe1).getDataValidation();
+    var dv = sh.getRange(ligne || (SESSION_ROWS[0] + 2), col + OFF.rpe1).getDataValidation();
     if (!dv) return null;
     var type = dv.getCriteriaType();
     var args = dv.getCriteriaValues();
@@ -427,7 +493,8 @@ function apiProgram(body) {
     semaine: semaine,
     nbSemaines: sit.nbSem,
     semaineAuto: sit.semaine,
-    rpeOptions: optionsRpe_(sit.sheet, WEEK_COLS[semaine - 1]),
+    rpeOptions: optionsRpe_(sit.sheet, WEEK_COLS[semaine - 1],
+                            w.seances.length ? w.seances[0].ligne + 2 : 0),
     recordsPrets: !!recPrets,
     seances: w.seances,
     recup: w.recup
@@ -470,7 +537,8 @@ function apiSave(body) {
   // Apps Script applique les ecritures au flush() : une valeur refusee par la validation
   // n'echoue donc PAS sur son setValue mais a la fin, et ferait tomber toute la seance.
   // On verifie donc les RPE AVANT d'ecrire.
-  var rpeOk = optionsRpe_(sh, col);
+  var pl = planDuSheet_(sh);
+  var rpeOk = optionsRpe_(sh, col, pl.seances[0] ? pl.seances[0].premier : 0);
   var refuser = function (r, champ, valeur, raison) {
     refus.push({ row: r, champ: champ, valeur: String(valeur), raison: raison });
   };
@@ -501,8 +569,8 @@ function apiSave(body) {
       }
     });
     if (body.difficulte) {
-      var hRow = SESSION_ROWS[Number(body.seance)];
-      if (hRow) ecrire(hRow + 9, col + OFF_DIFF, String(body.difficulte), 'difficulte');
+      var S = pl.seances[Number(body.seance)];
+      if (S) ecrire(S.total, col + OFF_DIFF, String(body.difficulte), 'difficulte');
     }
     try { SpreadsheetApp.flush(); }
     catch (e) { refuser(0, 'enregistrement', '', String((e && e.message) || e).slice(0, 200)); }
@@ -547,10 +615,12 @@ function apiWeekly(body) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    var lignes = planDuSheet_(sh).recup;
     ['sommeil', 'nutrition', 'steps', 'humeur', 'poids'].forEach(function (k) {
       var v = body[k];
       if (v === undefined || v === null || v === '') return;
-      sh.getRange(RECUP_ROWS[k], col + OFF_RECUP).setValue(Number(v));
+      if (!lignes[k]) return;
+      sh.getRange(lignes[k], col + OFF_RECUP).setValue(Number(v));
     });
     SpreadsheetApp.flush();
   } finally {
