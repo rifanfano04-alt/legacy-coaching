@@ -472,7 +472,9 @@
   var SYNC_URL = 'https://script.google.com/macros/s/AKfycbzWNM8ExWtsNQLhPpsaxJePhaVwyKcLCtcx5O3aBFbO_bC5RgEb76IYgLVRgWzOzZll/exec';
   var LS_CODE = 'lgcy-prog-code', LS_PROG = 'lgcy-prog-cache', LS_OUT = 'lgcy-prog-outbox';
   var LS_ROLE = 'lgcy-prog-role', LS_RUN = 'lgcy-prog-run';
-  var RPE = ['sub5','5','6','6.5','7','7.5','8','8.5','9','9.5','10','échec'];
+  /* Liste de secours SEULEMENT : la vraie liste vient du Sheet (rpeOptions), sinon l'app
+     peut proposer une valeur que la validation de données refuse, et l'envoi échoue. */
+  var RPE = ['sub 6', '6', '6,5', '7', '7,5', '8', '8,5', '9', '9,5', '10', 'échec'];
   var DIFF = ['TRES FACILE','FACILE','MID','DIFFICILE','TRES DIFFICILE'];
   var DIFF_LBL = ['Très facile','Facile','Mid','Difficile','Très dur'];
   var RECUP = [['sommeil','Sommeil'],['nutrition','Nutrition'],['steps','Steps'],['humeur','Humeur']];
@@ -567,6 +569,14 @@
   function rpeTxt(v) {
     var s = String(v == null ? '' : v).trim();
     return s.replace(/\.0$/, '');
+  }
+  /* « 9,5 » dans le Sheet, « 9.5 » une fois relu en nombre : c'est le même RPE. */
+  function memeRpe(a, b) {
+    var n = function (x) {
+      return String(x == null ? '' : x).trim().toLowerCase()
+        .replace(',', '.').replace(/\.0$/, '').replace(/\s+/g, ' ');
+    };
+    return n(a) !== '' && n(a) === n(b);
   }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
@@ -669,8 +679,13 @@
     var q = outbox(); if (!q.length) return Promise.resolve(0);
     var next = function () {
       var q2 = outbox(); if (!q2.length) return Promise.resolve(0);
-      return call(q2[0]).then(function () {
+      return call(q2[0]).then(function (j) {
         var r = outbox(); r.shift(); sSet(LS_OUT, JSON.stringify(r));
+        var refus = (j && j.refus) || [];
+        if (refus.length) {
+          toast(refus.length + ' valeur(s) refusée(s) par le tableau du coach : ' +
+                refus.map(function (x) { return x.champ + ' « ' + x.valeur + ' »'; }).join(' · '), true);
+        }
         return next();
       }).catch(function (e) {
         if (e && e.serverError) toast(e.message || 'Erreur du serveur sur une saisie en attente — préviens ton coach.', true);
@@ -748,6 +763,7 @@
 
   function applyProg(j, fromCache) {
     prog = j;
+    if (j.rpeOptions && j.rpeOptions.length) RPE = j.rpeOptions;
     if (!fromCache) progSet(j);
     $('h-name').textContent = j.prenom ? j.prenom : 'Ma séance';
     $('h-block').textContent = (j.block || '') + (j.blockDebut ? ' · depuis le ' + j.blockDebut : '');
@@ -927,8 +943,17 @@
   }
 
   function chips(box, cur, cb) {
-    box.innerHTML = RPE.map(function (v) {
-      return '<button class="chip' + (rpeTxt(cur) === v ? ' sel' : '') + '" data-v="' + v + '">' + v + '</button>';
+    /* Une valeur déjà dans le Sheet mais absente de la liste (ancienne saisie, échelle
+       modifiée depuis) doit rester visible : sinon l'athlète croit que rien n'est noté. */
+    var liste = RPE.slice();
+    if (String(cur == null ? '' : cur).trim() !== '' &&
+        !liste.some(function (v) { return memeRpe(cur, v); })) {
+      liste.push(String(cur).trim());
+    }
+    box.innerHTML = liste.map(function (v) {
+      /* on affiche la valeur nettoyée mais on renvoie EXACTEMENT celle du Sheet */
+      return '<button class="chip' + (memeRpe(cur, v) ? ' sel' : '') + '" data-v="' + esc(v) + '">' +
+             esc(String(v).trim()) + '</button>';
     }).join('');
     Array.prototype.forEach.call(box.querySelectorAll('.chip'), function (b) {
       b.onclick = function () {
@@ -982,14 +1007,23 @@
       seance: seance.idx, difficulte: diff, entries: entries
     };
     var btn = $('e-send'); btn.disabled = true; btn.textContent = 'Envoi…';
-    call(payload).then(function () {
+    call(payload).then(function (j) {
       seance.exos.forEach(function (e, i) { prog.seances[seance._i].exos[i] = e; });
       prog.seances[seance._i].faite = true;
       prog.seances[seance._i].etat = diff ? 'faite' : 'encours';
       prog.seances[seance._i].difficulte = diff;
       progSet(prog);
       clearRun(seance._i);
-      finish('C\'est envoyé', 'Ta séance est arrivée dans le suivi de ton coach.');
+      var refus = (j && j.refus) || [];
+      if (refus.length) {
+        /* le reste est bien enregistré : on ne fait pas croire à un échec complet,
+           mais on dit exactement ce que le tableau du coach a refusé. */
+        finish('Envoyé, ' + refus.length + ' valeur' + (refus.length > 1 ? 's' : '') + ' refusée' + (refus.length > 1 ? 's' : ''),
+               'Tout le reste est arrivé chez ton coach. Ces valeurs-là n\'ont pas été acceptées par son tableau — montre-lui cette ligne.',
+               refus.map(function (x) { return x.champ + ' « ' + x.valeur + ' »'; }).join(' · '));
+      } else {
+        finish('C\'est envoyé', 'Ta séance est arrivée dans le suivi de ton coach.');
+      }
     }).catch(function (e) {
       if (e && e.serverError) {
         /* le serveur a répondu mais a refusé la requête : réessayer tout seul ne réglera rien,
