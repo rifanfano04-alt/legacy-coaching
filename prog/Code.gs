@@ -329,6 +329,18 @@ function optionsRpe_(sh, col) {
   } catch (e) { return null; }
 }
 
+/** « 9,5 » dans la liste, 9.5 une fois ecrit en nombre : c'est le meme RPE. */
+function normRpe_(v) {
+  return String(v == null ? '' : v).trim().toLowerCase()
+    .replace(',', '.').replace(/\.0$/, '').replace(/\s+/g, ' ');
+}
+function rpeAccepte_(liste, v) {
+  if (!liste || !liste.length) return true;   // validation illisible : on ne bloque rien
+  var n = normRpe_(v);
+  for (var i = 0; i < liste.length; i++) if (normRpe_(liste[i]) === n) return true;
+  return false;
+}
+
 function apiLogin(body) {
   var a = athleteFromCode_(body.code);
   if (!a.sheetId) return { ok: true, role: 'coach', coach: true, prenom: a.prenom };
@@ -374,6 +386,13 @@ function apiSave(body) {
   // Une cellule refusee (validation de donnees) ne doit PAS faire perdre le reste de la seance :
   // on ecrit case par case et on renvoie la liste de ce qui n'est pas passe.
   var refus = [];
+  // Apps Script applique les ecritures au flush() : une valeur refusee par la validation
+  // n'echoue donc PAS sur son setValue mais a la fin, et ferait tomber toute la seance.
+  // On verifie donc les RPE AVANT d'ecrire.
+  var rpeOk = optionsRpe_(sh, col);
+  var refuser = function (r, champ, valeur, raison) {
+    refus.push({ row: r, champ: champ, valeur: String(valeur), raison: raison });
+  };
   var ecrire = function (r, c, valeur, champ) {
     try { sh.getRange(r, c).setValue(valeur); }
     catch (e) {
@@ -385,8 +404,14 @@ function apiSave(body) {
     (body.entries || []).forEach(function (en) {
       var r = Number(en.row);
       if (!r) return;
-      if (en.rpe1     !== undefined && en.rpe1    !== '') ecrire(r, col + OFF.rpe1,    valRpe_(en.rpe1),    'RPE 1re serie');
-      if (en.rpeLast  !== undefined && en.rpeLast !== '') ecrire(r, col + OFF.rpeLast, valRpe_(en.rpeLast), 'RPE derniere serie');
+      if (en.rpe1 !== undefined && en.rpe1 !== '') {
+        if (rpeAccepte_(rpeOk, en.rpe1)) ecrire(r, col + OFF.rpe1, valRpe_(en.rpe1), 'RPE 1re serie');
+        else refuser(r, 'RPE 1re serie', en.rpe1, 'valeur absente de la liste du Sheet');
+      }
+      if (en.rpeLast !== undefined && en.rpeLast !== '') {
+        if (rpeAccepte_(rpeOk, en.rpeLast)) ecrire(r, col + OFF.rpeLast, valRpe_(en.rpeLast), 'RPE derniere serie');
+        else refuser(r, 'RPE derniere serie', en.rpeLast, 'valeur absente de la liste du Sheet');
+      }
       if (en.charge   !== undefined && en.charge  !== '' && en.charge !== null) {
         ecrire(r, col + OFF.charge, Number(en.charge), 'charge');
       }
@@ -398,7 +423,8 @@ function apiSave(body) {
       var hRow = SESSION_ROWS[Number(body.seance)];
       if (hRow) ecrire(hRow + 9, col + OFF_DIFF, String(body.difficulte), 'difficulte');
     }
-    SpreadsheetApp.flush();
+    try { SpreadsheetApp.flush(); }
+    catch (e) { refuser(0, 'enregistrement', '', String((e && e.message) || e).slice(0, 200)); }
   } finally {
     lock.releaseLock();
   }
