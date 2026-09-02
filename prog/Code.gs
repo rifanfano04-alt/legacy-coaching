@@ -96,6 +96,22 @@ function registreSheet_() {
 function athleteFromCode_(code) {
   code = String(code || '').trim().toUpperCase();
   if (!code) throw new Error('Code manquant.');
+  // Le registre vit dans FUTURE PROG : louvrir coute cher et il ne change quasiment jamais.
+  // On garde la correspondance code -> Sheet 15 minutes en memoire du script.
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  if (cache) {
+    var hit = cache.get('ath:' + code);
+    if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  }
+  var a = athleteDepuisRegistre_(code);
+  if (cache) { try { cache.put('ath:' + code, JSON.stringify(a), 900); } catch (e) {} }
+  return a;
+}
+
+// Lecture reelle du registre. Les erreurs (code inconnu, acces desactive) ne sont
+// jamais mises en cache : une reactivation prend effet tout de suite.
+function athleteDepuisRegistre_(code) {
   var sh = registreSheet_();
   var rows = sh.getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
