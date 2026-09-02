@@ -1230,7 +1230,7 @@
 
   /* Un bandeau transparent, à poser sur sa story par-dessus la vidéo.
      Tout tient sur une ligne pour ne rien masquer ; LEGACY en dessous. */
-  var OR = '#ffc740';
+  var OR = '#ffc740', SANG = '#ff3b3b';
 
   /* Découper par unité UTF-16 casserait les emoji en deux moitiés invalides
      (🏆 en compte deux) : on découpe par vrai caractère. */
@@ -1295,8 +1295,8 @@
       gx += b.w * ech + espaceBloc * ech;
     });
 
-    x.font = '600 ' + Math.round(24 * ech) + 'px Unbounded, sans-serif';
-    x.fillStyle = 'rgba(255,255,255,.62)';
+    x.font = '700 ' + Math.round(24 * ech) + 'px Unbounded, sans-serif';
+    x.fillStyle = SANG;                       /* la signature reprend le rouge de la marque */
     var esp = 9 * ech, lm = largeurEsp(x, 'LEGACY', esp);
     ecritEsp(x, 'LEGACY', (L - lm) / 2, gy + Math.round(58 * ech), esp);
 
