@@ -339,15 +339,14 @@
   /* ---------- RECORD ---------- */
   .presc{position:relative;}
   .presc.pr{border-color:rgba(255,199,64,.45);background:rgba(255,199,64,.06);}
-  .prbadge{position:absolute;top:-10px;right:14px;display:none;align-items:center;gap:4px;
+  /* .presc span met tous les libellés en display:block : il faut au moins la même
+     priorité, sinon la pastille reste visible en permanence. */
+  .presc .prbadge{position:absolute;top:-10px;right:14px;display:none;align-items:center;gap:4px;
     background:var(--or);color:#141416;font-family:'Unbounded';font-weight:900;
-    font-size:10px;letter-spacing:1.6px;padding:4px 10px;border-radius:99px;
-    box-shadow:0 5px 14px rgba(0,0,0,.5);}
+    font-size:10px;line-height:1.4;letter-spacing:1.6px;text-transform:none;
+    padding:4px 10px;border-radius:99px;box-shadow:0 5px 14px rgba(0,0,0,.5);}
   .presc.pr .prbadge{display:inline-flex;}
   .presc.pr .hi b{color:var(--or);}
-  .prbar{display:flex;align-items:center;gap:7px;width:100%;padding:0 2px 9px;
-    font-size:10px;letter-spacing:1.2px;text-transform:uppercase;font-weight:800;color:var(--grey-3);}
-  .prbar em{font-style:normal;color:var(--grey-2);letter-spacing:.8px;}
 
   .prpop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     padding:26px;background:rgba(8,8,10,.86);backdrop-filter:blur(6px);}
@@ -935,10 +934,6 @@
         '<div class="exoname">' + esc(cap(e.nom)) + '</div>' +
         (e.variante ? '<div class="exovar">' + esc(e.variante) + '</div>' : '') +
       '</div>' +
-      /* Le record s'affiche dès qu'on le connaît, même si la charge prévue ne le bat pas :
-         savoir ce qu'il y a à battre est utile avant de charger la barre. Il passe en or
-         quand la charge en jeu le dépasse. */
-      barrePr(e) +
       '<div class="presc' + (enJeu(e) ? ' pr' : '') + '">' +
         '<span class="prbadge">🏆 PR</span>' +
         '<div><span>Séries</span><b>' + (e.sets !== null ? fmt(e.sets) : '—') + '</b></div>' +
@@ -1295,13 +1290,11 @@
     if (!e.record || e.record.charge === null || e.record.charge === undefined) return true;
     return c > e.record.charge;
   }
-  function enJeu(e) { return estPr(e, e.chargeReco) || estPr(e, e.charge); }
-
-  /* La coupe est dans l'angle de l'encadré : ici on ne garde que le chiffre à battre. */
-  function barrePr(e) {
-    if (!recordConnu(e) || !e.record) return '';
-    return '<div class="prbar">Record <em>' + esc(kg(e.record.charge)) +
-           (e.record.quand ? ' · ' + esc(e.record.quand) : '') + '</em></div>';
+  /* Tant qu'il n'a rien tapé on se fie à la charge conseillée ; dès qu'il saisit
+     quelque chose, c'est ce chiffre-là qui décide. */
+  function enJeu(e) {
+    var saisie = (e.charge !== null && e.charge !== undefined && e.charge !== '');
+    return estPr(e, saisie ? e.charge : e.chargeReco);
   }
 
   function echec(e) {
