@@ -1,5 +1,5 @@
 /* LEGACY — séance : cache l'app pour qu'elle s'ouvre sans réseau à la salle. */
-var CACHE = 'lgcy-prog-v3';
+var CACHE = 'lgcy-prog-v4';
 var ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png',
   './sil-dips.png', './sil-squat.png', './sil-traction.png'];
 
@@ -15,8 +15,12 @@ self.addEventListener('fetch', function (e) {
   var r = e.request;
   if (r.method !== 'GET') return;                      // les envois passent toujours par le réseau
   if (r.url.indexOf('script.google.com') > -1) return;
+  // La page elle-meme est toujours redemandee au serveur sans passer par le cache HTTP du
+  // navigateur : sinon une mise a jour peut mettre plusieurs minutes a arriver sur le telephone,
+  // et l athlete continue de tourner sur l ancienne version sans le savoir.
+  var req = (r.mode === 'navigate') ? new Request(r.url, { cache: 'reload' }) : r;
   e.respondWith(
-    fetch(r).then(function (res) {
+    fetch(req).then(function (res) {
       if (res && res.status === 200 && r.url.indexOf(self.registration.scope) === 0) {
         var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(r, copy); });
       }
