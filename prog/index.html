@@ -340,8 +340,10 @@
   .presc.pr{border-color:rgba(255,199,64,.45);background:rgba(255,199,64,.06);}
   .presc.pr .hi b{color:var(--or);}
   .prbar{display:flex;align-items:center;gap:7px;width:100%;padding:0 2px 9px;
-    font-size:10px;letter-spacing:1.2px;text-transform:uppercase;font-weight:800;color:var(--or);}
-  .prbar em{font-style:normal;color:var(--grey-3);letter-spacing:.8px;}
+    font-size:10px;letter-spacing:1.2px;text-transform:uppercase;font-weight:800;color:var(--grey-3);}
+  .prbar em{font-style:normal;color:var(--grey-2);letter-spacing:.8px;}
+  .prbar.on{color:var(--or);}
+  .prbar.on em{color:var(--grey-2);}
 
   .prpop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     padding:26px;background:rgba(8,8,10,.86);backdrop-filter:blur(6px);}
@@ -893,6 +895,7 @@
       seance = JSON.parse(JSON.stringify(prog.seances[i]));
       seance._i = i; idx = 0; diff = seance.difficulte || '';
     }
+    injecterRecords();
     $('r-day').textContent = seance.jour || ('Séance ' + (i + 1));
     saveRun();
     show('run'); renderExo();
@@ -928,14 +931,11 @@
         '<div class="exoname">' + esc(cap(e.nom)) + '</div>' +
         (e.variante ? '<div class="exovar">' + esc(e.variante) + '</div>' : '') +
       '</div>' +
-      /* toujours présente mais masquée : elle doit pouvoir apparaître dès qu'il tape une charge */
-      '<div class="prbar"' + ((estPr(e, e.chargeReco) || estPr(e, e.charge)) ? '' : ' style="display:none"') + '>' +
-        '🏆 Record à battre' +
-        (recordConnu(e) && e.record
-          ? ' <em>' + esc(kg(e.record.charge)) + (e.record.quand ? ' · ' + esc(e.record.quand) : '') + '</em>'
-          : ' <em>premier à ce format</em>') +
-      '</div>' +
-      '<div class="presc' + ((estPr(e, e.chargeReco) || estPr(e, e.charge)) ? ' pr' : '') + '">' +
+      /* Le record s'affiche dès qu'on le connaît, même si la charge prévue ne le bat pas :
+         savoir ce qu'il y a à battre est utile avant de charger la barre. Il passe en or
+         quand la charge en jeu le dépasse. */
+      barrePr(e) +
+      '<div class="presc' + (enJeu(e) ? ' pr' : '') + '">' +
         '<div><span>Séries</span><b>' + (e.sets !== null ? fmt(e.sets) : '—') + '</b></div>' +
         '<div><span>Reps</span><b>' + (e.reps !== null ? fmt(e.reps) : '—') + '</b></div>' +
         '<div><span>RPE cible</span><b>' + esc(rpeTxt(e.rpeCible) || '—') + '</b></div>' +
@@ -967,11 +967,20 @@
     inp.value = e.charge !== null && e.charge !== '' ? String(e.charge).replace('.', ',') : '';
     inp.oninput = function () { e.charge = nb(inp.value); saveRun(); majPr(); };
     var majPr = function () {
-      var actif = estPr(e, e.chargeReco) || estPr(e, e.charge);
+      var actif = enJeu(e);
       var box = $('r-body').querySelector('.presc');
       if (box) box.classList.toggle('pr', actif);
       var bar = $('r-body').querySelector('.prbar');
-      if (bar) bar.style.display = actif ? '' : 'none';
+      if (bar) {
+        bar.classList.toggle('on', actif);
+        bar.innerHTML = actif
+          ? (e.record ? '🏆 Record à battre <em>' + esc(kg(e.record.charge)) +
+              (e.record.quand ? ' · ' + esc(e.record.quand) : '') + '</em>'
+                      : '🏆 <em>Premier à ce format</em>')
+          : (e.record ? 'Record <em>' + esc(kg(e.record.charge)) +
+              (e.record.quand ? ' · ' + esc(e.record.quand) : '') + '</em>' : '');
+        bar.style.display = bar.innerHTML ? '' : 'none';
+      }
     };
     var bump = function (d) {
       var v = nb(inp.value) || 0; v = Math.round((v + d) * 1000) / 1000;
@@ -1261,6 +1270,7 @@
       });
       prog.recordsPrets = true;
       progSet(prog);
+      injecterRecords();
       if (seance && $('run').classList.contains('on')) renderExo();
     }).catch(function () { prog._recDemandes = false; });
   }
@@ -1268,6 +1278,23 @@
   /* Un record se bat à la charge, pour un format et un schéma donnés.
      Au poids du corps (0 kg) il n'y a rien à battre : pas de PR. */
   function recordConnu(e) { return e && e.prSchema !== undefined && e.prSchema !== null; }
+
+  /* La séance en cours est une COPIE du programme — et pour une séance déjà commencée,
+     elle est relue depuis le brouillon du téléphone. Les records arrivent après : sans
+     cette réinjection ils n'atteignent jamais la copie et le mode record reste éteint. */
+  function injecterRecords() {
+    if (!prog || !seance || seance._i === undefined || seance._i === null) return;
+    var src = prog.seances[seance._i];
+    if (!src || !src.exos) return;
+    var par = {};
+    src.exos.forEach(function (x) { par[x.row] = x; });
+    seance.exos.forEach(function (e) {
+      var x = par[e.row];
+      if (!x) return;
+      e.record = x.record; e.prFormat = x.prFormat; e.prSchema = x.prSchema;
+      e.chargeReco = x.chargeReco;      // vient du coach, jamais de l'athlète
+    });
+  }
   function estPr(e, charge) {
     if (!recordConnu(e)) return false;
     var c = nb(charge);
@@ -1275,6 +1302,21 @@
     if (!e.record || e.record.charge === null || e.record.charge === undefined) return true;
     return c > e.record.charge;
   }
+  function enJeu(e) { return estPr(e, e.chargeReco) || estPr(e, e.charge); }
+
+  function barrePr(e) {
+    if (!recordConnu(e)) return '';
+    var jeu = enJeu(e);
+    if (e.record) {
+      return '<div class="prbar' + (jeu ? ' on' : '') + '">' +
+        (jeu ? '🏆 Record à battre' : 'Record') +
+        ' <em>' + esc(kg(e.record.charge)) +
+        (e.record.quand ? ' · ' + esc(e.record.quand) : '') + '</em></div>';
+    }
+    /* aucun record à ce format : on ne le dit que si une charge est réellement en jeu */
+    return jeu ? '<div class="prbar on">🏆 <em>Premier à ce format</em></div>' : '';
+  }
+
   function echec(e) {
     var t = function (v) { return String(v == null ? '' : v).toLowerCase().indexOf('chec') > -1; };
     return t(e.rpe1) || t(e.rpeLast);
