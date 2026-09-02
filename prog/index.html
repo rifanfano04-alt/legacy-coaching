@@ -46,6 +46,13 @@
   .mark{font-family:'Unbounded';font-weight:900;font-size:30px;letter-spacing:1px;}
   .mark span{color:var(--blood);}
   .sub{color:var(--grey-2);font-size:14px;max-width:280px;}
+  .tech{color:var(--grey-3);font-size:11px;max-width:290px;margin-top:10px;line-height:1.45;display:none;}
+  .tech.on{display:block;}
+  .attente{display:none;margin:0 18px 2px;padding:9px 12px;border-radius:10px;font-size:11.5px;line-height:1.45;
+    background:rgba(255,214,0,.08);border:1px solid rgba(255,214,0,.28);color:#ffe89a;}
+  .attente.on{display:block;}
+  .attente b{display:block;font-weight:800;margin-bottom:2px;}
+  .attente span{color:var(--grey-3);}
   .field{width:100%;max-width:300px;}
   .field input{
     width:100%;background:var(--card);border:1px solid var(--line);border-radius:14px;
@@ -355,6 +362,7 @@
   <!-- ══════════ SEMAINE ══════════ -->
   <section class="screen" id="home">
     <div class="offline" id="off-1">Hors ligne — tes saisies sont gardées et envoyées au retour du réseau</div>
+    <div class="attente" id="att-1"></div>
     <div class="top">
       <div class="who">
         <div class="t1" id="h-name">—</div>
@@ -448,6 +456,7 @@
       <div class="tick">✓</div>
       <div class="h2" id="ok-t">C'est envoyé</div>
       <p class="sub" id="ok-s">Tout est arrivé dans le suivi de ton coach.</p>
+      <p class="tech" id="ok-tech"></p>
       <button class="btn" id="ok-go">Retour aux séances</button>
     </div>
   </section>
@@ -572,23 +581,86 @@
   window.addEventListener('offline', netState);
 
   /* ───── réseau ───── */
-  function call(payload) {
-    return fetch(SYNC_URL, {
+  var LS_ERR = 'lgcy-prog-lasterr';
+
+  /* On garde la raison exacte du dernier échec : sans ça, tout ressemble à « hors ligne »
+     et il n'y a rien à montrer au coach quand ça recommence. */
+  function noterPanne(e, payload) {
+    try {
+      sSet(LS_ERR, JSON.stringify({
+        quand: new Date().toISOString(),
+        action: payload && payload.action,
+        message: String((e && e.message) || e),
+        detail: (e && e.detail) || '',
+        enLigne: navigator.onLine
+      }));
+    } catch (x) {}
+  }
+  function dernierePanne() {
+    try { return JSON.parse(sGet(LS_ERR)) || null; } catch (e) { return null; }
+  }
+
+  function envoi(payload) {
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    /* un envoi normal prend 4 à 9 s ; au-delà de 45 s la requête est perdue,
+       et sans ça le bouton restait bloqué sur « Envoi… » indéfiniment. */
+    var minuteur = setTimeout(function () { if (ctrl) ctrl.abort(); }, 45000);
+    var opts = {
       method: 'POST', redirect: 'follow',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
-    }).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j || !j.ok) {
-        /* la requête a bien atteint le serveur : ce n'est pas un problème de réseau,
-           donc pas la peine de faire croire à l'athlète que ça repartira tout seul. */
-        var err = new Error((j && j.error) || 'Erreur serveur');
-        err.serverError = true;
-        throw err;
+    };
+    if (ctrl) opts.signal = ctrl.signal;
+    return fetch(SYNC_URL, opts).then(function (r) {
+      return r.text().then(function (txt) {
+        var j = null;
+        try { j = JSON.parse(txt); } catch (x) {
+          /* réponse non-JSON : page d'erreur Google, portail wifi, proxy… */
+          var e0 = new Error('Réponse inattendue du serveur (HTTP ' + r.status + ')');
+          e0.detail = String(txt).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140);
+          throw e0;
+        }
+        if (!j || !j.ok) {
+          /* la requête a bien atteint le serveur : ce n'est pas un problème de réseau,
+             donc pas la peine de faire croire à l'athlète que ça repartira tout seul. */
+          var err = new Error((j && j.error) || 'Erreur serveur');
+          err.serverError = true;
+          throw err;
+        }
+        return j;
+      });
+    }).then(function (j) { clearTimeout(minuteur); return j; },
+            function (e) { clearTimeout(minuteur); throw e; });
+  }
+
+  /* Une reprise automatique : en salle, la première requête tombe souvent
+     (réveil du téléphone, bascule wifi/4G). Le serveur réécrit les mêmes
+     cellules, renvoyer deux fois la même séance est sans conséquence. */
+  function call(payload, reste) {
+    var n = (reste === undefined) ? 1 : reste;
+    return envoi(payload).catch(function (e) {
+      if (e && e.serverError) { noterPanne(e, payload); throw e; }
+      if (n > 0) {
+        return new Promise(function (ok) { setTimeout(ok, 1500); })
+          .then(function () { return call(payload, n - 1); });
       }
-      return j;
+      noterPanne(e, payload);
+      throw e;
     });
   }
   function outbox() { try { return JSON.parse(sGet(LS_OUT)) || []; } catch (e) { return []; } }
+
+  /* Ce qui n'est pas encore parti, avec la raison : sinon l'athlète ne voit rien
+     et le coach ne peut pas savoir ce qui a bloqué. */
+  function majAttente() {
+    var el = $('att-1'); if (!el) return;
+    var n = outbox().length;
+    if (!n) { el.classList.remove('on'); el.innerHTML = ''; return; }
+    var p = dernierePanne();
+    el.innerHTML = '<b>' + n + ' saisie' + (n > 1 ? 's' : '') + ' en attente d\'envoi</b>' +
+      (p ? '<span>' + esc(p.message) + (p.detail ? ' — ' + esc(p.detail) : '') + '</span>' : '');
+    el.classList.add('on');
+  }
   function queue(payload) {
     var q = outbox(); q.push(payload);
     sSet(LS_OUT, JSON.stringify(q));
@@ -606,6 +678,7 @@
       });
     };
     return next().then(function () {
+      majAttente();
       if (!outbox().length) toast('Saisies en attente envoyées ✓');
     });
   }
@@ -690,6 +763,7 @@
 
   /* ───── écran semaine ───── */
   function renderHome() {
+    majAttente();
     var wrap = $('home-list'), h = '';
     var toutes = prog.seances.length && prog.seances.every(function (s) { return s.faite; });
     var bilanFait = prog.recup && nb(prog.recup.sommeil) !== null;
@@ -927,12 +1001,20 @@
       prog.seances[seance._i].faite = true;
       prog.seances[seance._i].etat = diff ? 'faite' : 'encours';
       clearRun(seance._i);
-      finish('Gardé hors ligne', 'Pas de réseau : ta séance part toute seule dès que tu es reconnecté.');
+      if (navigator.onLine) {
+        finish('Gardé sur ton téléphone',
+               'Le serveur n\'a pas répondu. Ta séance est en sécurité et repart toute seule au prochain lancement de l\'app. Si ça se répète, montre la ligne ci-dessous à ton coach.',
+               'Raison : ' + String((e && e.message) || e) + ((e && e.detail) ? ' — ' + e.detail : ''));
+      } else {
+        finish('Gardé hors ligne', 'Pas de réseau : ta séance part toute seule dès que tu es reconnecté.');
+      }
     }).then(function () { btn.disabled = false; btn.textContent = 'Envoyer au coach'; });
   };
 
-  function finish(t, s) {
+  function finish(t, s, tech) {
     $('ok-t').textContent = t; $('ok-s').textContent = s;
+    $('ok-tech').textContent = tech || '';
+    $('ok-tech').classList.toggle('on', !!tech);
     var toutes = prog.seances.every(function (x) { return x.faite; });
     var bilanFait = prog.recup && nb(prog.recup.sommeil) !== null;
     $('ok-go').textContent = (toutes && !bilanFait) ? 'Faire le bilan de la semaine' : 'Retour aux séances';
@@ -981,7 +1063,9 @@
     }).catch(function (e) {
       if (e && e.serverError) { toast(e.message || 'Erreur du serveur — préviens ton coach.', true); return; }
       queue(payload);
-      toast('Hors ligne — bilan gardé, il partira tout seul');
+      toast(navigator.onLine
+        ? 'Le serveur n\'a pas répondu — bilan gardé, il partira tout seul'
+        : 'Hors ligne — bilan gardé, il partira tout seul');
       renderHome(); show('home');
     }).then(function () { btn.disabled = false; btn.textContent = 'Envoyer le bilan'; });
   };
