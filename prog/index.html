@@ -1038,6 +1038,8 @@
       var tags = '';
       if (nCh) tags += '<span class="badge hot">' + nCh + ' à regarder</span>';
       if (nTr) tags += '<span class="badge warn">' + nTr + ' non rempli' + (nTr > 1 ? 's' : '') + '</span>';
+      var nSa = (a.sautees || []).length;
+      if (nSa) tags += '<span class="badge hot">' + nSa + ' séance' + (nSa > 1 ? 's' : '') + ' sautée' + (nSa > 1 ? 's' : '') + '</span>';
       if (a.aVenir) tags += '<span class="badge">' + a.aVenir + ' séance' + (a.aVenir > 1 ? 's' : '') + ' à venir</span>';
       if (!nCh && !nTr && pct >= 1) tags += '<span class="badge good">semaine complète</span>';
       return '<div class="ath clic" data-i="' + i + '">' +
@@ -1094,8 +1096,13 @@
         if (e.manque) trous.push({ jour: s.jour, nom: e.nom, variante: e.variante, mq: e.manque });
       });
     });
-    if (trous.length) {
-      h += '<div class="sect">Ce qu\'il manque (' + trous.length + ')</div><div class="al">' +
+    var sautees = a.sautees || [];
+    if (sautees.length || trous.length) {
+      h += '<div class="sect">Ce qu\'il manque (' + (sautees.length + trous.length) + ')</div><div class="al">' +
+        sautees.map(function (x) {
+          return '<div class="dur"><b>Séance non faite</b><i>' + esc(x.jour) +
+                 (x.date ? ' ' + esc(x.date) : '') + '</i></div>';
+        }).join('') +
         trous.map(function (t) {
           return '<div><b>' + esc(cap(t.nom)) + '</b>' +
                  (t.variante ? ' <span style="opacity:.7">' + esc(t.variante) + '</span>' : '') +
@@ -1106,8 +1113,9 @@
     /* 3. le détail, séance par séance */
     h += '<div class="sect">Semaine ' + a.semaine + ' en détail</div>';
     h += (a.seances || []).map(function (s) {
-      var etat = s.etat === 'faite' ? 'faite'
-               : (s.etat === 'encours' ? s.remplis + '/' + s.total : 'pas commencée');
+      var etat = s.passee === false ? 'à venir'
+               : (s.etat === 'faite' ? 'faite'
+               : (s.etat === 'encours' ? s.remplis + '/' + s.total : 'non faite'));
       var lignes = (s.exos || []).map(function (e) {
         var sch = schema(e);
         var det = [sch, e.tempo, (e.rpeCible ? 'cible ' + rpeTxt(e.rpeCible) : '')]
@@ -1128,6 +1136,7 @@
         '</div>';
       }).join('');
       return '<div class="cs"><div class="csh"><b>' + esc(s.jour || 'Séance') + '</b>' +
+        (s.date ? '<em style="font-style:normal;font-size:11px;color:var(--grey-3);font-weight:700">' + esc(s.date) + '</em>' : '') +
         '<span>' + esc(etat) + (s.difficulte ? ' · ' + esc(s.difficulte) : '') + '</span></div>' +
         lignes + '</div>';
     }).join('');
