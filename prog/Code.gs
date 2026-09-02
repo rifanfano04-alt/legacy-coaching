@@ -60,6 +60,7 @@ function doPost(e) {
     else if (action === 'save')    out = apiSave(body);
     else if (action === 'weekly')  out = apiWeekly(body);
     else if (action === 'coach')   out = apiCoach(body);
+    else if (action === 'records') out = apiRecords(body);
     else out = { ok: false, error: 'action inconnue : ' + action };
   } catch (err) {
     out = { ok: false, error: String(err && err.message || err) };
@@ -230,6 +231,8 @@ function lireSemaineDe_(vals, semaine) {
       var e = {
         row: r,
         prev: prev,
+        nomBrut: nom,
+        varBrut: vari,
         code: code,
         couleur: COULEURS[code] || '#D9D9D9',
         groupe: LIB_MUSCLE[code] || '',
@@ -341,6 +344,60 @@ function rpeAccepte_(liste, v) {
   return false;
 }
 
+/**
+ * Records de l'athlete, tels que le TABLEAU DE PR les calcule.
+ * Le scan complet du classeur coute cher : on le garde 6 h en memoire,
+ * et apiSave rafraichit la cle des qu'une seance est enregistree.
+ */
+function recordsAthlete_(sheetId, forcer, seulementCache) {
+  var cle = 'pr:' + sheetId, cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  if (cache && !forcer) {
+    var hit = cache.get(cle);
+    if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  }
+  // le scan complet coute ~5 s : on ne le fait jamais pendant le chargement de la seance
+  if (seulementCache) return null;
+  var plats;
+  try { plats = TableauPR.recordsPlats(sheetId); } catch (e) { return null; }
+  var index = {};
+  (plats || []).forEach(function (p) {
+    var cur = index[p.cle];
+    if (!cur || p.charge > cur.charge) index[p.cle] = { charge: p.charge, period: p.period };
+  });
+  if (cache) {
+    try {
+      var json = JSON.stringify(index);
+      if (json.length < 90000) cache.put(cle, json, 21600);
+    } catch (e) {}
+  }
+  return index;
+}
+
+/** Attache a chaque exercice le record a battre pour SON format et SON schema. */
+function attacherRecords_(sheetId, seances, seulementCache) {
+  var index = recordsAthlete_(sheetId, false, seulementCache);
+  if (!index) return false;
+  var plats = [], refs = [];
+  seances.forEach(function (s) {
+    s.exos.forEach(function (e) {
+      plats.push({ nom: e.nomBrut, qual: e.varBrut, tempo: e.tempo, sets: e.sets, reps: e.reps });
+      refs.push(e);
+    });
+  });
+  var cles;
+  try { cles = TableauPR.clesDExos(plats); } catch (e) { return; }
+  refs.forEach(function (e, i) {
+    var k = cles[i];
+    if (!k) return;
+    var rec = index[k.cle] || null;
+    e.record = rec ? { charge: rec.charge, quand: rec.period } : null;
+    e.prFormat = k.format;
+    e.prSchema = k.schema;
+  });
+  return true;
+}
+
 function apiLogin(body) {
   var a = athleteFromCode_(body.code);
   if (!a.sheetId) return { ok: true, role: 'coach', coach: true, prenom: a.prenom };
@@ -357,6 +414,9 @@ function apiProgram(body) {
   if (semaine < 1) semaine = 1;
   if (semaine > sit.nbSem) semaine = sit.nbSem;
   var w = lireSemaine_(sit.sheet, semaine);
+  // records seulement s'ils sont deja en memoire ; sinon l'app les demandera a part
+  var recPrets = false;
+  try { recPrets = attacherRecords_(a.sheetId, w.seances, true); } catch (e) {}
   return {
     ok: true,
     role: 'athlete',
@@ -368,9 +428,30 @@ function apiProgram(body) {
     nbSemaines: sit.nbSem,
     semaineAuto: sit.semaine,
     rpeOptions: optionsRpe_(sit.sheet, WEEK_COLS[semaine - 1]),
+    recordsPrets: !!recPrets,
     seances: w.seances,
     recup: w.recup
   };
+}
+
+/** Les records seuls : appel separe pour ne pas ralentir l'ouverture de la seance. */
+function apiRecords(body) {
+  var a = athleteFromCode_(body.code);
+  if (!a.sheetId) return { ok: true, records: {} };
+  var ss = SpreadsheetApp.openById(a.sheetId);
+  var sit = situation_(ss);
+  var semaine = Number(body.semaine) || sit.semaine;
+  if (semaine < 1) semaine = 1;
+  if (semaine > sit.nbSem) semaine = sit.nbSem;
+  var w = lireSemaine_(sit.sheet, semaine);
+  attacherRecords_(a.sheetId, w.seances, false);
+  var out = {};
+  w.seances.forEach(function (s) {
+    s.exos.forEach(function (e) {
+      out[e.row] = { record: e.record || null, format: e.prFormat || '', schema: e.prSchema || '' };
+    });
+  });
+  return { ok: true, semaine: semaine, records: out };
 }
 
 function apiSave(body) {
@@ -429,6 +510,7 @@ function apiSave(body) {
     lock.releaseLock();
   }
   rebuildPR_(a.sheetId);
+  try { recordsAthlete_(a.sheetId, true); } catch (e) {}   // le record vient peut-etre de changer
   return { ok: true, refus: refus };
 }
 
