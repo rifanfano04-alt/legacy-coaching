@@ -346,6 +346,10 @@
     font-size:10px;line-height:1.4;letter-spacing:1.6px;text-transform:none;
     padding:4px 10px;border-radius:99px;box-shadow:0 5px 14px rgba(0,0,0,.5);}
   .presc.pr .prbadge{display:inline-flex;}
+  /* première fois à ce format : on le signale, mais ce n'est pas un record */
+  .presc.neuf{border-color:rgba(255,255,255,.2);}
+  .presc.neuf .prbadge{display:inline-flex;background:rgba(255,255,255,.16);
+    color:var(--grey-1);box-shadow:none;letter-spacing:1.1px;text-transform:none;}
   .presc.pr .hi b{color:var(--or);}
 
   .prpop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
@@ -931,8 +935,8 @@
         '<div class="exoname">' + esc(cap(e.nom)) + '</div>' +
         (e.variante ? '<div class="exovar">' + esc(e.variante) + '</div>' : '') +
       '</div>' +
-      '<div class="presc' + (enJeu(e) ? ' pr' : '') + '">' +
-        '<span class="prbadge">🏆 PR</span>' +
+      '<div class="presc' + (enJeu(e) ? ' pr' : (premierAuFormat(e) ? ' neuf' : '')) + '">' +
+        '<span class="prbadge">' + (enJeu(e) ? '🏆 PR' : '1ʳᵉ fois') + '</span>' +
         '<div><span>Séries</span><b>' + (e.sets !== null ? fmt(e.sets) : '—') + '</b></div>' +
         '<div><span>Reps</span><b>' + (e.reps !== null ? fmt(e.reps) : '—') + '</b></div>' +
         '<div><span>RPE cible</span><b>' + esc(rpeTxt(e.rpeCible) || '—') + '</b></div>' +
@@ -965,7 +969,12 @@
     inp.oninput = function () { e.charge = nb(inp.value); saveRun(); majPr(); };
     var majPr = function () {
       var box = $('r-body').querySelector('.presc');
-      if (box) box.classList.toggle('pr', enJeu(e));
+      if (!box) return;
+      var record = enJeu(e), neuf = !record && premierAuFormat(e);
+      box.classList.toggle('pr', record);
+      box.classList.toggle('neuf', neuf);
+      var pastille = box.querySelector('.prbadge');
+      if (pastille) pastille.innerHTML = record ? '🏆 PR' : '1ʳᵉ fois';
     };
     var bump = function (d) {
       var v = nb(inp.value) || 0; v = Math.round((v + d) * 1000) / 1000;
@@ -1289,12 +1298,20 @@
       Object.keys(x).forEach(function (k) { if (!SAISIE[k]) e[k] = x[k]; });
     });
   }
+  /* Un record, c'est battre une charge déjà établie. La première fois à un format,
+     tout serait un record : on le mentionne, sans carte ni couleur. */
   function estPr(e, charge) {
     if (!recordConnu(e)) return false;
+    if (!e.record || e.record.charge === null || e.record.charge === undefined) return false;
     var c = nb(charge);
     if (c === null || c <= 0) return false;
-    if (!e.record || e.record.charge === null || e.record.charge === undefined) return true;
     return c > e.record.charge;
+  }
+  /* Sans charge il n'y aura jamais de record (planche, HSPU…) : inutile d'afficher
+     « 1ʳᵉ fois » sur eux toutes les semaines. */
+  function premierAuFormat(e) {
+    if (!recordConnu(e) || e.record) return false;
+    return (nb(e.chargeReco) || 0) > 0 || (nb(e.charge) || 0) > 0;
   }
   /* Tant qu'il n'a rien tapé on se fie à la charge conseillée ; dès qu'il saisit
      quelque chose, c'est ce chiffre-là qui décide. */
