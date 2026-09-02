@@ -337,13 +337,17 @@
   .mq.tout{color:#ffb4b4;background:rgba(255,59,59,.08);border-color:rgba(255,59,59,.30);}
 
   /* ---------- RECORD ---------- */
+  .presc{position:relative;}
   .presc.pr{border-color:rgba(255,199,64,.45);background:rgba(255,199,64,.06);}
+  .prbadge{position:absolute;top:-10px;right:14px;display:none;align-items:center;gap:4px;
+    background:var(--or);color:#141416;font-family:'Unbounded';font-weight:900;
+    font-size:10px;letter-spacing:1.6px;padding:4px 10px;border-radius:99px;
+    box-shadow:0 5px 14px rgba(0,0,0,.5);}
+  .presc.pr .prbadge{display:inline-flex;}
   .presc.pr .hi b{color:var(--or);}
   .prbar{display:flex;align-items:center;gap:7px;width:100%;padding:0 2px 9px;
     font-size:10px;letter-spacing:1.2px;text-transform:uppercase;font-weight:800;color:var(--grey-3);}
   .prbar em{font-style:normal;color:var(--grey-2);letter-spacing:.8px;}
-  .prbar.on{color:var(--or);}
-  .prbar.on em{color:var(--grey-2);}
 
   .prpop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     padding:26px;background:rgba(8,8,10,.86);backdrop-filter:blur(6px);}
@@ -936,6 +940,7 @@
          quand la charge en jeu le dépasse. */
       barrePr(e) +
       '<div class="presc' + (enJeu(e) ? ' pr' : '') + '">' +
+        '<span class="prbadge">🏆 PR</span>' +
         '<div><span>Séries</span><b>' + (e.sets !== null ? fmt(e.sets) : '—') + '</b></div>' +
         '<div><span>Reps</span><b>' + (e.reps !== null ? fmt(e.reps) : '—') + '</b></div>' +
         '<div><span>RPE cible</span><b>' + esc(rpeTxt(e.rpeCible) || '—') + '</b></div>' +
@@ -967,20 +972,8 @@
     inp.value = e.charge !== null && e.charge !== '' ? String(e.charge).replace('.', ',') : '';
     inp.oninput = function () { e.charge = nb(inp.value); saveRun(); majPr(); };
     var majPr = function () {
-      var actif = enJeu(e);
       var box = $('r-body').querySelector('.presc');
-      if (box) box.classList.toggle('pr', actif);
-      var bar = $('r-body').querySelector('.prbar');
-      if (bar) {
-        bar.classList.toggle('on', actif);
-        bar.innerHTML = actif
-          ? (e.record ? '🏆 Record à battre <em>' + esc(kg(e.record.charge)) +
-              (e.record.quand ? ' · ' + esc(e.record.quand) : '') + '</em>'
-                      : '🏆 <em>Premier à ce format</em>')
-          : (e.record ? 'Record <em>' + esc(kg(e.record.charge)) +
-              (e.record.quand ? ' · ' + esc(e.record.quand) : '') + '</em>' : '');
-        bar.style.display = bar.innerHTML ? '' : 'none';
-      }
+      if (box) box.classList.toggle('pr', enJeu(e));
     };
     var bump = function (d) {
       var v = nb(inp.value) || 0; v = Math.round((v + d) * 1000) / 1000;
@@ -1304,17 +1297,11 @@
   }
   function enJeu(e) { return estPr(e, e.chargeReco) || estPr(e, e.charge); }
 
+  /* La coupe est dans l'angle de l'encadré : ici on ne garde que le chiffre à battre. */
   function barrePr(e) {
-    if (!recordConnu(e)) return '';
-    var jeu = enJeu(e);
-    if (e.record) {
-      return '<div class="prbar' + (jeu ? ' on' : '') + '">' +
-        (jeu ? '🏆 Record à battre' : 'Record') +
-        ' <em>' + esc(kg(e.record.charge)) +
-        (e.record.quand ? ' · ' + esc(e.record.quand) : '') + '</em></div>';
-    }
-    /* aucun record à ce format : on ne le dit que si une charge est réellement en jeu */
-    return jeu ? '<div class="prbar on">🏆 <em>Premier à ce format</em></div>' : '';
+    if (!recordConnu(e) || !e.record) return '';
+    return '<div class="prbar">Record <em>' + esc(kg(e.record.charge)) +
+           (e.record.quand ? ' · ' + esc(e.record.quand) : '') + '</em></div>';
   }
 
   function echec(e) {
