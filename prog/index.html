@@ -364,6 +364,19 @@
   @keyframes fondu{from{opacity:0}to{opacity:1}}
   @keyframes surgit{0%{opacity:0;transform:scale(.82) translateY(14px)}100%{opacity:1;transform:none}}
 
+  .records{margin:0 0 18px;border:1px solid rgba(255,199,64,.35);border-radius:14px;
+    background:rgba(255,199,64,.06);padding:13px 14px;}
+  .records>b{display:block;font-family:'Unbounded';font-weight:800;font-size:12px;
+    letter-spacing:1.6px;text-transform:uppercase;color:var(--or);margin-bottom:10px;}
+  .records .rl{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,199,64,.16);}
+  .records .rl:first-of-type{border-top:0;}
+  .records .rl .n{flex:1;min-width:0;font-size:13px;line-height:1.3;}
+  .records .rl .n em{font-style:normal;color:var(--grey-3);font-size:11.5px;}
+  .records .rl .n b{display:block;font-family:'Unbounded';font-weight:800;font-size:14px;margin-top:2px;}
+  .records .rl button{flex:0 0 auto;background:transparent;border:1px solid rgba(255,199,64,.5);
+    color:var(--or);font-weight:700;font-size:12px;border-radius:99px;padding:7px 13px;}
+  .records .rl button:active{background:rgba(255,199,64,.14);}
+
   .empty{text-align:center;color:var(--grey-3);padding:44px 20px;font-size:14px;}
   .spin{width:22px;height:22px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--blood);border-radius:50%;
     animation:sp .7s linear infinite;margin:40px auto;}
@@ -460,6 +473,7 @@
     <div class="body">
       <div class="h2">Ta séance</div>
       <p class="p">Vérifie, note la difficulté, et j'envoie tout dans le suivi de ton coach.</p>
+      <div class="records" id="e-records" style="display:none"></div>
       <div class="recap" id="e-recap"></div>
       <div class="blk" style="margin:0 0 18px">
         <label>Difficulté de la séance</label>
@@ -900,7 +914,10 @@
       return '<i data-i="' + i + '" style="cursor:pointer;background:' + (i === idx ? x.couleur : (on ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.12)')) + '"></i>';
     }).join('');
     Array.prototype.forEach.call($('r-prog').querySelectorAll('i'), function (b) {
-      b.onclick = function () { idx = Number(b.getAttribute('data-i')); saveRun(); renderExo(); };
+      b.onclick = function () {
+        var n = Number(b.getAttribute('data-i'));
+        quitterExo(function () { idx = n; saveRun(); renderExo(); });
+      };
     });
 
     var reco = kg(e.chargeReco);
@@ -1030,33 +1047,70 @@
     });
   }
 
-  $('r-prev').onclick = function () { if (idx > 0) { idx--; saveRun(); renderExo(); } };
+  $('r-prev').onclick = function () {
+    quitterExo(function () { if (idx > 0) { idx--; saveRun(); renderExo(); } });
+  };
   function suivant() {
     if (idx < seance.exos.length - 1) { idx++; saveRun(); renderExo(); return; }
     openEnd();
   }
-  $('r-next').onclick = function () {
+
+  var exoCarte = null, apresCarte = null;
+
+  function montrerCarte(e) {
+    exoCarte = e;
+    $('pr-ex').textContent = cap(e.nom);
+    $('pr-va').textContent = [e.variante, e.tempo].filter(function (x) { return x && String(x).trim() !== ''; }).join(' · ');
+    $('pr-pf').textContent = [schema(e), kg(e.charge)].filter(Boolean).join('  ·  ');
+    $('pr-pop').classList.add('on');
+  }
+
+  /* La carte se déclenche dès qu'il QUITTE l'exercice, quel que soit le chemin :
+     bouton Suivant, retour, ou les repères en haut. Sinon il passerait à côté. */
+  function quitterExo(action) {
     var e = seance.exos[idx];
-    /* record battu, et aucune série en échec : on le lui montre avant de passer à la suite */
     if (e && estPr(e, e.charge) && !echec(e) && !(seance._pr || {})[e.row]) {
       seance._pr = seance._pr || {};
       seance._pr[e.row] = true;
       saveRun();
-      $('pr-ex').textContent = cap(e.nom);
-      $('pr-va').textContent = [e.variante, e.tempo].filter(function (x) { return x && String(x).trim() !== ''; }).join(' · ');
-      $('pr-pf').textContent = [schema(e), kg(e.charge)].filter(Boolean).join('  ·  ');
-      $('pr-pop').classList.add('on');
+      apresCarte = action;
+      montrerCarte(e);
       return;
     }
-    suivant();
+    action();
+  }
+
+  $('r-next').onclick = function () { quitterExo(suivant); };
+  $('pr-ok').onclick = function () {
+    $('pr-pop').classList.remove('on');
+    var a = apresCarte; apresCarte = null;
+    if (a) a();
   };
-  $('pr-ok').onclick = function () { $('pr-pop').classList.remove('on'); suivant(); };
-  $('pr-share').onclick = function () { partagerRecord(seance.exos[idx]); };
+  $('pr-share').onclick = function () { partagerRecord(exoCarte || seance.exos[idx]); };
   $('pr-img-ok').onclick = function () { $('pr-img').classList.remove('on'); };
 
   /* ───── fin de séance ───── */
   function openEnd() {
     $('e-day').textContent = seance.jour || '';
+    /* même s'il a fermé l'animation sans rien faire, ses records restent partageables ici */
+    var recs = seance.exos.filter(function (e) { return estPr(e, e.charge) && !echec(e); });
+    var box = $('e-records');
+    if (recs.length) {
+      box.innerHTML = '<b>🏆 ' + recs.length + ' record' + (recs.length > 1 ? 's' : '') + ' aujourd\'hui</b>' +
+        recs.map(function (e, i) {
+          var det = [e.variante, e.tempo].filter(function (x) { return x && String(x).trim() !== ''; }).join(' · ');
+          return '<div class="rl"><div class="n">' + esc(cap(e.nom)) +
+                 (det ? ' <em>' + esc(det) + '</em>' : '') +
+                 '<b>' + esc([schema(e), kg(e.charge)].filter(Boolean).join(' · ')) + '</b></div>' +
+                 '<button data-r="' + i + '">Partager</button></div>';
+        }).join('');
+      box.style.display = '';
+      Array.prototype.forEach.call(box.querySelectorAll('button'), function (b) {
+        b.onclick = function () { partagerRecord(recs[Number(b.getAttribute('data-r'))], b); };
+      });
+    } else {
+      box.style.display = 'none'; box.innerHTML = '';
+    }
     $('e-recap').innerHTML = seance.exos.map(function (e) {
       var r = [];
       if (e.charge !== null && e.charge !== '') r.push(kg(e.charge));
@@ -1303,9 +1357,13 @@
     return c;
   }
 
-  function partagerRecord(e) {
-    var fini = function () { $('pr-share').disabled = false; $('pr-share').textContent = 'Partager'; };
-    $('pr-share').disabled = true; $('pr-share').textContent = 'Un instant…';
+  function partagerRecord(e, bouton) {
+    if (!e) return;
+    /* le bouton peut venir de la carte ou de la liste de fin de séance */
+    var btn = bouton || $('pr-share');
+    var libelle = btn.textContent;
+    var fini = function () { btn.disabled = false; btn.textContent = libelle; };
+    btn.disabled = true; btn.textContent = 'Un instant…';
     var suite = function () {
       var c;
       try { c = dessineSticker(e); } catch (err) { toast('Image impossible à créer', true); return fini(); }
