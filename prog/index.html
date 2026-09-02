@@ -356,7 +356,11 @@
   .prcard .ex{margin-top:16px;font-family:'Unbounded';font-weight:700;font-size:19px;line-height:1.25;}
   .prcard .va{font-size:12.5px;color:var(--grey-3);margin-top:3px;text-transform:uppercase;letter-spacing:1.4px;}
   .prcard .pf{margin-top:15px;font-family:'Unbounded';font-weight:800;font-size:23px;color:var(--grey-1);}
-  .prcard .btn{margin-top:24px;}
+  .prcard .btn{margin-top:0;}
+  .prbtns{display:flex;gap:9px;margin-top:24px;}
+  .prbtns .btn{flex:1;}
+  .btn.ghost{background:transparent;color:var(--or);border:1px solid rgba(255,199,64,.5);}
+  .btn.ghost:active{background:rgba(255,199,64,.12);}
   @keyframes fondu{from{opacity:0}to{opacity:1}}
   @keyframes surgit{0%{opacity:0;transform:scale(.82) translateY(14px)}100%{opacity:1;transform:none}}
 
@@ -414,7 +418,18 @@
       <div class="ex" id="pr-ex">—</div>
       <div class="va" id="pr-va"></div>
       <div class="pf" id="pr-pf">—</div>
-      <button class="btn" id="pr-ok">Continuer</button>
+      <div class="prbtns">
+        <button class="btn ghost" id="pr-share">Partager</button>
+        <button class="btn" id="pr-ok">Continuer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="prpop" id="pr-img">
+    <div class="prcard" style="max-width:360px">
+      <img id="pr-png" alt="Ton record" style="width:100%;display:block;border-radius:12px;background:rgba(255,255,255,.06)">
+      <p class="sub" style="max-width:none;margin:16px auto 0;font-size:13px">Appui long sur l'image pour l'enregistrer, puis ajoute-la sur ta story par-dessus ta vidéo.</p>
+      <button class="btn" id="pr-img-ok" style="margin-top:18px">Fermer</button>
     </div>
   </div>
 
@@ -1036,6 +1051,8 @@
     suivant();
   };
   $('pr-ok').onclick = function () { $('pr-pop').classList.remove('on'); suivant(); };
+  $('pr-share').onclick = function () { partagerRecord(seance.exos[idx]); };
+  $('pr-img-ok').onclick = function () { $('pr-img').classList.remove('on'); };
 
   /* ───── fin de séance ───── */
   function openEnd() {
@@ -1207,6 +1224,109 @@
   function echec(e) {
     var t = function (v) { return String(v == null ? '' : v).toLowerCase().indexOf('chec') > -1; };
     return t(e.rpe1) || t(e.rpeLast);
+  }
+
+  /* ───── le sticker de record ───── */
+
+  /* Un bandeau transparent, à poser sur sa story par-dessus la vidéo.
+     Tout tient sur une ligne pour ne rien masquer ; LEGACY en dessous. */
+  var OR = '#ffc740';
+
+  /* Découper par unité UTF-16 casserait les emoji en deux moitiés invalides
+     (🏆 en compte deux) : on découpe par vrai caractère. */
+  function lettres(t) {
+    if (typeof Array.from === 'function') return Array.from(String(t));
+    return String(t).match(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\s\S]/g) || [];
+  }
+  function largeurEsp(x, t, esp) {
+    var a = lettres(t), l = 0;
+    for (var i = 0; i < a.length; i++) l += x.measureText(a[i]).width + (i < a.length - 1 ? esp : 0);
+    return l;
+  }
+  function ecritEsp(x, t, gx, gy, esp) {
+    var a = lettres(t);
+    for (var i = 0; i < a.length; i++) {
+      x.fillText(a[i], gx, gy);
+      gx += x.measureText(a[i]).width + esp;
+    }
+    return gx;
+  }
+
+  function dessineSticker(e) {
+    var L = 1080, H = 250, c = document.createElement('canvas');
+    c.width = L; c.height = H;
+    var x = c.getContext('2d');
+    x.textBaseline = 'middle';
+    /* l'ombre est ce qui rend le texte lisible sur une vidéo claire */
+    x.shadowColor = 'rgba(0,0,0,.85)'; x.shadowBlur = 18; x.shadowOffsetY = 4;
+
+    var det = [e.variante, e.tempo].filter(function (v) { return v && String(v).trim() !== ''; }).join(' · ');
+    var nomLigne = (cap(e.nom) + (det ? ' · ' + det : '')).toUpperCase();
+    var perf = [schema(e), kg(e.charge)].filter(Boolean).join(' · ');
+
+    var blocs = [
+      { t: '🏆 RECORD', f: '800 34px Unbounded, sans-serif', c: OR, esp: 3 },
+      { pt: true },
+      { t: nomLigne, f: '700 30px Inter, sans-serif', c: 'rgba(255,255,255,.88)', esp: 1.6 },
+      { pt: true },
+      { t: perf, f: '800 38px Unbounded, sans-serif', c: '#ffffff', esp: .6 }
+    ];
+
+    var espaceBloc = 22, total = 0;
+    blocs.forEach(function (b) {
+      if (b.pt) { b.w = 8; } else { x.font = b.f; b.w = largeurEsp(x, b.t, b.esp); }
+      total += b.w;
+    });
+    total += espaceBloc * (blocs.length - 1);
+
+    /* si la ligne dépasse, on réduit tout d'un coup plutôt que de couper le texte */
+    var marge = 40, ech = Math.min(1, (L - marge * 2) / total);
+    var gx = (L - total * ech) / 2, gy = 96;
+
+    blocs.forEach(function (b, i) {
+      if (b.pt) {
+        x.fillStyle = 'rgba(255,255,255,.5)';
+        x.beginPath(); x.arc(gx + 4 * ech, gy, 4 * ech, 0, 6.284); x.fill();
+      } else {
+        x.font = b.f.replace(/(\d+)px/, function (m, n) { return Math.round(n * ech) + 'px'; });
+        x.fillStyle = b.c;
+        ecritEsp(x, b.t, gx, gy, b.esp * ech);
+      }
+      gx += b.w * ech + espaceBloc * ech;
+    });
+
+    x.font = '600 ' + Math.round(24 * ech) + 'px Unbounded, sans-serif';
+    x.fillStyle = 'rgba(255,255,255,.62)';
+    var esp = 9 * ech, lm = largeurEsp(x, 'LEGACY', esp);
+    ecritEsp(x, 'LEGACY', (L - lm) / 2, gy + Math.round(58 * ech), esp);
+
+    return c;
+  }
+
+  function partagerRecord(e) {
+    var fini = function () { $('pr-share').disabled = false; $('pr-share').textContent = 'Partager'; };
+    $('pr-share').disabled = true; $('pr-share').textContent = 'Un instant…';
+    var suite = function () {
+      var c;
+      try { c = dessineSticker(e); } catch (err) { toast('Image impossible à créer', true); return fini(); }
+      if (!c.toBlob) { $('pr-png').src = c.toDataURL('image/png'); $('pr-img').classList.add('on'); return fini(); }
+      c.toBlob(function (blob) {
+        if (!blob) { toast('Image impossible à créer', true); return fini(); }
+        var f = null;
+        try { f = new File([blob], 'record-legacy.png', { type: 'image/png' }); } catch (err) {}
+        if (f && navigator.canShare && navigator.canShare({ files: [f] }) && navigator.share) {
+          navigator.share({ files: [f] }).catch(function () {}).then(fini, fini);
+          return;
+        }
+        /* pas de partage natif : on montre l'image, il l'enregistre par appui long */
+        $('pr-png').src = URL.createObjectURL(blob);
+        $('pr-img').classList.add('on');
+        fini();
+      }, 'image/png');
+    };
+    /* sans les polices chargées, le canvas dessinerait en Times */
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(suite, suite);
+    else suite();
   }
 
   /* ───── vue coach ───── */
