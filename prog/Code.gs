@@ -208,11 +208,28 @@ function lireSemaine_(sh, semaine) {
       var chg  = num_(get(r, OFF.charge));
       // ligne de gabarit (code muscle présent mais rien de programmé) : on l'ignore
       if (!code || (!sets && !reps && !vari && chg === null)) continue;
+      // Semaine precedente : elle est deja dans vals (on lit depuis la colonne A),
+      // donc aucune lecture supplementaire. Rien en semaine 1.
+      var prev = null;
+      if (semaine > 1) {
+        var pc = col - 18;
+        var pg = function (off) { return vals[r - 1][pc - 1 + off]; };
+        var pch = num_(pg(OFF.charge));
+        var pr1 = rpe_(pg(OFF.rpe1)), pr2 = rpe_(pg(OFF.rpeLast)), pnt = txt_(pg(OFF.note));
+        if (pch !== null || pr1 || pr2 || pnt) {
+          prev = { charge: pch, rpe1: pr1, rpeLast: pr2, note: pnt,
+                   sets: num_(pg(OFF.sets)), reps: num_(pg(OFF.reps)),
+                   variante: (code === 'R') ? '' : txt_(pg(OFF.variante)),
+                   tempo: txt_(pg(OFF.tempo)) };
+        }
+      }
+
       var libelle = (code === 'R') ? (vari || 'Renfo') : nom;
       var sousTitre = (code === 'R') ? '' : vari;
       var charge = chg;
       var e = {
         row: r,
+        prev: prev,
         code: code,
         couleur: COULEURS[code] || '#D9D9D9',
         groupe: LIB_MUSCLE[code] || '',
