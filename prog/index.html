@@ -591,14 +591,20 @@
     var m = progMap();
     return semaine ? (m['w' + semaine] || null) : (m.dernier || null);
   }
+  var loadSeq = 0;
   function load(semaine, silent) {
+    var mien = ++loadSeq;                                                 // numero de la demande en cours
     var vu = progGet(semaine);
     if (vu) { applyProg(vu, true); silent = true; }                       // affichage immediat de ce qui est deja connu
     else if (!silent) { $('home-list').innerHTML = '<div class="spin"></div>'; }
     var p = { action: 'program', code: code };
     if (semaine) p.semaine = semaine;
-    return call(p).then(function (j) { applyProg(j); flush(); }).catch(function (e) {
-      if (vu) return;                                                     // deja affiche depuis le cache : ne rien deranger
+    return call(p).then(function (j) {
+      progSet(j);                                                         // on garde la donnee fraiche dans tous les cas
+      if (mien !== loadSeq) return;                                       // une navigation plus recente a pris la main
+      applyProg(j, true); flush();
+    }).catch(function (e) {
+      if (vu || mien !== loadSeq) return;                                 // deja affiche, ou demande depassee
       var c = cache();
       if (c && !semaine) { applyProg(c, true); toast('Mode hors ligne', true); }
       else { $('home-list').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
