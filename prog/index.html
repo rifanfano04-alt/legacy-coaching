@@ -648,8 +648,10 @@
       var dots = s.exos.map(function (e) { return '<i style="background:' + e.couleur + '"></i>'; }).join('');
       var plan = s.exos.map(function (e) {
         var det = [e.variante, e.tempo].filter(function (x) { return x && String(x).trim() !== ''; }).join(' · ');
-        var sch = (e.sets === '' || e.sets === null || e.sets === undefined ? '?' : e.sets) + ' × ' +
-                  (e.reps === '' || e.reps === null || e.reps === undefined ? '?' : e.reps);
+        var vide = function (x) { return x === '' || x === null || x === undefined; };
+        var sch = vide(e.sets) ? (vide(e.reps) ? '' : '× ' + e.reps)
+                : (vide(e.reps) ? e.sets + (Number(e.sets) > 1 ? ' séries' : ' série')
+                : e.sets + ' × ' + e.reps);
         return '<span class="px">' + esc(cap(e.nom)) + (det ? ' <em>' + esc(det) + '</em>' : '') + '</span>' +
                '<span class="py">' + esc(sch) + '</span>';
       }).join('');
