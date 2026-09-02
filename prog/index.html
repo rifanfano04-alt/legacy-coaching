@@ -424,16 +424,44 @@
   function sDel(k){ try { localStorage.removeItem(k); } catch (e) {} }
 
   /* ───── séance en cours : sauvegardée à chaque saisie pour survivre à une fermeture ───── */
+  function runKey(block, semaine, i) { return String(block) + '|' + Number(semaine) + '|' + Number(i); }
+  function runMap() {
+    var raw = sGet(LS_RUN);
+    if (!raw) return {};
+    try {
+      var o = JSON.parse(raw);
+      if (o && o.seance) { var m = {}; m[runKey(o.block, o.semaine, o.i)] = o; return m; }  // ancien format
+      return (o && typeof o === 'object') ? o : {};
+    } catch (e) { return {}; }
+  }
   function saveRun() {
     if (!seance || !prog) return;
-    try { sSet(LS_RUN, JSON.stringify({ block: prog.block, semaine: prog.semaine, i: seance._i, idx: idx, diff: diff, seance: seance })); } catch (e) {}
+    try {
+      var m = runMap();
+      m[runKey(prog.block, prog.semaine, seance._i)] =
+        { block: prog.block, semaine: prog.semaine, i: seance._i, idx: idx, diff: diff, seance: seance };
+      sSet(LS_RUN, JSON.stringify(m));
+    } catch (e) {}
   }
-  function savedRun() { try { return JSON.parse(sGet(LS_RUN)); } catch (e) { return null; } }
-  function clearRun() { sDel(LS_RUN); }
+  function savedRun(i) {
+    if (!prog) return null;
+    var m = runMap();
+    if (i !== undefined && i !== null) return m[runKey(prog.block, prog.semaine, i)] || null;
+    for (var k in m) {
+      var r = m[k];
+      if (r && String(r.block) === String(prog.block) && Number(r.semaine) === Number(prog.semaine)) return r;
+    }
+    return null;
+  }
+  function clearRun(i) {
+    if (i === undefined || i === null || !prog) { sDel(LS_RUN); return; }   // deconnexion : tout part
+    var m = runMap();
+    delete m[runKey(prog.block, prog.semaine, i)];
+    try { sSet(LS_RUN, JSON.stringify(m)); } catch (e) {}
+  }
   function resumeRunIfAny() {
     var r = savedRun();
     if (!r) return;
-    if (!prog || r.block !== prog.block || r.semaine !== prog.semaine) return;   // autre semaine : on ignore le brouillon, on ne le supprime pas
     seance = r.seance; seance._i = r.i; idx = r.idx || 0; diff = r.diff || '';
     $('r-day').textContent = seance.jour || ('Séance ' + (r.i + 1));
     show('run'); renderExo();
@@ -608,8 +636,8 @@
 
   /* ───── séance ───── */
   function openSeance(i) {
-    var r = savedRun();
-    if (r && prog && r.block === prog.block && r.semaine === prog.semaine && r.i === i) {
+    var r = savedRun(i);
+    if (r) {
       /* on revient sur une séance déjà en cours (via ‹ puis re-clic) : on reprend les saisies, pas une copie vierge */
       seance = r.seance; seance._i = i; idx = r.idx || 0; diff = r.diff || '';
     } else {
@@ -761,13 +789,13 @@
       prog.seances[seance._i].etat = diff ? 'faite' : 'encours';
       prog.seances[seance._i].difficulte = diff;
       try { sSet(LS_PROG, JSON.stringify(prog)); } catch (e) {}
-      clearRun();
+      clearRun(seance._i);
       finish('C\'est envoyé', 'Ta séance est arrivée dans le suivi de ton coach.');
     }).catch(function () {
       queue(payload);
       prog.seances[seance._i].faite = true;
       prog.seances[seance._i].etat = diff ? 'faite' : 'encours';
-      clearRun();
+      clearRun(seance._i);
       finish('Gardé hors ligne', 'Pas de réseau : ta séance part toute seule dès que tu es reconnecté.');
     }).then(function () { btn.disabled = false; btn.textContent = 'Envoyer au coach'; });
   };
