@@ -20,7 +20,7 @@
     --bg:#0a0a0b; --bg-2:#111113; --card:#151517; --line:rgba(255,255,255,.09);
     --grey-1:#e7e8ec; --grey-2:#8a8b91; --grey-3:#5c5d63;
     --blood:#ff3b3b; --ok:#4ade80;
-    --exo:#9FC5E8;
+    --exo:#9FC5E8; --or:#ffc740;
     --stripes:repeating-linear-gradient(135deg,rgba(255,255,255,.03) 0px,rgba(255,255,255,.03) 1px,transparent 1px,transparent 16px);
     --safe-b:env(safe-area-inset-bottom,0px);
   }
@@ -336,6 +336,30 @@
     border-radius:999px;padding:3px 9px;}
   .mq.tout{color:#ffb4b4;background:rgba(255,59,59,.08);border-color:rgba(255,59,59,.30);}
 
+  /* ---------- RECORD ---------- */
+  .presc.pr{border-color:rgba(255,199,64,.45);background:rgba(255,199,64,.06);}
+  .presc.pr .hi b{color:var(--or);}
+  .prbar{display:flex;align-items:center;gap:7px;width:100%;padding:0 2px 9px;
+    font-size:10px;letter-spacing:1.2px;text-transform:uppercase;font-weight:800;color:var(--or);}
+  .prbar em{font-style:normal;color:var(--grey-3);letter-spacing:.8px;}
+
+  .prpop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+    padding:26px;background:rgba(8,8,10,.86);backdrop-filter:blur(6px);}
+  .prpop.on{display:flex;animation:fondu .22s ease-out;}
+  .prcard{width:100%;max-width:330px;border-radius:22px;padding:30px 26px 26px;text-align:center;
+    background:linear-gradient(160deg,#1d1a12 0%,#141416 60%);
+    border:1px solid rgba(255,199,64,.42);box-shadow:0 22px 60px rgba(0,0,0,.6);
+    animation:surgit .42s cubic-bezier(.2,1.3,.4,1);}
+  .prcard .cup{font-size:44px;line-height:1;}
+  .prcard .tag{margin-top:9px;font-family:'Unbounded';font-weight:800;font-size:26px;
+    letter-spacing:3px;color:var(--or);}
+  .prcard .ex{margin-top:16px;font-family:'Unbounded';font-weight:700;font-size:19px;line-height:1.25;}
+  .prcard .va{font-size:12.5px;color:var(--grey-3);margin-top:3px;text-transform:uppercase;letter-spacing:1.4px;}
+  .prcard .pf{margin-top:15px;font-family:'Unbounded';font-weight:800;font-size:23px;color:var(--grey-1);}
+  .prcard .btn{margin-top:24px;}
+  @keyframes fondu{from{opacity:0}to{opacity:1}}
+  @keyframes surgit{0%{opacity:0;transform:scale(.82) translateY(14px)}100%{opacity:1;transform:none}}
+
   .empty{text-align:center;color:var(--grey-3);padding:44px 20px;font-size:14px;}
   .spin{width:22px;height:22px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--blood);border-radius:50%;
     animation:sp .7s linear infinite;margin:40px auto;}
@@ -383,6 +407,17 @@
   </section>
 
   <!-- ══════════ SÉANCE ══════════ -->
+  <div class="prpop" id="pr-pop">
+    <div class="prcard">
+      <div class="cup">🏆</div>
+      <div class="tag">RECORD</div>
+      <div class="ex" id="pr-ex">—</div>
+      <div class="va" id="pr-va"></div>
+      <div class="pf" id="pr-pf">—</div>
+      <button class="btn" id="pr-ok">Continuer</button>
+    </div>
+  </div>
+
   <section class="screen" id="run">
     <div class="offline" id="off-2">Hors ligne — tes saisies sont gardées et envoyées au retour du réseau</div>
     <div class="top">
@@ -764,6 +799,7 @@
   function applyProg(j, fromCache) {
     prog = j;
     if (j.rpeOptions && j.rpeOptions.length) RPE = j.rpeOptions;
+    setTimeout(chargerRecords, 60);
     if (!fromCache) progSet(j);
     $('h-name').textContent = j.prenom ? j.prenom : 'Ma séance';
     $('h-block').textContent = (j.block || '') + (j.blockDebut ? ' · depuis le ' + j.blockDebut : '');
@@ -860,7 +896,14 @@
         '<div class="exoname">' + esc(cap(e.nom)) + '</div>' +
         (e.variante ? '<div class="exovar">' + esc(e.variante) + '</div>' : '') +
       '</div>' +
-      '<div class="presc">' +
+      /* toujours présente mais masquée : elle doit pouvoir apparaître dès qu'il tape une charge */
+      '<div class="prbar"' + ((estPr(e, e.chargeReco) || estPr(e, e.charge)) ? '' : ' style="display:none"') + '>' +
+        '🏆 Record à battre' +
+        (recordConnu(e) && e.record
+          ? ' <em>' + esc(kg(e.record.charge)) + (e.record.quand ? ' · ' + esc(e.record.quand) : '') + '</em>'
+          : ' <em>premier à ce format</em>') +
+      '</div>' +
+      '<div class="presc' + ((estPr(e, e.chargeReco) || estPr(e, e.charge)) ? ' pr' : '') + '">' +
         '<div><span>Séries</span><b>' + (e.sets !== null ? fmt(e.sets) : '—') + '</b></div>' +
         '<div><span>Reps</span><b>' + (e.reps !== null ? fmt(e.reps) : '—') + '</b></div>' +
         '<div><span>RPE cible</span><b>' + esc(rpeTxt(e.rpeCible) || '—') + '</b></div>' +
@@ -890,7 +933,14 @@
 
     var inp = $('f-charge');
     inp.value = e.charge !== null && e.charge !== '' ? String(e.charge).replace('.', ',') : '';
-    inp.oninput = function () { e.charge = nb(inp.value); saveRun(); };
+    inp.oninput = function () { e.charge = nb(inp.value); saveRun(); majPr(); };
+    var majPr = function () {
+      var actif = estPr(e, e.chargeReco) || estPr(e, e.charge);
+      var box = $('r-body').querySelector('.presc');
+      if (box) box.classList.toggle('pr', actif);
+      var bar = $('r-body').querySelector('.prbar');
+      if (bar) bar.style.display = actif ? '' : 'none';
+    };
     var bump = function (d) {
       var v = nb(inp.value) || 0; v = Math.round((v + d) * 1000) / 1000;
       if (v < 0) v = 0; inp.value = String(v).replace('.', ','); e.charge = v; saveRun();
@@ -966,10 +1016,26 @@
   }
 
   $('r-prev').onclick = function () { if (idx > 0) { idx--; saveRun(); renderExo(); } };
-  $('r-next').onclick = function () {
+  function suivant() {
     if (idx < seance.exos.length - 1) { idx++; saveRun(); renderExo(); return; }
     openEnd();
+  }
+  $('r-next').onclick = function () {
+    var e = seance.exos[idx];
+    /* record battu, et aucune série en échec : on le lui montre avant de passer à la suite */
+    if (e && estPr(e, e.charge) && !echec(e) && !(seance._pr || {})[e.row]) {
+      seance._pr = seance._pr || {};
+      seance._pr[e.row] = true;
+      saveRun();
+      $('pr-ex').textContent = cap(e.nom);
+      $('pr-va').textContent = [e.variante, e.tempo].filter(function (x) { return x && String(x).trim() !== ''; }).join(' · ');
+      $('pr-pf').textContent = [schema(e), kg(e.charge)].filter(Boolean).join('  ·  ');
+      $('pr-pop').classList.add('on');
+      return;
+    }
+    suivant();
   };
+  $('pr-ok').onclick = function () { $('pr-pop').classList.remove('on'); suivant(); };
 
   /* ───── fin de séance ───── */
   function openEnd() {
@@ -1103,6 +1169,45 @@
       renderHome(); show('home');
     }).then(function () { btn.disabled = false; btn.textContent = 'Envoyer le bilan'; });
   };
+
+  /* ───── records ───── */
+
+  /* Les records coûtent une lecture complète du classeur : le serveur ne les joint
+     que s'il les a déjà en mémoire, sinon on les réclame à part sans bloquer l'écran. */
+  function chargerRecords() {
+    if (!prog || prog.recordsPrets || prog._recDemandes) return;
+    prog._recDemandes = true;
+    var pourSemaine = prog.semaine, pourBlock = prog.block;
+    call({ action: 'records', code: code, semaine: pourSemaine }).then(function (j) {
+      if (!prog || prog.semaine !== pourSemaine || prog.block !== pourBlock) return;
+      var m = j.records || {};
+      prog.seances.forEach(function (s) {
+        s.exos.forEach(function (e) {
+          var r = m[e.row];
+          if (!r) return;
+          e.record = r.record; e.prFormat = r.format; e.prSchema = r.schema;
+        });
+      });
+      prog.recordsPrets = true;
+      progSet(prog);
+      if (seance && $('run').classList.contains('on')) renderExo();
+    }).catch(function () { prog._recDemandes = false; });
+  }
+
+  /* Un record se bat à la charge, pour un format et un schéma donnés.
+     Au poids du corps (0 kg) il n'y a rien à battre : pas de PR. */
+  function recordConnu(e) { return e && e.prSchema !== undefined && e.prSchema !== null; }
+  function estPr(e, charge) {
+    if (!recordConnu(e)) return false;
+    var c = nb(charge);
+    if (c === null || c <= 0) return false;
+    if (!e.record || e.record.charge === null || e.record.charge === undefined) return true;
+    return c > e.record.charge;
+  }
+  function echec(e) {
+    var t = function (v) { return String(v == null ? '' : v).toLowerCase().indexOf('chec') > -1; };
+    return t(e.rpe1) || t(e.rpeLast);
+  }
 
   /* ───── vue coach ───── */
   var coachList = [], coachNom = '', coachSel = null, coachBackAff = null;
