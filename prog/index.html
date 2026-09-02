@@ -187,6 +187,16 @@
   .steps button:active{background:rgba(255,255,255,.09);}
   .hint{font-size:11.5px;color:var(--grey-3);margin-top:7px;}
 
+  .last{margin:11px 18px 0;padding:8px 11px;border-radius:10px;
+    background:rgba(255,255,255,.045);color:var(--grey-2);
+    font-size:11.5px;line-height:1.5;cursor:pointer;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .last.open{white-space:normal;overflow:visible;text-overflow:clip;}
+  .last u{text-decoration:none;font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;
+    font-weight:800;color:var(--grey-3);margin-right:6px;}
+  .last b{color:var(--grey-1);font-weight:800;}
+  .presc .hi{cursor:pointer;}
+
   .chips{display:flex;flex-wrap:wrap;gap:6px;}
   .chip{
     padding:9px 12px;border-radius:11px;border:1px solid var(--line);background:var(--card);
@@ -706,6 +716,7 @@
     });
 
     var reco = kg(e.chargeReco);
+    var derniere = ligneDerniere(e);
     var h =
       '<div class="exohead">' +
         '<div class="kicker">' + esc(e.groupe || 'Exercice') + '</div>' +
@@ -716,8 +727,9 @@
         '<div><span>Séries</span><b>' + (e.sets !== null ? fmt(e.sets) : '—') + '</b></div>' +
         '<div><span>Reps</span><b>' + (e.reps !== null ? fmt(e.reps) : '—') + '</b></div>' +
         '<div><span>RPE cible</span><b>' + esc(rpeTxt(e.rpeCible) || '—') + '</b></div>' +
-        '<div class="hi"><span>Conseillé</span><b>' + reco + '</b></div>' +
+        '<div class="hi" id="f-reco"><span>Conseillé</span><b>' + reco + '</b></div>' +
       '</div>' +
+      derniere +
       (e.tempo ? '<div class="blk"><label>Tempo / format</label><div style="font-weight:700">' + esc(e.tempo) + '</div></div>' : '') +
       '<div class="blk">' +
         '<label>Charge utilisée</label>' +
@@ -730,8 +742,6 @@
           '<button data-s="-5">−5</button><button data-s="-2.5">−2,5</button>' +
           '<button data-s="2.5">+2,5</button><button data-s="5">+5</button>' +
         '</div>' +
-        (e.chargeReco !== null ? '<div class="hint">Recommandé par le programme : ' + reco +
-          ' <button id="f-take" style="color:var(--exo);font-weight:700;text-decoration:underline">utiliser</button></div>' : '') +
       '</div>' +
       '<div class="blk"><label>RPE 1ʳᵉ série</label><div class="chips" id="f-rpe1"></div></div>' +
       '<div class="blk"><label>RPE dernière série</label><div class="chips" id="f-rpe2"></div></div>' +
@@ -754,14 +764,45 @@
     Array.prototype.forEach.call($('r-body').querySelectorAll('.steps button'), function (b) {
       b.onclick = function () { bump(Number(b.getAttribute('data-s'))); };
     });
-    var take = $('f-take');
-    if (take) take.onclick = function () {
-      var v = Math.round(e.chargeReco * 100) / 100;
+    var take = $('f-reco');
+    if (take && e.chargeReco !== null && e.chargeReco !== '') take.onclick = function () {
+      var v = Math.round(Number(e.chargeReco) * 100) / 100;
       inp.value = String(v).replace('.', ','); e.charge = v; saveRun();
     };
+    var last = $('f-last');
+    if (last) last.onclick = function () { last.classList.toggle('open'); };
     chips($('f-rpe1'), e.rpe1, function (v) { e.rpe1 = v; saveRun(); });
     chips($('f-rpe2'), e.rpeLast, function (v) { e.rpeLast = v; saveRun(); });
     $('f-note').oninput = function () { e.note = $('f-note').value; saveRun(); };
+  }
+
+  /* rappel de la semaine precedente (rien en semaine 1, rien si pas de donnee) */
+  function ligneDerniere(e) {
+    var p = e.prev;
+    if (!p) return '';
+    var eq = function (a, b) {
+      var f = function (x) { return (x === null || x === undefined) ? '' : String(x).trim(); };
+      return f(a) === f(b);
+    };
+    var vide = function (x) { return x === null || x === undefined || String(x).trim() === ''; };
+    var bits = [];
+    if (!vide(p.charge)) bits.push('<b>' + esc(kg(p.charge)) + '</b>');
+    if (!eq(p.sets, e.sets) || !eq(p.reps, e.reps)) {
+      var sch = vide(p.sets) ? (vide(p.reps) ? '' : 'x ' + fmt(p.reps))
+              : (vide(p.reps) ? fmt(p.sets) + ' x' : fmt(p.sets) + ' x ' + fmt(p.reps));
+      if (sch) bits.push('en ' + esc(sch));
+    }
+    var chg = [];
+    if (!eq(p.variante, e.variante) && !vide(p.variante)) chg.push(p.variante);
+    if (!eq(p.tempo, e.tempo) && !vide(p.tempo)) chg.push(p.tempo);
+    if (chg.length) bits.push('format ' + esc(chg.join(' \u00b7 ')));
+    var r = [];
+    if (!vide(p.rpe1)) r.push(rpeTxt(p.rpe1));
+    if (!vide(p.rpeLast)) r.push(rpeTxt(p.rpeLast));
+    if (r.length) bits.push('RPE ' + esc(r.join(' \u2192 ')));
+    if (!vide(p.note)) bits.push('\u00ab\u202f' + esc(p.note) + '\u202f\u00bb');
+    if (!bits.length) return '';
+    return '<div class="last" id="f-last"><u>Sem. derni\u00e8re</u>' + bits.join(' \u00b7 ') + '</div>';
   }
 
   function chips(box, cur, cb) {
