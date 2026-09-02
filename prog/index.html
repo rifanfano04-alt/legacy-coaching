@@ -291,6 +291,44 @@
   .recup .pill.bas{color:#ffb4b4;border-color:rgba(255,59,59,.35);}
   .recup .pill.haut{color:#9ff0bd;border-color:rgba(74,222,128,.30);}
 
+  .ath.clic{cursor:pointer;}
+  .ath .chev{flex:0 0 auto;color:var(--grey-3);font-size:20px;line-height:1;}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px;}
+  .badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;
+    letter-spacing:.5px;text-transform:uppercase;padding:4px 9px;border-radius:999px;
+    border:1px solid var(--line);color:var(--grey-3);}
+  .badge.warn{color:#ffd600;border-color:rgba(255,214,0,.32);background:rgba(255,214,0,.07);}
+  .badge.hot{color:#ffb4b4;border-color:rgba(255,59,59,.32);background:rgba(255,59,59,.07);}
+  .badge.good{color:#9ff0bd;border-color:rgba(74,222,128,.30);background:rgba(74,222,128,.07);}
+
+  .sect{font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;font-weight:800;
+    color:var(--grey-3);margin:20px 2px 9px;}
+  .sect:first-child{margin-top:4px;}
+  .al div.recurrent{border-left-color:var(--blood);color:#ffc9c9;background:rgba(255,59,59,.09);}
+  .al div.stagne{border-left-color:#ffd600;color:#ffe89a;background:rgba(255,214,0,.07);}
+  .al div.dur{border-left-color:var(--blood);color:#ffc9c9;background:rgba(255,59,59,.07);}
+  .al div i{font-style:normal;color:var(--grey-3);font-weight:700;font-size:10.5px;
+    letter-spacing:.8px;text-transform:uppercase;margin-left:6px;}
+
+  .cs{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:13px 15px 4px;margin-bottom:12px;}
+  .cs .csh{display:flex;align-items:baseline;gap:9px;padding-bottom:10px;}
+  .cs .csh b{font-family:'Unbounded';font-weight:700;font-size:14px;}
+  .cs .csh span{margin-left:auto;font-size:10.5px;letter-spacing:1px;text-transform:uppercase;
+    color:var(--grey-3);font-weight:800;}
+  .cx{padding:10px 0;border-top:1px solid var(--line);}
+  .cx1{font-size:13.5px;font-weight:700;color:var(--grey-1);line-height:1.3;}
+  .cx1 em{font-style:normal;font-weight:600;color:var(--grey-3);font-size:12px;}
+  .cx2{font-size:11.5px;color:var(--grey-3);margin-top:3px;}
+  .cx3{font-size:12.5px;color:var(--grey-2);margin-top:5px;}
+  .cx3 b{color:var(--exo);font-weight:800;}
+  .cx.dur .cx3 b{color:#ffb4b4;}
+  .cx4{font-size:12px;color:var(--grey-2);margin-top:5px;line-height:1.45;}
+  .mq{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+    color:#ffd600;background:rgba(255,214,0,.10);border:1px solid rgba(255,214,0,.30);
+    border-radius:999px;padding:3px 9px;}
+  .mq.tout{color:#ffb4b4;background:rgba(255,59,59,.08);border-color:rgba(255,59,59,.30);}
+
   .empty{text-align:center;color:var(--grey-3);padding:44px 20px;font-size:14px;}
   .spin{width:22px;height:22px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--blood);border-radius:50%;
     animation:sp .7s linear infinite;margin:40px auto;}
@@ -933,16 +971,41 @@
   };
 
   /* ───── vue coach ───── */
+  var coachList = [], coachNom = '', coachSel = null, coachBackAff = null;
+
   function loadCoach() {
     show('coach');
     $('c-body').innerHTML = '<div class="spin"></div>';
     return call({ action: 'coach', code: code }).then(function (j) {
-      $('c-name').textContent = j.prenom ? ('Athlètes de ' + j.prenom) : 'Mes athlètes';
-      renderCoach(j.athletes || []);
+      coachNom = j.prenom || '';
+      coachList = j.athletes || [];
+      if (coachSel !== null) {
+        var i = -1;
+        coachList.forEach(function (a, k) { if (a.code === coachSel) i = k; });
+        if (i >= 0) { openCoachAth(i); return; }
+        coachSel = null;
+      }
+      renderCoach(coachList);
     }).catch(function (e) {
       $('c-body').innerHTML = '<div class="empty">' + esc(e.message) + '</div>';
     });
   }
+
+  /* combien de points chauds : tout sauf les simples notes */
+  function chauds(a) {
+    return (a.soucis || []).filter(function (x) { return x.type !== 'note'; }).length;
+  }
+
+  function schema(e) {
+    var v = function (x) { return x === null || x === undefined || x === ''; };
+    if (v(e.sets) && v(e.reps)) return '';
+    if (v(e.sets)) return '× ' + fmt(e.reps);
+    if (v(e.reps)) return fmt(e.sets) + ' ×';
+    return fmt(e.sets) + ' × ' + fmt(e.reps);
+  }
+
+  var MQ = { tout: 'rien de saisi', charge: 'charge manquante', rpe: 'RPE manquant' };
+  var TYPE = { recurrent: 'récurrent', stagne: 'stagne', dur: 'trop dur', note: 'note' };
 
   function renderCoach(list) {
     if (!list.length) {
@@ -950,7 +1013,7 @@
       return;
     }
     var total = 0, faits = 0;
-    var h = list.map(function (a) {
+    var h = list.map(function (a, i) {
       if (a.erreur) {
         return '<div class="ath"><div class="haut"><div class="nom"><b>' + esc(a.prenom) +
                '</b><i>illisible</i></div></div><div class="al"><div>' + esc(a.erreur) + '</div></div></div>';
@@ -971,21 +1034,122 @@
             '<span>' + esc(a.recup.detail) + '</span>' +
             (a.recup.poids ? '<span class="pill">' + fmt(a.recup.poids) + ' kg</span>' : '') + '</div>';
       }
-      return '<div class="ath">' +
+      var nCh = chauds(a), nTr = a.trous || 0;
+      var tags = '';
+      if (nCh) tags += '<span class="badge hot">' + nCh + ' à regarder</span>';
+      if (nTr) tags += '<span class="badge warn">' + nTr + ' non rempli' + (nTr > 1 ? 's' : '') + '</span>';
+      if (!nCh && !nTr && pct >= 1) tags += '<span class="badge good">semaine complète</span>';
+      return '<div class="ath clic" data-i="' + i + '">' +
         '<div class="haut"><div class="nom"><b>' + esc(a.prenom) + '</b>' +
           '<i>' + esc(a.block) + ' · semaine ' + a.semaine + '/' + a.nbSem + '</i></div>' +
-          '<div class="score ' + cls + '">' + a.faites + '/' + a.total + '</div></div>' +
-        '<div class="jours">' + jours + '</div>' + (al ? '<div class="al">' + al + '</div>' : '') + r +
+          '<div class="score ' + cls + '">' + a.faites + '/' + a.total + '</div>' +
+          '<div class="chev">›</div></div>' +
+        '<div class="jours">' + jours + '</div>' +
+        (tags ? '<div class="tags">' + tags + '</div>' : '') + r +
       '</div>';
     }).join('');
+    $('c-name').textContent = coachNom ? ('Athlètes de ' + coachNom) : 'Mes athlètes';
     $('c-sub').textContent = faits + ' séance' + (faits > 1 ? 's' : '') + ' faite' + (faits > 1 ? 's' : '') +
                              ' sur ' + total + ' cette semaine';
     $('c-body').innerHTML = h;
+    $('c-body').scrollTop = 0;
+    Array.prototype.forEach.call($('c-body').querySelectorAll('.ath.clic'), function (el) {
+      el.onclick = function () { openCoachAth(Number(el.getAttribute('data-i'))); };
+    });
+    if (coachSel === null && coachBackAff !== null) $('c-back').style.display = coachBackAff;
+  }
+
+  /* ───── détail d'un athlète : tout ce qu'il a fait, ce qui manque, ce qui coince ───── */
+  function openCoachAth(i) {
+    var a = coachList[i];
+    if (!a) return;
+    if (coachSel === null) coachBackAff = $('c-back').style.display;
+    coachSel = a.code;
+    $('c-back').style.display = '';
+    $('c-name').textContent = a.prenom;
+    $('c-sub').textContent = (a.block || '') + ' · semaine ' + a.semaine + '/' + a.nbSem +
+                             ' · ' + a.faites + '/' + a.total + ' séances';
+
+    if (a.erreur) { $('c-body').innerHTML = '<div class="empty">' + esc(a.erreur) + '</div>'; return; }
+
+    var h = '';
+
+    /* 1. ce qui coince, sur tout le bloc */
+    var soucis = a.soucis || [];
+    if (soucis.length) {
+      h += '<div class="sect">Ce qui coince</div><div class="al">' + soucis.map(function (x) {
+        var sem = x.semaines && x.semaines.length
+          ? '<i>sem. ' + x.semaines.join(', ') + '</i>' : '';
+        return '<div class="' + x.type + '"><b>' + esc(cap(x.exo)) + '</b>' +
+               (x.variante ? ' <span style="opacity:.7">' + esc(x.variante) + '</span>' : '') +
+               ' · ' + esc(x.texte) + sem + '</div>';
+      }).join('') + '</div>';
+    }
+
+    /* 2. ce qui n'a pas été rempli cette semaine */
+    var trous = [];
+    (a.seances || []).forEach(function (s) {
+      (s.exos || []).forEach(function (e) {
+        if (e.manque) trous.push({ jour: s.jour, nom: e.nom, variante: e.variante, mq: e.manque });
+      });
+    });
+    if (trous.length) {
+      h += '<div class="sect">Ce qu\'il manque (' + trous.length + ')</div><div class="al">' +
+        trous.map(function (t) {
+          return '<div><b>' + esc(cap(t.nom)) + '</b>' +
+                 (t.variante ? ' <span style="opacity:.7">' + esc(t.variante) + '</span>' : '') +
+                 ' · ' + esc(MQ[t.mq] || t.mq) + '<i>' + esc(t.jour) + '</i></div>';
+        }).join('') + '</div>';
+    }
+
+    /* 3. le détail, séance par séance */
+    h += '<div class="sect">Semaine ' + a.semaine + ' en détail</div>';
+    h += (a.seances || []).map(function (s) {
+      var etat = s.etat === 'faite' ? 'faite'
+               : (s.etat === 'encours' ? s.remplis + '/' + s.total : 'pas commencée');
+      var lignes = (s.exos || []).map(function (e) {
+        var sch = schema(e);
+        var det = [sch, e.tempo, (e.rpeCible ? 'cible ' + rpeTxt(e.rpeCible) : '')]
+                  .filter(function (x) { return x && String(x).trim() !== ''; }).join(' · ');
+        var rpe = [e.rpe1, e.rpeLast].filter(function (x) { return x !== '' && x !== null && x !== undefined; })
+                  .map(rpeTxt).join(' → ');
+        var fait = [];
+        if (e.charge !== null && e.charge !== '') fait.push('<b>' + esc(kg(e.charge)) + '</b>');
+        if (rpe) fait.push('RPE ' + esc(rpe));
+        if (e.manque) fait.push('<span class="mq' + (e.manque === 'tout' ? ' tout' : '') + '">' +
+                                esc(MQ[e.manque]) + '</span>');
+        return '<div class="cx' + (e.dur ? ' dur' : '') + '">' +
+          '<div class="cx1">' + esc(cap(e.nom)) +
+            (e.variante ? ' <em>' + esc(e.variante) + '</em>' : '') + '</div>' +
+          (det ? '<div class="cx2">' + esc(det) + '</div>' : '') +
+          (fait.length ? '<div class="cx3">' + fait.join(' · ') + '</div>' : '') +
+          (e.note ? '<div class="cx4">«\u202f' + esc(e.note) + '\u202f»</div>' : '') +
+        '</div>';
+      }).join('');
+      return '<div class="cs"><div class="csh"><b>' + esc(s.jour || 'Séance') + '</b>' +
+        '<span>' + esc(etat) + (s.difficulte ? ' · ' + esc(s.difficulte) : '') + '</span></div>' +
+        lignes + '</div>';
+    }).join('');
+
+    /* 4. récup */
+    if (a.recup && a.recup.moyenne !== null) {
+      var c2 = a.recup.moyenne < 2.5 ? 'bas' : (a.recup.moyenne >= 4 ? 'haut' : '');
+      h += '<div class="sect">Récupération</div>' +
+           '<div class="recup"><span class="pill ' + c2 + '">Récup ' + a.recup.moyenne + '/5</span>' +
+           '<span>' + esc(a.recup.detail) + '</span>' +
+           (a.recup.poids ? '<span class="pill">' + fmt(a.recup.poids) + ' kg</span>' : '') + '</div>';
+    }
+
+    $('c-body').innerHTML = h;
+    $('c-body').scrollTop = 0;
   }
 
   $('c-reload').onclick = loadCoach;
-  $('h-coach').onclick = loadCoach;
-  $('c-back').onclick = function () { renderHome(); show('home'); };
+  $('h-coach').onclick = function () { coachSel = null; loadCoach(); };
+  $('c-back').onclick = function () {
+    if (coachSel !== null) { coachSel = null; renderCoach(coachList); return; }
+    renderHome(); show('home');
+  };
   $('c-out').onclick = function () {
     if (!confirm('Se déconnecter ?')) return;
     sDel(LS_CODE); sDel(LS_PROG); sDel(LS_ROLE); clearRun();
