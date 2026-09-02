@@ -575,21 +575,40 @@
   $('h-reload').onclick = function () { load(prog ? prog.semaine : null, true); };
 
   /* ───── chargement programme ───── */
+  /* cache par semaine : affichage immediat, puis rafraichissement discret en fond */
+  function progMap() {
+    try {
+      var o = JSON.parse(sGet(LS_PROG));
+      if (!o) return {};
+      if (o.seances) { var m = {}; m['w' + o.semaine] = o; m.dernier = o; return m; }  // ancien format
+      return (typeof o === 'object') ? o : {};
+    } catch (e) { return {}; }
+  }
+  function progSet(j) {
+    try { var m = progMap(); m['w' + j.semaine] = j; m.dernier = j; sSet(LS_PROG, JSON.stringify(m)); } catch (e) {}
+  }
+  function progGet(semaine) {
+    var m = progMap();
+    return semaine ? (m['w' + semaine] || null) : (m.dernier || null);
+  }
   function load(semaine, silent) {
-    if (!silent) { $('home-list').innerHTML = '<div class="spin"></div>'; }
+    var vu = progGet(semaine);
+    if (vu) { applyProg(vu, true); silent = true; }                       // affichage immediat de ce qui est deja connu
+    else if (!silent) { $('home-list').innerHTML = '<div class="spin"></div>'; }
     var p = { action: 'program', code: code };
     if (semaine) p.semaine = semaine;
     return call(p).then(function (j) { applyProg(j); flush(); }).catch(function (e) {
+      if (vu) return;                                                     // deja affiche depuis le cache : ne rien deranger
       var c = cache();
       if (c && !semaine) { applyProg(c, true); toast('Mode hors ligne', true); }
       else { $('home-list').innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; }
     });
   }
-  function cache() { try { return JSON.parse(sGet(LS_PROG)); } catch (e) { return null; } }
+  function cache() { return progGet(null); }
 
   function applyProg(j, fromCache) {
     prog = j;
-    if (!fromCache) { try { sSet(LS_PROG, JSON.stringify(j)); } catch (e) {} }
+    if (!fromCache) progSet(j);
     $('h-name').textContent = j.prenom ? j.prenom : 'Ma séance';
     $('h-block').textContent = (j.block || '') + (j.blockDebut ? ' · depuis le ' + j.blockDebut : '');
     $('w-lbl').textContent = 'Semaine ' + j.semaine + ' / ' + j.nbSemaines;
@@ -788,7 +807,7 @@
       prog.seances[seance._i].faite = true;
       prog.seances[seance._i].etat = diff ? 'faite' : 'encours';
       prog.seances[seance._i].difficulte = diff;
-      try { sSet(LS_PROG, JSON.stringify(prog)); } catch (e) {}
+      progSet(prog);
       clearRun(seance._i);
       finish('C\'est envoyé', 'Ta séance est arrivée dans le suivi de ton coach.');
     }).catch(function () {
