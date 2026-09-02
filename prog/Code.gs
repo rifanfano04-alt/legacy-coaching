@@ -418,6 +418,21 @@ function apiWeekly(body) {
 
 /* ───────────────────────── VUE COACH ───────────────────────── */
 
+/** Date reelle d'une seance : debut de la semaine + le jour ecrit dans le Sheet. */
+var JOURS_SEM = { dimanche: 0, lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6 };
+function dateSeance_(debutSemaine, jour) {
+  if (!debutSemaine) return null;
+  var k = JOURS_SEM[String(jour || '').trim().toLowerCase()];
+  if (k === undefined) return null;
+  var d = new Date(debutSemaine.getTime());
+  d.setDate(d.getDate() + ((k - d.getDay() + 7) % 7));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+function jourCourt_(d) {
+  return d ? Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd/MM') : '';
+}
+
 /** RPE au plafond : 9.5 et plus, ou « échec ». */
 function estDur_(v) {
   var t = String(v || '').toLowerCase();
@@ -544,12 +559,24 @@ function apiCoach(body) {
       fiche.nbSem    = sit.nbSem;
       fiche.faites   = faites;
       fiche.total    = w.seances.length;
-      var trous = 0, aVenir = 0;
+      // Une seance dont le jour n'est pas encore arrive ne peut rien avoir d'oublie.
+      var t0 = new Date(); t0.setHours(0, 0, 0, 0);
+      var debutW = null;
+      if (sit.debut) {
+        debutW = new Date(sit.debut.getTime());
+        debutW.setDate(debutW.getDate() + 7 * (sit.semaine - 1));
+        debutW.setHours(0, 0, 0, 0);
+      }
+      var trous = 0, aVenir = 0, sautees = [];
       fiche.seances  = w.seances.map(function (s) {
+        var dS = dateSeance_(debutW, s.jour);
+        // sans date exploitable, on retombe sur l'ancienne regle
+        var passee = dS ? (dS < t0) : (s.etat !== 'vide');
         var commencee = (s.etat !== 'vide');
-        if (!commencee) aVenir++;
+        if (!passee) aVenir++;
+        if (passee && !commencee) sautees.push({ jour: s.jour, date: jourCourt_(dS) });
         var exos = s.exos.map(function (e) {
-          var mq = commencee ? manque_(e) : '';
+          var mq = (passee && commencee) ? manque_(e) : '';
           if (mq) trous++;
           return {
             nom: e.nom, variante: e.variante, tempo: e.tempo,
@@ -559,11 +586,13 @@ function apiCoach(body) {
             note: e.note, manque: mq, dur: estDur_(e.rpeLast) || estDur_(e.rpe1)
           };
         });
-        return { jour: s.jour, etat: s.etat, remplis: s.remplis, total: s.total,
+        return { jour: s.jour, date: jourCourt_(dS), passee: passee,
+                 etat: s.etat, remplis: s.remplis, total: s.total,
                  difficulte: s.difficulte, exos: exos };
       });
       fiche.trous    = trous;
       fiche.aVenir   = aVenir;
+      fiche.sautees  = sautees;
       fiche.soucis   = soucisDuBloc_(semaines, sit.semaine);
       fiche.alertes  = alertes.slice(0, 12);
       fiche.recup    = { moyenne: moyenne, detail: notes.join(' · '), poids: w.recup.poids };
