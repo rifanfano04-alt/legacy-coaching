@@ -595,6 +595,8 @@
   function resumeRunIfAny() {
     var r = savedRun();
     if (!r) return;
+    var s = prog && prog.seances && prog.seances[r.i];
+    if (s && s.faite) { clearRun(r.i); return; }   // séance déjà envoyée : rien à reprendre de force
     seance = r.seance; seance._i = r.i; idx = r.idx || 0; diff = r.diff || '';
     $('r-day').textContent = seance.jour || ('Séance ' + (r.i + 1));
     show('run'); renderExo();
