@@ -252,11 +252,13 @@ function plan_(vals) {
 }
 
 /**
- * Une charge seule ne prouve rien : le coach ecrit parfois ses charges a l'avance
- * dans la colonne « charge utilisee ». L'exercice n'est considere comme FAIT que
- * si un RPE est saisi (c'est ce qui ne peut se remplir qu'apres avoir force).
+ * Le RPE est le seul champ qui ne peut se remplir qu'apres l'effort. Le coach ecrit
+ * parfois ses charges a l'avance dans la colonne « charge utilisee » : une seance ou
+ * AUCUN RPE n'a ete saisi n'a donc pas ete faite, quelles que soient les charges.
+ * (Au niveau de la ligne on reste tolerant : les exos secondaires sont souvent
+ *  charges sans RPE alors que la seance a bien eu lieu.)
  */
-function exoFait_(e) { return !!(e.rpe1 || e.rpeLast); }
+function aUnRpe_(e) { return !!(e.rpe1 || e.rpeLast); }
 
 /** Lit une semaine dans un tableau deja charge (colonne A -> fin de la semaine). */
 function lireSemaineDe_(vals, semaine) {
@@ -267,7 +269,7 @@ function lireSemaineDe_(vals, semaine) {
   var seances = [];
   pl.seances.forEach(function (S, sIdx) {
     var hRow = S.head;
-    var exos = [], rempli = 0, prescrits = 0;
+    var exos = [], rempli = 0, prescrits = 0, avecRpe = 0;
     for (var r = S.premier; r <= S.dernier; r++) {
       var code = txt_(get(r, OFF.code)).toUpperCase();
       var sets = num_(get(r, OFF.sets));
@@ -317,16 +319,19 @@ function lireSemaineDe_(vals, semaine) {
         rpeLast: rpe_(get(r, OFF.rpeLast)),
         note: txt_(get(r, OFF.note))
       };
-      if (exoFait_(e)) rempli++;
+      if (e.charge !== null || e.rpe1 || e.rpeLast || e.note) rempli++;
+      if (aUnRpe_(e)) avecRpe++;
       if (e.sets || e.reps) prescrits++;
       exos.push(e);
     }
     if (!exos.length) return;
     var diff = txt_(get(S.total, OFF_DIFF));
     // « faite » = la difficulté de séance est renseignée (c'est le marqueur de fin,
-    // écrit par l'app) OU tout ce qui était programmé a été FAIT (RPE saisis).
-    // Des charges notées à l'avance, sans RPE, ne valident plus rien.
-    var faite = !!diff || (prescrits > 0 && rempli >= prescrits);
+    // écrit par l'app) OU tout ce qui était programmé a été rempli — mais dans ce
+    // cas il faut au moins un RPE quelque part : sans ça, ce sont des charges
+    // notées à l'avance et la séance n'a pas eu lieu.
+    var reelle = avecRpe > 0;
+    var faite = !!diff || (reelle && prescrits > 0 && rempli >= prescrits);
     seances.push({
       idx: sIdx,
       ligne: hRow,
@@ -336,8 +341,9 @@ function lireSemaineDe_(vals, semaine) {
       exos: exos,
       remplis: rempli,
       total: exos.length,
-      etat: faite ? 'faite' : (rempli > 0 ? 'encours' : 'vide'),
-      faite: faite
+      etat: faite ? 'faite' : ((reelle && rempli > 0) ? 'encours' : 'vide'),
+      faite: faite,
+      reelle: reelle
     });
   });
 
@@ -691,7 +697,7 @@ function soucisDuBloc_(semaines, jusqua) {
         if (!suivi[k]) { suivi[k] = { nom: e.nom, variante: e.variante, jour: se.jour, dur: [], charges: [], note: null }; ordre.push(k); }
         var t = suivi[k];
         if (estDur_(e.rpeLast) || estDur_(e.rpe1)) t.dur.push(s + 1);
-        if (e.charge !== null && exoFait_(e)) t.charges.push({ sem: s + 1, val: e.charge });
+        if (e.charge !== null && se.reelle) t.charges.push({ sem: s + 1, val: e.charge });
         if (e.note) t.note = { sem: s + 1, texte: e.note };
       });
     });
