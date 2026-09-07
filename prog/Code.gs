@@ -231,23 +231,32 @@ function plan_(vals) {
   // ligne — et apiWeekly ECRIT dedans.
   var recup = {}, c0 = WEEK_COLS[0];
   var depart = seances[seances.length - 1].total + 1;
-  var chercher = function (mot, apres) {
+  var chercher = function (mot, apres) {   // mot est une expression reguliere
     for (var rr = apres; rr <= vals.length; rr++) {
       for (var cc = c0; cc <= c0 + 16; cc++) {
         var s = txt(rr, cc);
-        if (s && s.indexOf(mot) === 0) return rr;
+        if (s && mot.test(s)) return rr;
       }
     }
     return 0;
   };
   var apres = depart;
-  ['sommeil', 'nutrition', 'steps', 'humeur', 'poids'].forEach(function (mot) {
-    var l = chercher(mot, apres);
-    recup[mot] = l || RECUP_ROWS[mot];
+  // libelles tolerants : le Sheet ecrit « Hummeur » et « Poids du corps »
+  [['sommeil', /^sommeil/], ['nutrition', /^nutrition/], ['steps', /^steps/],
+   ['humeur', /^humm?eur/], ['poids', /^poids/]].forEach(function (p) {
+    var l = chercher(p[1], apres);
+    recup[p[0]] = l || RECUP_ROWS[p[0]];
     if (l) apres = l;
   });
   return { seances: seances, recup: recup };
 }
+
+/**
+ * Une charge seule ne prouve rien : le coach ecrit parfois ses charges a l'avance
+ * dans la colonne « charge utilisee ». L'exercice n'est considere comme FAIT que
+ * si un RPE est saisi (c'est ce qui ne peut se remplir qu'apres avoir force).
+ */
+function exoFait_(e) { return !!(e.rpe1 || e.rpeLast); }
 
 /** Lit une semaine dans un tableau deja charge (colonne A -> fin de la semaine). */
 function lireSemaineDe_(vals, semaine) {
@@ -308,14 +317,15 @@ function lireSemaineDe_(vals, semaine) {
         rpeLast: rpe_(get(r, OFF.rpeLast)),
         note: txt_(get(r, OFF.note))
       };
-      if (e.charge !== null || e.rpe1 || e.rpeLast || e.note) rempli++;
+      if (exoFait_(e)) rempli++;
       if (e.sets || e.reps) prescrits++;
       exos.push(e);
     }
     if (!exos.length) return;
     var diff = txt_(get(S.total, OFF_DIFF));
     // « faite » = la difficulté de séance est renseignée (c'est le marqueur de fin,
-    // écrit par l'app) OU tout ce qui était programmé a été rempli.
+    // écrit par l'app) OU tout ce qui était programmé a été FAIT (RPE saisis).
+    // Des charges notées à l'avance, sans RPE, ne valident plus rien.
     var faite = !!diff || (prescrits > 0 && rempli >= prescrits);
     seances.push({
       idx: sIdx,
@@ -502,6 +512,7 @@ function apiProgram(body) {
 }
 
 /** Les records seuls : appel separe pour ne pas ralentir l'ouverture de la seance. */
+/** Les records seuls : appel separe pour ne pas ralentir l'ouverture de la seance. */
 function apiRecords(body) {
   var a = athleteFromCode_(body.code);
   if (!a.sheetId) return { ok: true, records: {} };
@@ -680,7 +691,7 @@ function soucisDuBloc_(semaines, jusqua) {
         if (!suivi[k]) { suivi[k] = { nom: e.nom, variante: e.variante, jour: se.jour, dur: [], charges: [], note: null }; ordre.push(k); }
         var t = suivi[k];
         if (estDur_(e.rpeLast) || estDur_(e.rpe1)) t.dur.push(s + 1);
-        if (e.charge !== null) t.charges.push({ sem: s + 1, val: e.charge });
+        if (e.charge !== null && exoFait_(e)) t.charges.push({ sem: s + 1, val: e.charge });
         if (e.note) t.note = { sem: s + 1, texte: e.note };
       });
     });
@@ -816,3 +827,19 @@ function apiCoach(body) {
   }
   return { ok: true, prenom: a.prenom, athletes: athletes };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
