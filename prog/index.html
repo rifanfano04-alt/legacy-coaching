@@ -919,7 +919,7 @@
     }
     $('r-pos').textContent = 'Exercice ' + (idx + 1) + ' / ' + seance.exos.length;
     $('r-prog').innerHTML = seance.exos.map(function (x, i) {
-      var on = (x.charge !== null && x.charge !== '') || x.rpe1 || x.rpeLast;
+      var on = aRpe(x);   // une charge notee a l'avance ne vaut pas « fait »
       return '<i data-i="' + i + '" style="cursor:pointer;background:' + (i === idx ? x.couleur : (on ? 'rgba(255,255,255,.45)' : 'rgba(255,255,255,.12)')) + '"></i>';
     }).join('');
     Array.prototype.forEach.call($('r-prog').querySelectorAll('i'), function (b) {
@@ -1062,7 +1062,10 @@
 
   var exoCarte = null, apresCarte = null, carteRecord = true;
 
-  function estRecordFait(e) { return !!(e && estPr(e, e.charge) && !echec(e)); }
+  /* Le RPE est la preuve que la serie a ete faite : une charge tapee a l'avance
+     dans le Sheet ne doit pas declencher de record. */
+  function aRpe(e) { return !!(e && (e.rpe1 || e.rpeLast)); }
+  function estRecordFait(e) { return !!(e && estPr(e, e.charge) && aRpe(e) && !echec(e)); }
 
   function montrerCarte(e, record, libelleFin) {
     exoCarte = e;
