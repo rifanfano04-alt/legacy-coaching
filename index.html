@@ -69,8 +69,7 @@
         "serviceType": "Coaching sportif personnalisé",
         "description": "Programmation sur-mesure en streetlifting, force athlétique et calisthénie avec suivi quotidien RPE et nutrition pilotée.",
         "offers": [
-          { "@type": "Offer", "name": "Formule Performance", "description": "Programme mensuel personnalisé, suivi nutrition macros, tableau de suivi, ajustements réguliers, réponse sous 48h" },
-          { "@type": "Offer", "name": "Formule Compétiteur", "description": "Tout Performance + suivi en compétition, retour vidéo, appel visio, support illimité" }
+          { "@type": "Offer", "name": "Accompagnement Legacy", "description": "Un seul suivi, adapté à chacun : programme personnalisé réajusté chaque semaine, tableau et graphiques de progression, application Legacy Séance, suivi nutrition avec l'application de tracking Legacy, retour vidéo des séries, appel visio, réponse sous 48h, prépa et suivi le jour de la compétition. Tarif présenté pendant l'appel découverte." }
         ]
       },
       {
@@ -78,7 +77,7 @@
         "mainEntity": [
           { "@type": "Question", "name": "J'ai besoin de combien de séances par semaine ?", "acceptedAnswer": { "@type": "Answer", "text": "Le programme s'adapte à ta disponibilité. La plupart des athlètes suivis tournent sur 3 à 4 séances de 1h30 à 2h, mais on construit autour de ton emploi du temps." } },
           { "@type": "Question", "name": "Faut-il une salle équipée ?", "acceptedAnswer": { "@type": "Answer", "text": "Pour le streetlifting et la calisthénie, une barre de traction et de quoi se lester suffisent. Pour la force athlétique, l'accès à une salle classique est recommandé." } },
-          { "@type": "Question", "name": "Comment se passe le suivi ?", "acceptedAnswer": { "@type": "Answer", "text": "Tu reçois un tableau de suivi (programme, charges, RPE, nutrition, sommeil). Tu le remplis, j'analyse, j'ajuste. Échanges par messages et, selon l'offre, en visio." } },
+          { "@type": "Question", "name": "Comment se passe le suivi ?", "acceptedAnswer": { "@type": "Answer", "text": "Tu reçois un tableau de suivi (programme, charges, RPE, nutrition, sommeil). Tu le remplis, j'analyse, j'ajuste. Échanges par messages et en visio quand il en faut." } },
           { "@type": "Question", "name": "Je débute, est-ce pour moi ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le bilan initial cale le programme sur ton niveau. Débutant comme compétiteur, la logique reste la même : progresser de façon mesurée et durable." } },
           { "@type": "Question", "name": "Puis-je arrêter quand je veux ?", "acceptedAnswer": { "@type": "Answer", "text": "Aucun engagement de durée. L'accompagnement est mensuel et sans reconduction forcée." } }
         ]
@@ -416,6 +415,14 @@ html.js .hero-inner > *:not(h1) { opacity: 0; }
 .feature-list li { padding-left: 26px; position: relative; color: var(--muted); font-size: .95rem; }
 .feature-list li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 800; }
 .price-popular { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-line), 0 24px 60px -24px oklch(88% 0 0 / .30); }
+
+/* Un seul suivi : la carte a gauche, les reperes a droite */
+.pricing-solo { grid-template-columns: 1.15fr .85fr; max-width: 940px; align-items: center; }
+.offer-notes { display: flex; flex-direction: column; gap: 26px; padding-top: 8px; }
+.offer-note { padding-left: 20px; border-left: 2px solid var(--accent-line); }
+.offer-note h3 { font-size: 1.05rem; margin-bottom: 7px; }
+.offer-note p { color: var(--muted); font-size: .95rem; line-height: 1.65; }
+@media (max-width: 900px) { .pricing-solo { grid-template-columns: 1fr; max-width: 620px; } }
 .badge {
   position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
   background: var(--accent); color: var(--ink); font-size: .75rem; font-weight: 800;
@@ -611,6 +618,8 @@ body.leaving .page-fade { animation: none; opacity: 1; pointer-events: all; tran
 #faq .eyebrow, #faq h2, #faq > .container > .muted { text-shadow: 0 2px 16px oklch(0% 0 0 / .82); }
 #offres h2, #resultats h2, #outil h2, #faq h2 { text-shadow: 0 2px 16px oklch(0% 0 0 / .82), 0 0 24px rgba(150,22,30,.3); }
 
+#offres .offer-note h3, #offres .offer-note p { text-shadow: 0 1px 10px oklch(0% 0 0 / .85); }
+
 #offres .card, #resultats .card,
 #outil .tool-form, #outil .tool-result {
   background: oklch(13% 0.012 264 / .34);
@@ -721,7 +730,7 @@ body.leaving .page-fade { animation: none; opacity: 1; pointer-events: all; tran
       <ul class="nav-menu">
         <li><a href="#coach">Coach</a></li>
         <li><a href="#methode">Méthode</a></li>
-        <li><a href="#offres">Offres</a></li>
+        <li><a href="#offres">Le suivi</a></li>
         <li><a href="#outil">Calculateur 1RM</a></li>
         <li><a href="#resultats">Résultats</a></li>
         <li><a href="#faq">FAQ</a></li>
@@ -806,37 +815,39 @@ body.leaving .page-fade { animation: none; opacity: 1; pointer-events: all; tran
   <!-- OFFRES -->
   <section class="section" id="offres">
     <div class="container">
-      <p class="eyebrow center">Formules</p>
-      <h2 class="center">Choisis ton niveau d'<span class="hl">accompagnement</span></h2>
-      <p class="center muted">Le tarif est défini ensemble pendant l'appel découverte, selon tes objectifs et ton rythme.</p>
-      <div class="cards pricing">
+      <p class="eyebrow center">L'accompagnement</p>
+      <h2 class="center">Un seul suivi, <span class="hl">taillé pour toi</span></h2>
+      <p class="center muted">Un seul suivi, que j'adapte à tes objectifs et à ton rythme. On voit tout ça ensemble pendant l'appel découverte, tarif compris.</p>
+      <div class="cards pricing pricing-solo">
         <article class="card price-card price-popular">
-          <div class="badge">La plus choisie</div>
-          <h3>Performance</h3>
-          <p class="price-sub">Le suivi complet pour progresser sérieusement.</p>
+          <h3>Le suivi LEGACY</h3>
+          <p class="price-sub">Programme, nutrition, outils : tout est dedans.</p>
           <ul class="feature-list">
-            <li>Programme personnalisé mensuel</li>
-            <li>Suivi nutrition complet (macros)</li>
-            <li>Accès au tableau de suivi</li>
-            <li>Ajustements réguliers du programme</li>
-            <li>Retour et réponse sous 48h</li>
-          </ul>
-          <!-- COPYWRITING: CTA Performance plus engageant -->
-          <a href="#contact" class="btn btn-block" data-offre="Performance">Je démarre Performance</a>
-        </article>
-        <article class="card price-card">
-          <h3>Compétiteur</h3>
-          <p class="price-sub">La prépa complète jusqu'au jour de la compétition.</p>
-          <ul class="feature-list">
-            <li>Tout ce que contient la formule Performance</li>
-            <li>Suivi en compétition (jour J)</li>
+            <li>Programme personnalisé, réajusté chaque semaine</li>
+            <li>Accès au tableau et aux graphiques de suivi de ta progression</li>
+            <li>L'appli LEGACY Séance : remplir tes séances vite et bien, depuis ton téléphone</li>
+            <li>Suivi diet avec l'appli de tracking LEGACY complète</li>
             <li>Retour vidéo de tes séries</li>
-            <li>Appel visio si besoin</li>
-            <li>Support illimité</li>
+            <li>Appel visio quand il en faut</li>
+            <li>Réponse à tes questions sous 48h</li>
+            <li>Prépa et suivi le jour J si tu fais de la compétition</li>
           </ul>
-          <!-- COPYWRITING: CTA Compétiteur plus engageant -->
-          <a href="#contact" class="btn btn-block btn-ghost" data-offre="Compétiteur">Je vise la compétition</a>
+          <a href="#contact" class="btn btn-block">Je réserve mon appel</a>
         </article>
+        <aside class="offer-notes">
+          <div class="offer-note">
+            <h3>Un seul suivi</h3>
+            <p>Pas de formules à comparer, pas d'options à cocher. Tout le monde a le même cadre.</p>
+          </div>
+          <div class="offer-note">
+            <h3>Adapté à toi</h3>
+            <p>Le contenu se cale sur tes objectifs, ton niveau et ton rythme de vie.</p>
+          </div>
+          <div class="offer-note">
+            <h3>On en parle en appel</h3>
+            <p>Le tarif et ce qu'on met en place, je te l'explique de vive voix. Gratuit, sans engagement.</p>
+          </div>
+        </aside>
       </div>
     </div>
   </section>
@@ -927,7 +938,7 @@ body.leaving .page-fade { animation: none; opacity: 1; pointer-events: all; tran
         </details>
         <details>
           <summary>Comment se passe le suivi&nbsp;?</summary>
-          <p>Tu reçois un tableau de suivi (programme, charges, RPE, nutrition, sommeil). Tu le remplis, j'analyse, j'ajuste. Échanges par messages et, selon l'offre, en visio.</p>
+          <p>Tu reçois un tableau de suivi (programme, charges, RPE, nutrition, sommeil). Tu le remplis, j'analyse, j'ajuste. Échanges par messages et en visio quand il en faut.</p>
         </details>
         <details>
           <summary>Je débute, est-ce pour moi&nbsp;?</summary>
@@ -971,11 +982,11 @@ body.leaving .page-fade { animation: none; opacity: 1; pointer-events: all; tran
             </select>
           </div>
           <div class="field">
-            <label for="offre">Formule souhaitée</label>
-            <select id="offre" name="offre">
-              <option>Performance</option>
-              <option>Compétiteur</option>
-              <option>Je ne sais pas encore</option>
+            <label for="competition">Tu fais de la compétition&nbsp;?</label>
+            <select id="competition" name="competition">
+              <option>Non, pas pour l'instant</option>
+              <option>Oui</option>
+              <option>J'aimerais m'y mettre</option>
             </select>
           </div>
         </div>
@@ -1322,14 +1333,6 @@ rmForm.addEventListener('submit', e => {
   }
 });
 
-// ===== Pré-remplissage offre depuis les boutons pricing =====
-document.querySelectorAll('[data-offre]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const sel = document.getElementById('offre');
-    if (sel) sel.value = btn.dataset.offre;
-  });
-});
-
 // ===== Validation + envoi formulaire de contact =====
 const form = document.getElementById('contactForm');
 const feedback = document.getElementById('formFeedback');
@@ -1421,14 +1424,14 @@ form.addEventListener('submit', async e => {
     name: name.value.trim(),
     contact: contact.value.trim(),
     discipline: document.getElementById('discipline').value,
-    offre: document.getElementById('offre').value,
+    competition: document.getElementById('competition').value,
     message: document.getElementById('message').value.trim(),
   };
-  const subject = encodeURIComponent(`Demande d'appel découverte : ${data.offre} (${data.discipline})`);
+  const subject = encodeURIComponent(`Demande d'appel découverte : ${data.discipline}`);
   const body = encodeURIComponent(
     `Bonjour Richard,\n\nJe souhaite réserver un appel découverte.\n\n` +
     `Nom : ${data.name}\nMe contacter (Instagram ou téléphone) : ${data.contact}\n` +
-    `Discipline : ${data.discipline}\nFormule : ${data.offre}\n\n` +
+    `Discipline : ${data.discipline}\nCompétition : ${data.competition}\n\n` +
     `Mon objectif :\n${data.message || '(non précisé)'}\n`
   );
   window.location.href = `mailto:rifanfano04@gmail.com?subject=${subject}&body=${body}`;
