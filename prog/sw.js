@@ -1,5 +1,5 @@
 /* LEGACY — séance : cache l'app pour qu'elle s'ouvre sans réseau à la salle. */
-var CACHE = 'lgcy-prog-v5';
+var CACHE = 'lgcy-prog-v6';
 var ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png',
   './sil-dips.png', './sil-squat.png', './sil-traction.png'];
 
