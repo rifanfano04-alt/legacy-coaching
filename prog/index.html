@@ -383,6 +383,72 @@
   .recap .l.pr .part{border-color:rgba(255,199,64,.5);color:var(--or);}
   .recap .l .part:active{background:rgba(255,255,255,.08);}
 
+
+  /* ---------- CHRONO : récup, EMOM, chrono, séries ---------- */
+  .tool{position:fixed;inset:0;z-index:40;display:none;flex-direction:column;background:var(--bg);
+    background-image:var(--stripes);max-width:520px;margin:0 auto;}
+  .tool.on{display:flex;animation:fondu .18s ease-out;}
+  .ttabs{display:flex;gap:6px;padding:12px 16px 0;}
+  .ttabs button{flex:1;padding:10px 4px;border-radius:12px;border:1px solid var(--line);background:var(--card);
+    font-size:12.5px;font-weight:800;color:var(--grey-2);position:relative;}
+  .ttabs button.sel{background:var(--grey-1);border-color:var(--grey-1);color:#0a0a0b;}
+  .ttabs button.vit::after{content:"";position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:50%;
+    background:var(--blood);box-shadow:0 0 8px var(--blood);}
+  .ring{position:relative;width:min(68vw,250px);aspect-ratio:1;margin:18px auto 6px;}
+  .ring svg{width:100%;height:100%;transform:rotate(-90deg);}
+  .ring circle{fill:none;stroke-width:6;}
+  .ring .fond{stroke:rgba(255,255,255,.08);}
+  .ring .arc{stroke:var(--blood);stroke-linecap:round;transition:stroke .3s;}
+  .ring.prep .arc{stroke:var(--or);}
+  .ring.fini .arc{stroke:var(--ok);}
+  .ring .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .tbig{font-family:'Unbounded';font-weight:800;font-size:clamp(40px,14vw,58px);line-height:1;
+    font-variant-numeric:tabular-nums;letter-spacing:-1px;}
+  .tinfo{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:800;color:var(--grey-3);margin-top:10px;}
+  .ring.prep .tinfo{color:var(--or);}
+  .ring.fini .tinfo{color:var(--ok);}
+  .tset{margin:18px 2px 0;}
+  .tset>label{display:block;font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey-3);
+    font-weight:800;margin-bottom:9px;}
+  .tset .chips .chip{flex:1;min-width:52px;}
+  .tset .chip.sel{background:var(--grey-1);border-color:var(--grey-1);}
+  .tstep{display:flex;align-items:center;gap:10px;}
+  .tstep button{flex:0 0 56px;height:48px;border-radius:13px;border:1px solid var(--line);background:var(--card);
+    font-weight:800;font-size:14px;color:var(--grey-1);}
+  .tstep button:active{background:#1d1d20;}
+  .tstep b{flex:1;text-align:center;font-family:'Unbounded';font-weight:800;font-size:20px;font-variant-numeric:tabular-nums;}
+  .tool .off{opacity:.35;pointer-events:none;}
+  .snom{text-align:center;font-family:'Unbounded';font-weight:700;font-size:15px;margin-top:14px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .snom i{display:block;font-style:normal;font-family:'Inter';font-size:11px;letter-spacing:1.3px;
+    text-transform:uppercase;color:var(--grey-3);font-weight:800;margin-top:3px;}
+  .scount{text-align:center;font-family:'Unbounded';font-weight:900;font-size:clamp(64px,24vw,104px);line-height:1;
+    margin-top:18px;font-variant-numeric:tabular-nums;}
+  .scount em{font-style:normal;font-size:.36em;color:var(--grey-3);font-weight:800;}
+  .scount.plein{color:var(--ok);}
+  .spts{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:16px auto 0;max-width:300px;}
+  .spts i{width:22px;height:8px;border-radius:4px;background:rgba(255,255,255,.12);display:block;}
+  .spts i.on{background:var(--ok);}
+  .smini{margin:14px auto 0;text-align:center;font-size:13px;font-weight:700;color:var(--grey-2);min-height:20px;
+    font-variant-numeric:tabular-nums;}
+  .smini b{color:var(--blood);font-family:'Unbounded';}
+  .tsw{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:12px 14px;width:100%;text-align:left;font-size:13.5px;font-weight:600;}
+  .tsw span{flex:1;}
+  .tsw i{flex:0 0 42px;height:25px;border-radius:99px;background:rgba(255,255,255,.14);position:relative;transition:.2s;}
+  .tsw i::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;transition:.2s;}
+  .tsw.on i{background:var(--ok);}
+  .tsw.on i::after{left:20px;}
+  .tpill{position:fixed;z-index:35;right:14px;bottom:calc(86px + var(--safe-b));display:none;align-items:center;gap:7px;
+    padding:10px 15px;border-radius:99px;background:#1d1d20;border:1px solid rgba(255,59,59,.45);
+    box-shadow:0 8px 24px rgba(0,0,0,.55);font-family:'Unbounded';font-weight:800;font-size:14px;
+    font-variant-numeric:tabular-nums;color:var(--grey-1);}
+  .tpill.on{display:inline-flex;}
+  .tpill.prep{border-color:rgba(255,199,64,.5);}
+  .tpill.go{background:var(--blood);color:#0a0a0b;border-color:var(--blood);animation:pouls .8s ease-in-out infinite;}
+  @keyframes pouls{50%{transform:scale(1.07)}}
+  .tool.flash{animation:flash .5s ease-out 3;}
+  @keyframes flash{0%{box-shadow:inset 0 0 0 100vmax rgba(255,59,59,.3)}100%{box-shadow:inset 0 0 0 100vmax rgba(255,59,59,0)}}
   .empty{text-align:center;color:var(--grey-3);padding:44px 20px;font-size:14px;}
   .spin{width:22px;height:22px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--blood);border-radius:50%;
     animation:sp .7s linear infinite;margin:40px auto;}
@@ -415,6 +481,7 @@
         <div class="t1" id="h-name">—</div>
         <div class="t2" id="h-block">—</div>
       </div>
+      <button class="icobtn" id="h-tool" aria-label="Chrono">⏱</button>
       <button class="icobtn" id="h-coach" style="display:none">👥</button>
       <button class="icobtn" id="h-reload">↻</button>
       <button class="icobtn" id="h-out">⏻</button>
@@ -461,6 +528,7 @@
         <div class="t1" id="r-day">Séance</div>
         <div class="t2" id="r-pos">Exercice 1 / 1</div>
       </div>
+      <button class="icobtn" id="r-tool" aria-label="Chrono">⏱</button>
     </div>
     <div class="prog" id="r-prog"></div>
     <div class="sil" id="r-sil"></div>
@@ -531,6 +599,21 @@
     </div>
   </section>
 
+
+  <!-- ══════════ CHRONO ══════════ -->
+  <section class="tool" id="tool">
+    <div class="top">
+      <button class="icobtn" id="t-close">✕</button>
+      <div class="who"><div class="t1">Chrono</div><div class="t2" id="t-sub">récup · emom · séries</div></div>
+    </div>
+    <div class="ttabs" id="t-tabs">
+      <button data-v="recup">Récup</button><button data-v="emom">EMOM</button>
+      <button data-v="chrono">Chrono</button><button data-v="series">Séries</button>
+    </div>
+    <div class="body" id="t-body"></div>
+    <div class="foot" id="t-foot"></div>
+  </section>
+  <button class="tpill" id="t-pill"></button>
   <div class="toast" id="toast"></div>
 </div>
 
@@ -541,7 +624,7 @@
   /* ───── config ───── */
   var SYNC_URL = 'https://script.google.com/macros/s/AKfycbzWNM8ExWtsNQLhPpsaxJePhaVwyKcLCtcx5O3aBFbO_bC5RgEb76IYgLVRgWzOzZll/exec';
   var LS_CODE = 'lgcy-prog-code', LS_PROG = 'lgcy-prog-cache', LS_OUT = 'lgcy-prog-outbox';
-  var LS_ROLE = 'lgcy-prog-role', LS_RUN = 'lgcy-prog-run';
+  var LS_ROLE = 'lgcy-prog-role', LS_RUN = 'lgcy-prog-run', LS_ECRAN = 'lgcy-prog-ecran';
   /* Liste de secours SEULEMENT : la vraie liste vient du Sheet (rpeOptions), sinon l'app
      peut proposer une valeur que la validation de données refuse, et l'envoi échoue. */
   var RPE = ['sub 6', '6', '6,5', '7', '7,5', '8', '8,5', '9', '9,5', '10', 'échec'];
@@ -600,7 +683,6 @@
     seance = r.seance; seance._i = r.i; idx = r.idx || 0; diff = r.diff || '';
     $('r-day').textContent = seance.jour || ('Séance ' + (r.i + 1));
     show('run'); renderExo();
-    toast('Séance reprise là où tu t\'étais arrêté ✓');
   }
 
   /* ───── state ───── */
@@ -615,6 +697,8 @@
   var $ = function (id) { return document.getElementById(id); };
   function show(id) {
     ['gate','home','run','end','week','ok','coach'].forEach(function (s) { $(s).classList.toggle('on', s === id); });
+    sSet(LS_ECRAN, id === 'run' ? 'run' : '');   // à la réouverture, on revient là où on était — tout de suite
+
     var b = document.querySelector('#' + id + ' .body'); if (b) b.scrollTop = 0;
   }
   function toast(msg, bad) {
@@ -908,6 +992,20 @@
   }
   $('r-back').onclick = function () { show('home'); };
 
+  /* Met à jour l'encadré record SANS redessiner l'exercice : les records arrivent quelques
+     secondes après l'ouverture, et tout redessiner fermait le clavier et remontait l'écran
+     pendant que l'athlète tapait. */
+  function majPastillePr() {
+    var e = seance && seance.exos[idx];
+    var box = e && $('r-body').querySelector('.presc');
+    if (!box) return;
+    var record = enJeu(e), neuf = !record && premierAuFormat(e);
+    box.classList.toggle('pr', record);
+    box.classList.toggle('neuf', neuf);
+    var pastille = box.querySelector('.prbadge');
+    if (pastille) pastille.innerHTML = record ? '🏆 PR' : '1ʳᵉ fois';
+  }
+
   function renderExo() {
     var e = seance.exos[idx];
     document.documentElement.style.setProperty('--exo', e.couleur);
@@ -969,15 +1067,7 @@
     var inp = $('f-charge');
     inp.value = e.charge !== null && e.charge !== '' ? String(e.charge).replace('.', ',') : '';
     inp.oninput = function () { e.charge = nb(inp.value); saveRun(); majPr(); };
-    var majPr = function () {
-      var box = $('r-body').querySelector('.presc');
-      if (!box) return;
-      var record = enJeu(e), neuf = !record && premierAuFormat(e);
-      box.classList.toggle('pr', record);
-      box.classList.toggle('neuf', neuf);
-      var pastille = box.querySelector('.prbadge');
-      if (pastille) pastille.innerHTML = record ? '🏆 PR' : '1ʳᵉ fois';
-    };
+    var majPr = majPastillePr;
     var bump = function (d) {
       var v = nb(inp.value) || 0; v = Math.round((v + d) * 1000) / 1000;
       if (v < 0) v = 0; inp.value = String(v).replace('.', ','); e.charge = v; saveRun();
@@ -1091,7 +1181,9 @@
      bouton Suivant, retour, ou les repères en haut. Sinon il passerait à côté. */
   function quitterExo(action) {
     var e = seance.exos[idx];
-    if (e && estPr(e, e.charge) && !echec(e) && !(seance._pr || {})[e.row]) {
+    /* la carte ne part que pour un record VALIDÉ (charge + RPE saisi, pas « échec ») :
+       passer sur un exercice ou y taper une charge ne suffit pas */
+    if (estRecordFait(e) && !(seance._pr || {})[e.row]) {
       seance._pr = seance._pr || {};
       seance._pr[e.row] = true;
       saveRun();
@@ -1276,7 +1368,7 @@
       prog.recordsPrets = true;
       progSet(prog);
       rafraichirExos();
-      if (seance && $('run').classList.contains('on')) renderExo();
+      if (seance && $('run').classList.contains('on')) majPastillePr();
     }).catch(function () { prog._recDemandes = false; });
   }
 
@@ -1664,6 +1756,295 @@
     code = ''; prog = null; $('code').value = ''; show('gate');
   };
 
+
+  /* ───── CHRONO : récup, EMOM, chrono libre et compteur de séries ─────
+     Tout est calculé à partir d'horodatages (Date.now) et gardé dans le téléphone :
+     le temps reste juste si l'écran se verrouille, si on change d'app ou si l'app se recharge.
+     Un seul minuteur tourne à la fois ; en lancer un autre arrête le précédent. */
+  var LS_TOOL = 'lgcy-prog-chrono';
+  var T = (function () {
+    var d = { vue: 'recup', mode: '', run: false, t0: 0, acc: 0, fini: false,
+              recup: 90, emomInt: 60, emomTours: 10,
+              series: { n: 0, cible: 4, cle: 'libre', nom: '', auto: true } };
+    try { var o = JSON.parse(sGet(LS_TOOL) || 'null'); if (o) for (var k in o) d[k] = o[k]; } catch (e) {}
+    return d;
+  })();
+  var PREP = 5000;   // EMOM : 5 s pour se mettre en place
+  var tHandle = null, tKey = '', tLock = null, AC = null;
+
+  function tSave() { sSet(LS_TOOL, JSON.stringify(T)); }
+  function ecoule() { return T.acc + (T.run ? Date.now() - T.t0 : 0); }
+  function mmss(ms, dixiemes) {
+    var neg = ms < 0; ms = Math.abs(ms);
+    var tot = dixiemes ? Math.floor(ms / 100) : Math.ceil(ms / 1000);
+    var sec = dixiemes ? Math.floor(tot / 10) : tot;
+    var txt = Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2);
+    if (dixiemes) txt += ',' + (tot % 10);
+    return (neg ? '-' : '') + txt;
+  }
+
+  /* son : WebAudio, en mode « ambient » pour se mélanger à la musique sans la couper */
+  function audio() {
+    try {
+      if (!AC) {
+        var C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+        try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) {}
+        AC = new C();
+      }
+      if (AC.state === 'suspended') AC.resume();
+    } catch (e) { return null; }
+    return AC;
+  }
+  function bip(freq, dur, fois) {
+    var a = audio(); if (!a) return;
+    for (var i = 0; i < (fois || 1); i++) {
+      var t = a.currentTime + i * (dur + 0.12), o = a.createOscillator(), g = a.createGain();
+      o.type = 'square'; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+    }
+  }
+  function vibre(m) { try { if (navigator.vibrate) navigator.vibrate(m); } catch (e) {} }
+  var sCourt = function () { bip(880, 0.12); vibre(60); };
+  var sTop = function () { bip(1320, 0.35); vibre(250); };
+  var sFin = function () { bip(1320, 0.3, 3); vibre([300, 120, 300, 120, 300]); };
+
+  /* l'écran reste allumé tant qu'un minuteur tourne (sinon le téléphone se verrouille et ne sonne pas) */
+  function veille() {
+    var faut = T.run && document.visibilityState === 'visible';
+    try {
+      if (faut && !tLock && navigator.wakeLock) {
+        navigator.wakeLock.request('screen').then(function (l) {
+          tLock = l; l.addEventListener('release', function () { tLock = null; });
+        }).catch(function () {});
+      } else if (!faut && tLock) { tLock.release(); tLock = null; }
+    } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', function () { veille(); if (T.run) tick(); });
+
+  /* état courant du minuteur, calculé à partir du temps écoulé */
+  function etat() {
+    var e = ecoule();
+    if (T.mode === 'recup') {
+      var dur = T.recup * 1000, r = dur - e;
+      return { temps: mmss(Math.max(r, 0)), frac: Math.max(r, 0) / dur, fini: r <= 0,
+               info: r <= 0 ? 'GO !' : 'Récup ' + mmss(dur), pill: mmss(Math.max(r, 0)),
+               cle: r <= 0 ? 'fin' : (r <= 3000 ? 'r' + Math.ceil(r / 1000) : '') };
+    }
+    if (T.mode === 'emom') {
+      var it = T.emomInt * 1000, x = e - PREP;
+      if (x < 0) return { temps: mmss(-x), frac: -x / PREP, prep: true, info: 'Prépare-toi', pill: 'Prêt ' + mmss(-x),
+                          cle: -x <= 3000 ? 'p' + Math.ceil(-x / 1000) : '' };
+      var tour = Math.floor(x / it) + 1;
+      if (tour > T.emomTours) return { temps: '0:00', frac: 0, fini: true, info: 'EMOM terminé', pill: 'Fini', cle: 'fin' };
+      var reste = it - (x % it);
+      return { temps: mmss(reste), frac: reste / it, info: 'Tour ' + tour + ' / ' + T.emomTours,
+               pill: tour + '/' + T.emomTours + ' · ' + mmss(reste),
+               cle: reste > it - 800 ? 't' + tour : (reste <= 3000 ? 'd' + tour + '-' + Math.ceil(reste / 1000) : '') };
+    }
+    if (T.mode === 'chrono') return { temps: mmss(e, true), frac: 1, info: T.run ? 'En cours' : (e ? 'En pause' : 'Prêt'),
+                                       pill: mmss(e), cle: '' };
+    return null;
+  }
+
+  function tick() {
+    var s = etat();
+    if (s && T.run && s.cle && s.cle !== tKey) {
+      tKey = s.cle;
+      if (s.cle === 'fin') sFin();
+      else if (/^t/.test(s.cle)) sTop();
+      else sCourt();
+    }
+    if (s && T.run && s.fini) {             // fin : on fige, on prévient
+      T.acc = ecoule(); T.run = false; T.fini = true; tSave(); veille();
+      var tool = $('tool'); tool.classList.remove('flash'); void tool.offsetWidth; tool.classList.add('flash');
+      if (T.mode === 'recup' && T.vue === 'series' && $('tool').classList.contains('on')) majSeries();
+      renderToolFoot();
+      /* le « GO » clignote 15 s puis s'efface tout seul s'il n'a pas été vu */
+      if (T.mode === 'recup') setTimeout(function () {
+        if (T.fini && T.mode === 'recup' && !T.run) { T.fini = false; tSave(); tick(); }
+      }, 15000);
+    }
+    /* affichage */
+    var ring = $('t-ring');
+    if (ring && s && ring.getAttribute('data-m') === T.mode) {
+      $('t-time').textContent = s.temps; $('t-info').textContent = s.info;
+      ring.classList.toggle('prep', !!s.prep); ring.classList.toggle('fini', !!s.fini || T.fini);
+      $('t-arc').style.strokeDashoffset = String(289 * (1 - s.frac));
+    } else if (ring && ring.getAttribute('data-m') !== T.mode) {
+      ring.classList.remove('prep', 'fini'); $('t-arc').style.strokeDashoffset = '0';
+    }
+    var mini = $('t-mini');
+    if (mini) mini.innerHTML = (T.mode === 'recup' && (T.run || T.fini))
+      ? (T.fini ? '<b>GO</b> — série suivante' : 'Récup <b>' + s.temps + '</b>') : '';
+    var pill = $('t-pill'), visible = !$('tool').classList.contains('on') && s && (T.run || (T.fini && T.mode === 'recup'))
+                                       && !$('gate').classList.contains('on');
+    pill.classList.toggle('on', !!visible);
+    if (visible) {
+      pill.textContent = (T.fini ? (T.mode === 'recup' ? 'GO ⏱' : s.pill) : '⏱ ' + s.pill);
+      pill.classList.toggle('go', T.fini && T.mode === 'recup');
+      pill.classList.toggle('prep', !!s.prep);
+    }
+    $('t-tabs').querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('vit', T.run && b.getAttribute('data-v') === T.mode);
+    });
+    if (T.run && !tHandle) tHandle = setInterval(tick, 150);
+    if (!T.run && !T.fini && tHandle) { clearInterval(tHandle); tHandle = null; }
+    if (!T.run && T.fini && tHandle) { clearInterval(tHandle); tHandle = null; }
+  }
+
+  function lancer(mode) {
+    audio();
+    T.mode = mode; T.acc = 0; T.fini = false;
+    T.t0 = Date.now(); T.run = true; tKey = '';
+    tSave(); veille(); tick();
+  }
+  function pause() { T.acc = ecoule(); T.run = false; tSave(); veille(); tick(); }
+  function remiseAZero(mode) {
+    if (T.mode === mode || !mode) { T.run = false; T.acc = 0; T.fini = false; T.mode = mode || T.mode; }
+    tKey = ''; tSave(); veille(); tick();
+  }
+
+  /* ───── rendu du panneau ───── */
+  function ringHtml(mode) {
+    return '<div class="ring" id="t-ring" data-m="' + mode + '"><svg viewBox="0 0 100 100">' +
+      '<circle class="fond" cx="50" cy="50" r="46"/>' +
+      '<circle class="arc" id="t-arc" cx="50" cy="50" r="46" stroke-dasharray="289" stroke-dashoffset="0"/></svg>' +
+      '<div class="ctr"><div class="tbig" id="t-time">0:00</div><div class="tinfo" id="t-info">&nbsp;</div></div></div>';
+  }
+  function dureeChips(id, liste, val) {
+    return '<div class="chips" id="' + id + '">' + liste.map(function (s) {
+      return '<button class="chip' + (s === val ? ' sel' : '') + '" data-s="' + s + '">' + mmss(s * 1000) + '</button>';
+    }).join('') + '</div>';
+  }
+  function renderTool() {
+    var v = T.vue, h = '';
+    $('t-tabs').querySelectorAll('button').forEach(function (b) { b.classList.toggle('sel', b.getAttribute('data-v') === v); });
+    var tourne = T.run && T.mode === v;
+    if (v === 'recup') {
+      h = ringHtml('recup') +
+        '<div class="tset"><label>Durée de récup</label>' + dureeChips('t-dur', [45, 60, 90, 120, 150, 180, 240, 300], T.recup) + '</div>' +
+        '<div class="tset"><div class="tstep"><button data-a="-15">−15 s</button><b id="t-durv">' + mmss(T.recup * 1000) +
+        '</b><button data-a="15">+15 s</button></div></div>';
+      if (T.mode !== 'recup') h = h.replace('0:00', mmss(T.recup * 1000));
+    } else if (v === 'emom') {
+      h = ringHtml('emom') +
+        '<div class="' + (tourne ? 'off' : '') + '">' +
+        '<div class="tset"><label>Toutes les</label>' + dureeChips('t-int', [30, 45, 60, 90, 120, 180], T.emomInt) + '</div>' +
+        '<div class="tset"><label>Nombre de tours</label><div class="tstep"><button data-t="-1">−</button><b id="t-tours">' +
+        T.emomTours + '</b><button data-t="1">+</button></div></div></div>';
+      if (T.mode !== 'emom') h = h.replace('0:00', mmss(T.emomInt * 1000)).replace('&nbsp;', T.emomTours + ' tours · ' + Math.round(T.emomInt * T.emomTours / 60) + ' min');
+    } else if (v === 'chrono') {
+      h = ringHtml('chrono');
+      if (T.mode !== 'chrono') h = h.replace('0:00', '0:00,0');
+    } else {
+      h = '<div id="t-series"></div>';
+    }
+    $('t-body').innerHTML = h;
+    if (v === 'series') majSeries();
+
+    var bd = $('t-body');
+    bd.querySelectorAll('#t-dur .chip').forEach(function (b) {
+      b.onclick = function () {
+        T.recup = Number(b.getAttribute('data-s'));
+        if (T.mode === 'recup' && (T.run || T.fini)) lancer('recup'); else tSave();
+        renderTool();
+      };
+    });
+    bd.querySelectorAll('.tstep button[data-a]').forEach(function (b) {
+      b.onclick = function () {     // en cours de récup, ± ajuste la récup en cours
+        T.recup = Math.max(15, Math.min(900, T.recup + Number(b.getAttribute('data-a'))));
+        tSave(); renderTool();
+      };
+    });
+    bd.querySelectorAll('#t-int .chip').forEach(function (b) {
+      b.onclick = function () { T.emomInt = Number(b.getAttribute('data-s')); tSave(); renderTool(); };
+    });
+    bd.querySelectorAll('.tstep button[data-t]').forEach(function (b) {
+      b.onclick = function () { T.emomTours = Math.max(1, Math.min(60, T.emomTours + Number(b.getAttribute('data-t')))); tSave(); renderTool(); };
+    });
+    renderToolFoot(); tick();
+  }
+
+  function renderToolFoot() {
+    var v = T.vue, f = $('t-foot');
+    if (v === 'series') {
+      f.innerHTML = '<button class="side" id="t-moins">−1</button><button class="btn" id="t-plus">Série faite ✓</button>';
+      $('t-moins').onclick = function () { if (T.series.n > 0) { T.series.n--; tSave(); majSeries(); } };
+      $('t-plus').onclick = function () {
+        audio();
+        var S = T.series; S.n++; tSave(); vibre(40);
+        if (S.cible && S.n >= S.cible) { toast('Toutes les séries sont faites 💪'); if (T.mode === 'recup' && T.run) remiseAZero('recup'); }
+        else if (S.auto) lancer('recup');
+        majSeries();
+      };
+      return;
+    }
+    var tourne = T.run && T.mode === v, enPause = !T.run && T.mode === v && T.acc > 0 && !T.fini;
+    var lbl = tourne ? 'Pause' : (enPause ? 'Reprendre' : (v === 'recup' && T.fini && T.mode === 'recup' ? 'Relancer' : 'Démarrer'));
+    f.innerHTML = '<button class="side" id="t-raz">↺</button><button class="btn" id="t-go">' + lbl + '</button>';
+    $('t-raz').onclick = function () { remiseAZero(v); renderTool(); };
+    $('t-go').onclick = function () {
+      if (tourne) pause();
+      else if (enPause) { audio(); T.t0 = Date.now(); T.run = true; tSave(); veille(); tick(); }
+      else lancer(v);
+      renderTool();
+    };
+  }
+
+  function majSeries() {
+    var w = $('t-series'); if (!w) return;
+    var S = T.series, plein = S.cible && S.n >= S.cible, pts = '';
+    for (var i = 0; i < Math.max(S.cible || 0, S.n); i++) pts += '<i class="' + (i < S.n ? 'on' : '') + '"></i>';
+    w.innerHTML =
+      '<div class="snom">' + esc(S.nom || 'Compteur libre') + '<i>' + (S.nom ? 'exercice en cours' : 'séries') + '</i></div>' +
+      '<div class="scount' + (plein ? ' plein' : '') + '">' + S.n + (S.cible ? '<em> / ' + S.cible + '</em>' : '') + '</div>' +
+      '<div class="spts">' + pts + '</div>' +
+      '<div class="smini" id="t-mini"></div>' +
+      '<div class="tset"><label>Séries prévues</label><div class="tstep"><button data-c="-1">−</button><b>' +
+        (S.cible || '—') + '</b><button data-c="1">+</button></div></div>' +
+      '<div class="tset"><button class="tsw' + (S.auto ? ' on' : '') + '" id="t-auto"><span>Lancer la récup (' +
+        mmss(T.recup * 1000) + ') après chaque série</span><i></i></button></div>' +
+      '<div class="tset" style="text-align:center"><button class="chip" id="t-s0" style="padding:9px 18px">Remettre à zéro</button></div>';
+    w.querySelectorAll('button[data-c]').forEach(function (b) {
+      b.onclick = function () { S.cible = Math.max(0, Math.min(40, (S.cible || 0) + Number(b.getAttribute('data-c')))); tSave(); majSeries(); };
+    });
+    $('t-auto').onclick = function () { S.auto = !S.auto; tSave(); majSeries(); };
+    $('t-s0').onclick = function () { S.n = 0; tSave(); majSeries(); };
+    tick();
+  }
+
+  /* ouvert depuis une séance : le compteur suit l'exercice affiché */
+  function ouvrirTool() {
+    var e = seance && $('run').classList.contains('on') && seance.exos[idx];
+    if (e) {
+      var cle = (prog ? prog.block + '|' + prog.semaine + '|' : '') + seance._i + '|' + e.row;
+      if (T.series.cle !== cle) {
+        var n = nb(e.sets);
+        T.series = { n: 0, cible: n ? Math.round(n) : (T.series.cible || 4), cle: cle, auto: T.series.auto !== false,
+                     nom: cap(e.nom) + (e.variante ? ' · ' + e.variante : '') };
+      }
+    }
+    if (T.run && T.mode !== T.vue && T.vue !== 'series') T.vue = T.mode;
+    tSave();
+    $('tool').classList.add('on');
+    renderTool();
+  }
+  $('h-tool').onclick = ouvrirTool;
+  $('r-tool').onclick = ouvrirTool;
+  $('t-pill').onclick = function () {
+    if (T.fini && T.mode === 'recup') { T.fini = false; T.acc = 0; tSave(); }
+    ouvrirTool();
+  };
+  $('t-close').onclick = function () { $('tool').classList.remove('on'); tick(); };
+  $('t-tabs').querySelectorAll('button').forEach(function (b) {
+    b.onclick = function () { T.vue = b.getAttribute('data-v'); tSave(); renderTool(); };
+  });
+  if (T.fini && T.mode === 'recup') T.fini = false;   // un vieux « GO » ne ressort pas à la réouverture
+  tick(); veille();
+
   /* ───── démarrage ───── */
   (function () {
     var g = $('gate-sil');
@@ -1673,7 +2054,26 @@
 
   netState();
   if (code && sGet(LS_ROLE) === 'coach') { $('code').value = code; loadCoach(); }
-  else if (code) { $('code').value = code; show('home'); load(null).then(resumeRunIfAny); }
+  else if (code) {
+    /* On ne déplace JAMAIS l'athlète après coup : l'ancienne version attendait la réponse du
+       serveur (10-20 s) pour le renvoyer dans sa séance, en plein milieu de ce qu'il faisait.
+       Désormais la reprise est immédiate, depuis ce qui est gardé dans le téléphone, et
+       seulement s'il était dans une séance quand il a quitté l'app. */
+    var etaitEnSeance = sGet(LS_ECRAN) === 'run';
+    $('code').value = code; show('home');
+    var charge = load(null);
+    if (etaitEnSeance) {
+      if (prog) resumeRunIfAny();
+      else {   // premier lancement sans rien en mémoire : on ne reprend que s'il n'a encore touché à rien
+        var touche = false, marque = function () { touche = true; };
+        document.addEventListener('pointerdown', marque, true);
+        charge.then(function () {
+          document.removeEventListener('pointerdown', marque, true);
+          if (!touche && $('home').classList.contains('on')) resumeRunIfAny();
+        });
+      }
+    }
+  }
   else show('gate');
   flush();
 
