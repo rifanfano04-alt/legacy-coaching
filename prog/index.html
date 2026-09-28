@@ -1514,13 +1514,26 @@
     if (!memeSemaine(prog)) return;   // l'écran affiche une autre semaine : on n'y touche pas
     var src = prog.seances[seance._i];
     if (!src || !src.exos) return;
-    var par = {};
-    src.exos.forEach(function (x) { par[x.row] = x; });
-    seance.exos.forEach(function (e) {
-      var x = par[e.row];
-      if (!x) return;
+    /* La LISTE des exercices vient aussi du programme : un brouillon ouvert pendant que le coach
+       écrivait la séance n'en contenait qu'une partie (cas vécu : 1 seul exo sur 7), et il restait
+       figé ainsi. On repart du programme et on y remet les saisies du brouillon (par ligne). */
+    var brouillon = {};
+    seance.exos.forEach(function (e) { brouillon[e.row] = e; });
+    /* on garde les MÊMES objets pour les exos déjà là : l'écran en cours de saisie les tient */
+    var exos = src.exos.map(function (x) {
+      var e = brouillon[x.row];
+      delete brouillon[x.row];
+      if (!e) return JSON.parse(JSON.stringify(x));
       Object.keys(x).forEach(function (k) { if (!SAISIE[k]) e[k] = x[k]; });
+      return e;
     });
+    /* une ligne retirée du programme mais déjà saisie n'est pas jetée en silence */
+    Object.keys(brouillon).forEach(function (r) {
+      var b = brouillon[r];
+      if (Object.keys(SAISIE).some(function (k) { return b[k] !== undefined && b[k] !== null && b[k] !== ''; })) exos.push(b);
+    });
+    seance.exos = exos;
+    if (idx >= exos.length) idx = Math.max(0, exos.length - 1);
   }
   /* Un record, c'est battre une charge déjà établie. La première fois à un format,
      tout serait un record : on le mentionne, sans carte ni couleur. */
