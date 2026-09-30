@@ -66,6 +66,9 @@ function doPost(e) {
     else if (action === 'weekly')  out = apiWeekly(body);
     else if (action === 'coach')   out = apiCoach(body);
     else if (action === 'records') out = apiRecords(body);
+    else if (action === 'coachAthletes') out = apiCoachAthletes(body);
+    else if (action === 'coachFiche')    out = apiCoachFiche(body);
+    else if (action === 'coachReglages') out = apiCoachReglages(body);
     else out = { ok: false, error: 'action inconnue : ' + action };
   } catch (err) {
     out = { ok: false, error: String(err && err.message || err) };
@@ -596,6 +599,7 @@ function apiSave(body) {
   }
   rebuildPR_(a.sheetId);
   try { recordsAthlete_(a.sheetId, true); } catch (e) {}   // le record vient peut-etre de changer
+  oublierFiche_(a.sheetId);                                  // vue coach : la fiche sera relue
   return { ok: true, refus: refus };
 }
 
@@ -643,6 +647,7 @@ function apiWeekly(body) {
   } finally {
     lock.releaseLock();
   }
+  oublierFiche_(a.sheetId);   // vue coach : la fiche sera relue
   return { ok: true };
 }
 
@@ -834,18 +839,195 @@ function apiCoach(body) {
   return { ok: true, prenom: a.prenom, athletes: athletes };
 }
 
+/* ═════════════════════════ VUE COACH v2 ═════════════════════════
+   La fiche complète d'un athlète : tous ses onglets BLOCK (toutes les semaines, toutes les lignes)
+   et son Tableau de PR. Tout est calculé ensuite dans l'app (records battus, graphiques, muscles).
+   - fiche gardée en mémoire du script, compressée (limite ~100 Ko par entrée), 15 min maximum,
+     effacée dès que l'athlète envoie une séance ou son bilan (apiSave / apiWeekly) ;
+   - réglages du coach (classement des exercices, muscles associés, fusions) dans les propriétés du script. */
 
+var FICHE_TTL = 900;
+var JAUNE_V2 = [['sommeil', /^sommeil/], ['nutrition', /^nutrition/], ['steps', /^steps/], ['humeur', /^humm?eur/], ['poids', /^poids/]];
 
+function coachAutorise_(body) {
+  var a = athleteFromCode_(body.code);
+  if (!a.coach) throw new Error('Réservé au coach.');
+  return a;
+}
 
+/** Athlètes actifs du registre (gardés 15 min en mémoire : ouvrir FUTURE PROG coûte cher). */
+function athletesActifs_() {
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  if (cache) { var hit = cache.get('reg:actifs'); if (hit) { try { return JSON.parse(hit); } catch (e) {} } }
+  var rows = registreSheet_().getDataRange().getValues(), out = [];
+  for (var i = 1; i < rows.length; i++) {
+    var code = String(rows[i][0] || '').trim();
+    if (!code) continue;
+    if (String(rows[i][2] || 'oui').trim().toLowerCase() === 'non') continue;
+    var id = String(rows[i][3] || '').trim();
+    var m = id.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (m) id = m[1];
+    if (!id) continue;
+    out.push({ code: code, prenom: String(rows[i][1] || '').trim() || code, id: id });
+  }
+  if (cache) { try { cache.put('reg:actifs', JSON.stringify(out), 900); } catch (e) {} }
+  return out;
+}
 
+function numV2_(x) {
+  if (x === '' || x === null || x === undefined) return null;
+  if (typeof x === 'number') return x;
+  if (x instanceof Date) return parseFloat(x.getDate() + '.' + (x.getMonth() + 1));   // « 7.5 » converti en date par Sheets FR
+  var m = String(x).match(/^\s*(\d+(?:[.,]\d+)?)/);
+  return m ? parseFloat(m[1].replace(',', '.')) : null;
+}
+function txtV2_(x) {
+  if (x === null || x === undefined) return '';
+  if (x instanceof Date) return x.getDate() + '.' + (x.getMonth() + 1);
+  if (typeof x === 'number') return (x % 1 === 0) ? String(x) : String(x);
+  return String(x).trim();
+}
+function isoV2_(d) { return (d instanceof Date) ? Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd') : null; }
 
+function extraireFiche_(id) {
+  var ss = SpreadsheetApp.openById(id);
+  var blocs = {}, semaines = {};
+  ss.getSheets().forEach(function (sh) {
+    var mm = sh.getName().match(/^BLOCK (\d+)$/);
+    if (!mm) return;
+    var b = Number(mm[1]);
+    var nbL = Math.min(sh.getMaxRows(), HAUTEUR_MAX), nbC = Math.min(sh.getMaxColumns(), 4 + 18 * 5 + 17);
+    var v = sh.getRange(1, 1, nbL, nbC).getValues();
+    var cell = function (r, c) { return (r >= 1 && r <= nbL && c >= 1 && c <= nbC) ? v[r - 1][c - 1] : ''; };
+    var dm = String(cell(12, 16) || '').match(/(\d)/), duree = dm ? Number(dm[1]) : null;
+    var heads = [];
+    for (var r = 1; r <= nbL; r++) if (String(cell(r, 4) || '').trim().toLowerCase() === 'mouvement') heads.push(r);
+    blocs[b] = { debut: isoV2_(cell(12, 4)), duree: duree };
+    for (var w = 1; w <= 6; w++) {
+      if (duree && w > duree) break;
+      var c = 4 + 18 * (w - 1);
+      if (c + 15 > nbC) break;
+      var seances = [], vide = true;
+      heads.forEach(function (h) {
+        var lignes = [], rr = h + 2;
+        while (rr <= nbL && String(cell(rr, 4) || '').trim().toLowerCase().indexOf('total s') !== 0) {
+          var nom = txtV2_(cell(rr, c)), s = numV2_(cell(rr, c + 3));
+          if (nom && s) {
+            var e1 = numV2_(cell(rr, c + 15));
+            lignes.push({ row: rr, code: txtV2_(cell(rr, c - 1)), nom: nom.toLowerCase(), 'var': txtV2_(cell(rr, c + 1)).toLowerCase(),
+              tempo: txtV2_(cell(rr, c + 2)), sets: s, reps: numV2_(cell(rr, c + 5)) || 0, repsTxt: txtV2_(cell(rr, c + 5)),
+              rpeCible: txtV2_(cell(rr, c + 6)), rpe1: txtV2_(cell(rr, c + 7)), rpeLast: txtV2_(cell(rr, c + 8)),
+              charge: numV2_(cell(rr, c + 12)), note: txtV2_(cell(rr, c + 13)), ton: numV2_(cell(rr, c + 14)) || 0,
+              // une cellule mal remplie a donné -2881,7 chez Mathias : on écarte l'aberrant
+              e1rm: (e1 !== null && e1 > 0 && e1 < 400) ? e1 : null });
+          }
+          rr++;
+        }
+        if (lignes.length) vide = false;
+        seances.push({ jour: txtV2_(cell(h - 1, c)), difficulte: txtV2_(cell(rr, c + 13)), lignes: lignes });
+      });
+      /* tableau jaune : libellés cherchés DANS L'ORDRE (sinon « poids » sort avant « humeur ») ; case vide = null */
+      var recup = {}, depart = 1;
+      JAUNE_V2.forEach(function (j) {
+        for (var r2 = depart; r2 <= nbL; r2++) {
+          if (j[1].test(String(cell(r2, c + 11) || '').trim().toLowerCase())) { recup[j[0]] = numV2_(cell(r2, c + 12)); depart = r2 + 1; return; }
+        }
+      });
+      if (!vide) semaines[b + '-' + w] = { date: isoV2_(cell(12, c)), seances: seances, recup: recup };
+    }
+  });
+  return { blocs: blocs, semaines: semaines, pr: tableauPrV2_(ss) };
+}
 
+/** Le Tableau de PR tel qu'il est affiché dans le Sheet : groupes > exercices > lignes (format, schéma, record, date). */
+function tableauPrV2_(ss) {
+  var sh = ss.getSheetByName('TABLEAU DE PR');
+  if (!sh) return [];
+  var vals = sh.getDataRange().getValues(), nL = vals.length;
+  var v = function (r, c) { return (r >= 1 && r <= nL && vals[r - 1][c - 1] !== undefined) ? vals[r - 1][c - 1] : ''; };
+  var groupes = [], cur = null, r = 4;
+  while (r <= nL) {
+    var b = v(r, 2);
+    if (b && v(r + 1, 2) === 'Format') {
+      var fin = r + 2;
+      [2, 7, 12].forEach(function (c) {
+        var nom = v(r, c);
+        if (!nom) return;
+        var rows = [], rr = r + 2;
+        while (rr <= nL && v(rr, c) !== '' && v(rr, c) !== null) {
+          var d = v(rr, c + 3);
+          rows.push({ f: String(v(rr, c)), s: String(v(rr, c + 1)), rec: String(v(rr, c + 2)),
+                      le: (d instanceof Date) ? Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd/MM/yy') : String(d || '') });
+          rr++;
+        }
+        fin = Math.max(fin, rr);
+        if (!cur) { cur = { titre: 'AUTRE', exos: [] }; groupes.push(cur); }
+        cur.exos.push({ nom: String(nom), rows: rows });
+      });
+      r = fin; continue;
+    }
+    if (b && typeof b === 'string') { cur = { titre: b.trim(), exos: [] }; groupes.push(cur); }
+    r++;
+  }
+  return groupes.filter(function (g) { return g.exos.length; });
+}
 
+/* mémoire du script : JSON compressé puis découpé en morceaux de 90 000 caractères */
+function ficheEnCache_(id) {
+  try {
+    var c = CacheService.getScriptCache(), n = Number(c.get('fiche:' + id + ':n') || 0);
+    if (!n) return null;
+    var cles = []; for (var i = 0; i < n; i++) cles.push('fiche:' + id + ':' + i);
+    var got = c.getAll(cles), s = '';
+    for (var k = 0; k < n; k++) { if (!got[cles[k]]) return null; s += got[cles[k]]; }
+    var json = Utilities.ungzip(Utilities.newBlob(Utilities.base64Decode(s), 'application/x-gzip')).getDataAsString();
+    return JSON.parse(json);
+  } catch (e) { return null; }
+}
+function mettreFicheEnCache_(id, fiche) {
+  try {
+    var z = Utilities.base64Encode(Utilities.gzip(Utilities.newBlob(JSON.stringify(fiche), 'application/json')).getBytes());
+    var parts = {}, n = 0;
+    for (var i = 0; i < z.length; i += 90000) { parts['fiche:' + id + ':' + n] = z.slice(i, i + 90000); n++; }
+    parts['fiche:' + id + ':n'] = String(n);
+    CacheService.getScriptCache().putAll(parts, FICHE_TTL);
+  } catch (e) {}
+}
+/** Appelé après chaque envoi de l'athlète : la prochaine ouverture relit le Sheet. */
+function oublierFiche_(id) { try { CacheService.getScriptCache().remove('fiche:' + id + ':n'); } catch (e) {} }
 
+function lireReglages_() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('coach_reglages') || '{}'); } catch (e) { return {}; }
+}
 
+function apiCoachAthletes(body) {
+  var a = coachAutorise_(body);
+  return { ok: true, prenom: a.prenom,
+           athletes: athletesActifs_().map(function (x) { return { code: x.code, prenom: x.prenom }; }),
+           reglages: lireReglages_() };
+}
 
+function apiCoachFiche(body) {
+  coachAutorise_(body);
+  var voulu = String(body.athlete || '').trim().toUpperCase();
+  var cible = athletesActifs_().filter(function (x) { return x.code.toUpperCase() === voulu; })[0];
+  if (!cible) throw new Error('Athlète introuvable.');
+  var fiche = body.forcer ? null : ficheEnCache_(cible.id);
+  if (!fiche) { fiche = extraireFiche_(cible.id); mettreFicheEnCache_(cible.id, fiche); }
+  return { ok: true, code: cible.code, prenom: cible.prenom, fiche: fiche };
+}
 
-
-
-
-
+function apiCoachReglages(body) {
+  coachAutorise_(body);
+  var r = lireReglages_();
+  if (body.reglages) {
+    ['classement', 'muscles', 'fusions'].forEach(function (k) {
+      if (body.reglages[k] && typeof body.reglages[k] === 'object') r[k] = body.reglages[k];
+    });
+    var s = JSON.stringify(r);
+    if (s.length > 8500) throw new Error('Réglages trop volumineux.');
+    PropertiesService.getScriptProperties().setProperty('coach_reglages', s);
+  }
+  return { ok: true, reglages: r };
+}
