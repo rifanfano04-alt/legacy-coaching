@@ -23,8 +23,14 @@
   .wrap{max-width:480px;margin:0 auto;padding:0 16px 60px;}
 
   /* haut */
-  .top{display:flex;align-items:center;justify-content:space-between;padding:16px 0 6px;}
-  .back{display:flex;align-items:center;gap:6px;color:var(--grey-2);font-size:13px;font-weight:600;}
+  /* barre du haut toujours visible : « ‹ Athlètes » reste touchable même en bas de la fiche */
+  .top{position:sticky;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:10px;
+    height:50px;box-sizing:border-box;margin:0 -16px;padding:8px 16px;background:rgba(10,10,11,.9);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+  .top .mark{margin-left:auto;}
+  .top .bloupe{margin-left:0;width:30px;height:30px;}
+  .back{display:flex;align-items:center;gap:6px;color:var(--grey-2);font-size:13px;font-weight:600;
+    padding:10px 12px 10px 0;margin:-10px 0;}
   .mark{font-family:'Unbounded';font-weight:900;font-size:13px;letter-spacing:1px;}
   .mark span{color:var(--blood);}
   .hero{padding:18px 0 14px;position:relative;}
@@ -36,7 +42,7 @@
   .pill.red{color:#fff;background:var(--blood);border-color:var(--blood);}
 
   /* onglets */
-  .tabs{position:sticky;top:0;z-index:5;margin:0 -16px;padding:10px 16px;background:rgba(10,10,11,.88);
+  .tabs{position:sticky;top:50px;z-index:5;margin:0 -16px;padding:10px 16px;background:rgba(10,10,11,.88);
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line);}
   .seg{display:grid;grid-template-columns:repeat(3,1fr);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:3px;}
   .seg{position:relative;}
@@ -527,6 +533,7 @@
     <div class="top">
       <button class="back" id="retour">‹ Athlètes</button>
       <div class="mark">LEGA<span>CY</span> · COACH</div>
+      <button class="bloupe" id="fiche-maj" aria-label="Relire le Sheet">↻</button>
     </div>
     <div class="hero" id="hero"><h1 id="nom"></h1><div class="meta" id="meta"></div></div>
     <div id="fiche-err" style="display:none"><p class="vide-msg" id="fiche-err-t"></p><div style="text-align:center"><button class="chip on" id="fiche-err-r">Réessayer</button></div></div>
@@ -802,6 +809,22 @@ function ouvrirFiche(i, carte) {
   });
 }
 var FICHES_VUES = {};
+/* ↻ sur la fiche : relit le Sheet tout de suite (sinon le serveur garde sa copie jusqu'à 15 min
+   quand le coach corrige le Sheet à la main — seuls les envois de l'app l'effacent) */
+if ($('fiche-maj')) $('fiche-maj').onclick = function () {
+  var i = carteOuverte, a = DATA.athletes[i], b = $('fiche-maj');
+  if (!a || MAQUETTE || b.classList.contains('tourne')) return;
+  b.classList.add('tourne');
+  chargerFiche(a, true).then(function () {
+    b.classList.remove('tourne');
+    if (carteOuverte !== i || !$('fiche').classList.contains('on')) return;
+    if (a._change) {
+      a._change = false;
+      preparer(a); renderEntete(); ongl(ongletCourant, true); renderSemaine(); renderRec(); construireGraphiques();
+      toast('Fiche relue', 'données du Sheet');
+    } else toast('Déjà à jour', 'rien de changé dans le Sheet');
+  }, function (e) { b.classList.remove('tourne'); toast('Pas de réponse', e.message || 'réseau'); });
+};
 $('retour').onclick = function () {
   var carte;
   transition(function () {
