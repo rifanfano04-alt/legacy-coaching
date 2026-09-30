@@ -518,6 +518,31 @@
   @keyframes tourne{to{transform:rotate(360deg);}}
   /* athlète (lecture seule) : pas d'onglets, seulement ses records */
   .lecture .tabs{display:none;}
+  /* modifier un exercice : panneau qui monte du bas (appui long) */
+  [data-exo]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+  .edit{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,0);pointer-events:none;transition:background .25s;}
+  .edit.on{background:rgba(0,0,0,.55);pointer-events:auto;}
+  .edit-p{position:absolute;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;max-height:82vh;overflow-y:auto;
+    background:#141416;border:1px solid var(--line);border-bottom:0;border-radius:20px 20px 0 0;padding:8px 18px calc(22px + env(safe-area-inset-bottom,0px));
+    transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.8,.2,1);}
+  .edit.on .edit-p{transform:none;}
+  .ed-poignee{width:38px;height:4px;border-radius:2px;background:var(--line);margin:2px auto 10px;}
+  .ed-t{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+  .ed-t b{flex:1;font-family:'Unbounded';font-weight:800;font-size:16px;}
+  .ed-t button{color:var(--grey-2);font-size:15px;padding:6px;}
+  .ed-l{display:flex;justify-content:space-between;font-size:10.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--grey-2);margin:16px 0 7px;}
+  .ed-l span{font-weight:600;letter-spacing:0;text-transform:none;color:var(--grey-3,#6b6d75);}
+  .edit input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:15px;}
+  .ed-note{font-size:12px;color:var(--grey-2);margin-top:7px;}
+  .ed-note button{color:var(--grey-1);text-decoration:underline;font-size:12px;padding:0;}
+  .ed-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .ed-cands{display:flex;flex-direction:column;margin-top:6px;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  .ed-cands button{text-align:left;padding:10px 12px;font-size:14px;border-top:1px solid var(--line);}
+  .ed-cands button:first-child{border-top:0;}
+  .ed-masquer{display:block;margin:20px auto 0;color:#e2837a;font-size:13px;font-weight:600;}
+  .masques{margin-top:14px;text-align:center;}
+  .masques > button{font-size:12px;color:var(--grey-2);text-decoration:underline;}
+  .masques .cats{justify-content:center;margin-top:8px;}
 </style>
 
 </head>
@@ -556,6 +581,8 @@
     </div>
   </section>
 
+  <!-- modifier un exercice (appui long) -->
+  <div class="edit" id="edit"><div class="edit-p" id="edit-p"></div></div>
 </div>
 
 <script>
@@ -585,6 +612,10 @@ var FUSIONS = {};
 try { FUSIONS = JSON.parse(localStorage.getItem('lgcy-coach-fusions') || '{}'); } catch (e) {}
 var FUSIONS_DEFAUT = { 'lat pull down': 'straight arm pull down' };
 function canonF(s) { var k = canon(s); return FUSIONS[k] || FUSIONS_DEFAUT[k] || k; }
+/* réglages du coach par exercice (clé = nom canonique, après fusion) : nom affiché, exercice masqué */
+var NOMS = {}, MASQUES = {};
+function nomVu(n) { var v = NOMS[canonF(n)]; n = String(n || ''); return v || (n.charAt(0).toUpperCase() + n.slice(1)); }
+function masque(n) { return !!MASQUES[canonF(n)]; }
 /* orthographe corrigée (streight / dawn), sans toucher aux pluriels : c'est ce que lisent les règles de muscles */
 function nomRegle(s) { return cleNom(s).replace(/\bstreight\b/g, 'straight').replace(/\bdawn\b/g, 'down'); }
 /* + pluriels retirés pour reconnaître un même exercice ; « press », « extenss » gardent leur s */
@@ -701,7 +732,7 @@ function categorieAuto(a, nom) {
   return p ? titreApp(p.titre) : AUTRE;
 }
 function categorie(a, nom) {
-  var c = CLASSEMENT[cleNom(nom)];
+  var c = CLASSEMENT[canonF(nom)] || CLASSEMENT[cleNom(nom)];
   if (c === 'ÉPAULES') c = 'POUSSÉE (PECS / DIPS)';   // ancien classement fait quand Épaules existait
   return CATS.indexOf(c) >= 0 ? c : categorieAuto(a, nom);
 }
@@ -1337,7 +1368,7 @@ function exosSansRecord() {
   LABS.forEach(function (lab) { A.semaines[lab].seances.forEach(function (s) { s.lignes.forEach(function (l) {
     if (GROUPE_MVT[l.nom]) return;
     var n = nomAff(l), k = canonF(n);
-    if (!k || connus[k] || out[k]) return;
+    if (!k || connus[k] || out[k] || MASQUES[k]) return;
     if (prProche(A, n)) return;   // simple faute de frappe d'un exercice qui a déjà ses records
     out[k] = n;
   }); }); });
@@ -1370,7 +1401,7 @@ function renderRec(anim) {
   CATS.forEach(function (c) { parTitre[c] = { titre: c, exos: [] }; });
   A.pr.forEach(function (g) {
     g.exos.forEach(function (e) {
-      if (estPrinc(e.nom)) return;
+      if (estPrinc(e.nom) || masque(e.nom)) return;
       var rows = e.rows.filter(garder).sort(schemaTri);
       if (!rows.length || (q && cleNom(e.nom).indexOf(q) < 0)) return;
       var auto = categorieAuto(A, e.nom), dest = categorie(A, e.nom), kf = canonF(e.nom);
@@ -1398,7 +1429,7 @@ function renderRec(anim) {
         (n ? ' · <em>' + n + ' récent' + (n > 1 ? 's' : '') + '</em>' : '') + '</span></div><span class="chev">›</span></button><div class="gb">' +
         g.exos.map(function (e) {
           var nr = nbRecents(e.rows), seul = e.rows.length === 1 ? e.rows[0] : null, k = cleNom(e.nom);
-          return '<div class="rex' + (q || filtre.recent ? ' open' : '') + '"><button class="rh"><div><b>' + esc(e.nom.charAt(0).toUpperCase() + e.nom.slice(1)) + '</b><br><span>' +
+          return '<div class="rex' + (q || filtre.recent ? ' open' : '') + '"><button class="rh" data-exo="' + esc(e.nom) + '"><div><b>' + esc(nomVu(e.nom)) + '</b><br><span>' +
             [!e.rows.length ? 'aucun record' : seul ? esc(seul.s) + ' · ' + esc(seul.rec) : '',
              nr ? '<em style="font-style:normal;color:var(--or);font-weight:700">' + (seul ? 'récent' : nr + ' récent' + (nr > 1 ? 's' : '')) + '</em>' : '',
              e.deplace ? '<em style="font-style:normal;color:var(--grey-2)">déplacé</em>' : ''].filter(Boolean).join(' · ') +
@@ -1428,7 +1459,7 @@ function renderRec(anim) {
   $('v-rec').querySelectorAll('.bclasser').forEach(function (b) { b.onclick = function () { enClassement = enClassement === b.dataset.n ? null : b.dataset.n; renderRec(); }; });
   $('v-rec').querySelectorAll('[data-cat]').forEach(function (b) {
     b.onclick = function () {
-      CLASSEMENT[b.dataset.n] = b.dataset.cat; ecrireClassement();
+      delete CLASSEMENT[b.dataset.n]; CLASSEMENT[canonF(b.dataset.n)] = b.dataset.cat; ecrireClassement();
       enClassement = null; ouvertG = b.dataset.cat; renderRec(); construireGraphiques(); toast(b.dataset.n, b.dataset.cat);
     };
   });
@@ -1493,7 +1524,8 @@ var REGLES_MUSCLES = [
 var MUSCLES_MANUEL = {};
 try { MUSCLES_MANUEL = JSON.parse(localStorage.getItem('lgcy-coach-muscles') || '{}'); } catch (e) {}
 function musclesDe(nom) {
-  var k = cleNom(nom); if (MUSCLES_MANUEL[k]) return MUSCLES_MANUEL[k];
+  var k = canonF(nom); if (MUSCLES_MANUEL[k]) return MUSCLES_MANUEL[k];
+  k = cleNom(nom); if (MUSCLES_MANUEL[k]) return MUSCLES_MANUEL[k];
   k = nomRegle(nom);
   for (var i = 0; i < REGLES_MUSCLES.length; i++) if (REGLES_MUSCLES[i][0].test(k)) return REGLES_MUSCLES[i][1];
   return [];
@@ -1518,7 +1550,7 @@ function volumeMuscles() {
 function exosDuMuscle(m) {
   var vus = {}, out = [];
   A.pr.forEach(function (g) { g.exos.forEach(function (e) {
-    var k = canonF(e.nom); if (musclesDe(e.nom).indexOf(m) < 0) return;
+    var k = canonF(e.nom); if (masque(e.nom) || musclesDe(e.nom).indexOf(m) < 0) return;
     if (vus[k]) { reunir(vus[k], e); return; }
     vus[k] = { nom: e.nom, rows: e.rows.slice().sort(schemaTri), princ: estPrinc(e.nom), alias: [] }; out.push(vus[k]);
   }); });
@@ -1529,7 +1561,7 @@ function exosDuMuscle(m) {
 function exosSansMuscle() {
   var vus = {}, out = [];
   A.pr.forEach(function (g) { g.exos.forEach(function (e) {
-    var k = canonF(e.nom); if (musclesDe(e.nom).length) return;
+    var k = canonF(e.nom); if (masque(e.nom) || musclesDe(e.nom).length) return;
     if (vus[k]) { reunir(vus[k], e); return; }
     vus[k] = { nom: e.nom, rows: e.rows.slice().sort(schemaTri), alias: [] }; out.push(vus[k]);
   }); });
@@ -1583,7 +1615,7 @@ function reunir(dest, e) {
 var enFusion = null;
 function rexHtml(e, liste) {
   var seul = e.rows.length === 1 ? e.rows[0] : null, nr = nbRecents(e.rows), k = cleNom(e.nom), kf = canonF(e.nom);
-  return '<div class="rex"><button class="rh"><div><b>' + esc(e.nom.charAt(0).toUpperCase() + e.nom.slice(1)) + '</b><br><span>' +
+  return '<div class="rex"><button class="rh" data-exo="' + esc(e.nom) + '"><div><b>' + esc(nomVu(e.nom)) + '</b><br><span>' +
     [!e.rows.length ? 'aucun record' : seul ? esc(seul.s) + ' · ' + esc(seul.rec) : '',
      nr ? '<em style="font-style:normal;color:var(--or);font-weight:700">' + (seul ? 'récent' : nr + ' récent' + (nr > 1 ? 's' : '')) + '</em>' : ''].filter(Boolean).join(' · ') +
     '</span></div><span class="chev">›</span></button>' +
@@ -1603,7 +1635,7 @@ function fusionHtml(e, liste) {
   if (autres.length) {
     h += '<button class="bfus" data-fus="' + esc(kf) + '">Fusionner avec… ›</button>';
     if (enFusion === kf) h += '<div class="cats">' + autres.map(function (x) {
-      return '<button class="chip" data-dans="' + esc(canonF(x.nom)) + '" data-de="' + esc(kf) + '">' + esc(x.nom.charAt(0).toUpperCase() + x.nom.slice(1)) + '</button>'; }).join('') + '</div>';
+      return '<button class="chip" data-dans="' + esc(canonF(x.nom)) + '" data-de="' + esc(kf) + '">' + esc(nomVu(x.nom)) + '</button>'; }).join('') + '</div>';
   }
   return h + '</div>';
 }
@@ -1625,6 +1657,9 @@ function corpsHtml() {
     '<button class="bloupe" id="pivoter" aria-label="Pivoter">↻</button></div>' + detailPrinc();
   if (corps.muscle) h += detailExo();
   var sans = exosSansMuscle();
+  var masques = LECTURE ? [] : Object.keys(MASQUES);
+  if (masques.length) h += '<div class="masques"><button id="voir-masques">' + masques.length + ' exercice' + (masques.length > 1 ? 's' : '') + ' masqué' + (masques.length > 1 ? 's' : '') + '</button>' +
+    (voirMasques ? '<div class="cats">' + masques.map(function (k) { return '<button class="chip" data-demasque="' + esc(k) + '">↺ ' + esc(NOMS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + '</button>'; }).join('') + '</div>' : '') + '</div>';
   if (sans.length && !LECTURE) h += '<div class="grp' + (ouvertG === 'SANS' ? ' open' : '') + '" style="margin-top:12px"><button class="gh" data-g="SANS"><div class="tt"><b>Sans muscle</b><span>' + sans.length + ' exercice' + (sans.length > 1 ? 's' : '') +
     '</span></div><span class="chev">›</span></button><div class="gb">' + sans.map(function (e) { e.associer = true; return rexHtml(e, sans); }).join('') + '</div></div>';
   return h;
@@ -1684,8 +1719,8 @@ function etiquettesHtml(vol) {
     var gauche = i < g, rang = gauche ? i : i - g, nb = gauche ? g : n - g;
     var y = 62 + (nb > 1 ? rang * Math.min(52, 290 / (nb - 1)) : 130);
     var p = PRINC.filter(function (x) { return x.cle === cleNom(e.nom); })[0], kf = canonF(e.nom), nr = nbRecents(e.rows);
-    return '<button class="etiq ' + (gauche ? 'g' : 'd') + (corps.exo === kf ? ' on' : corps.exo ? ' eteint' : '') + (e.rows.length ? '' : ' sans') + '" data-ex="' + esc(kf) + '"' +
-      ' style="top:' + y + 'px;--i:' + i + (p ? ';--c:' + p.c : '') + '">' + esc(e.nom.charAt(0).toUpperCase() + e.nom.slice(1)) +
+    return '<button class="etiq ' + (gauche ? 'g' : 'd') + (corps.exo === kf ? ' on' : corps.exo ? ' eteint' : '') + (e.rows.length ? '' : ' sans') + '" data-ex="' + esc(kf) + '" data-exo="' + esc(e.nom) + '"' +
+      ' style="top:' + y + 'px;--i:' + i + (p ? ';--c:' + p.c : '') + '">' + esc(nomVu(e.nom)) +
       (nr ? '<i>🏆</i>' : '') + '</button>';
   }).join('');
   return h;
@@ -1744,7 +1779,7 @@ function detailExo() {
   var parF = {}, ordre = [];
   e.rows.forEach(function (r) { if (!parF[r.f]) { parF[r.f] = []; ordre.push(r.f); } parF[r.f].push(r); });
   ordre.sort(function (a, b) { return a === 'Standard' ? -1 : b === 'Standard' ? 1 : parF[b].length - parF[a].length; });
-  return '<div class="exo-d" style="--c:' + c + '"><div class="exo-t"><b>' + esc(e.nom.charAt(0).toUpperCase() + e.nom.slice(1)) + '</b>' +
+  return '<div class="exo-d" style="--c:' + c + '"><div class="exo-t"><b data-exo="' + esc(e.nom) + '">' + esc(nomVu(e.nom)) + '</b>' +
     (nr ? '<span>🏆 ' + nr + ' récent' + (nr > 1 ? 's' : '') + '</span>' : '') + '<button id="exo-x" aria-label="Fermer">✕</button></div>' +
     (e.rows.length ? ordre.map(function (f) { return (ordre.length > 1 || f !== 'Standard' ? '<div class="exo-f">' + esc(f) + '</div>' : '') +
       parF[f].sort(schemaTri).map(function (r) { return ligneRec(r, e.nom, c, true); }).join(''); }).join('') : '<p class="exo-vide">Aucun record</p>') +
@@ -1839,11 +1874,16 @@ function brancherCorps() {
   $('v-rec').querySelectorAll('[data-sep]').forEach(function (b) {
     b.onclick = function () { var k = b.dataset.sep, cible = FUSIONS[k]; delete FUSIONS[k]; ecrireFusions(); renderRec(); ouvrirRex(cible); };
   });
+  if ($('voir-masques')) $('voir-masques').onclick = function () { voirMasques = !voirMasques; renderRec(); };
+  $('v-rec').querySelectorAll('[data-demasque]').forEach(function (b) {
+    b.onclick = function () { delete MASQUES[b.dataset.demasque]; envoyerReglages(); renderRec(); toast('Réaffiché', 'de retour dans les records'); };
+  });
   $('v-rec').querySelectorAll('.bassoc').forEach(function (b) { b.onclick = function () { corps.associer = corps.associer === b.dataset.n ? null : b.dataset.n; renderRec(); }; });
   $('v-rec').querySelectorAll('[data-mu2]').forEach(function (b) {
     b.onclick = function () {
-      var k = b.dataset.n, liste = (MUSCLES_MANUEL[k] || []).slice(), i = liste.indexOf(b.dataset.mu2);
+      var k0 = b.dataset.n, k = canonF(k0), liste = (MUSCLES_MANUEL[k] || MUSCLES_MANUEL[k0] || []).slice(), i = liste.indexOf(b.dataset.mu2);
       if (i >= 0) liste.splice(i, 1); else liste.push(b.dataset.mu2);
+      delete MUSCLES_MANUEL[k0];
       if (liste.length) MUSCLES_MANUEL[k] = liste; else delete MUSCLES_MANUEL[k];
       try { localStorage.setItem('lgcy-coach-muscles', JSON.stringify(MUSCLES_MANUEL)); } catch (e) {}
       envoyerReglages();
@@ -1853,9 +1893,124 @@ function brancherCorps() {
 }
 /* après un nouveau rendu, on rouvre l'exercice sur lequel on travaillait */
 function ouvrirRex(kf) {
-  $('v-rec').querySelectorAll('.rex').forEach(function (r) { var b = r.querySelector('[data-fus],[data-sep]'); var n = r.querySelector('.rh b');
-    if (n && canonF(n.textContent) === kf) r.classList.add('open'); });
+  $('v-rec').querySelectorAll('.rex').forEach(function (r) { var n = r.querySelector('.rh[data-exo]');
+    if (n && canonF(n.dataset.exo) === kf) r.classList.add('open'); });
 }
+/* ==================== MODIFIER UN EXERCICE (appui long, coach seulement) ====================
+   Nom affiché, « c'est le même que… », muscles, catégorie, masquer : tout au même endroit,
+   sans bouton à l'écran. Enregistré dans les réglages du coach : s'applique aussi chez les athlètes. */
+var voirMasques = false, edNom = null, edQ = '';
+function tousLesExos() {
+  var vus = {}, out = [];
+  A.pr.forEach(function (g) { g.exos.forEach(function (e) { var k = canonF(e.nom); if (!vus[k] && !MASQUES[k]) { vus[k] = 1; out.push(e.nom); } }); });
+  exosSansRecord().forEach(function (n) { var k = canonF(n); if (!vus[k]) { vus[k] = 1; out.push(n); } });
+  return out;
+}
+function aliasDe(kf) {
+  var out = [];
+  A.pr.forEach(function (g) { g.exos.forEach(function (e) { if (canonF(e.nom) === kf && canon(e.nom) !== kf && out.indexOf(e.nom) < 0) out.push(e.nom); }); });
+  LABS.forEach(function (lab) { A.semaines[lab].seances.forEach(function (s) { s.lignes.forEach(function (l) {
+    var n = nomAff(l); if (n && canonF(n) === kf && canon(n) !== kf && out.indexOf(n) < 0) out.push(n); }); }); });
+  return out;
+}
+function sauverReglagesExo() {
+  try { localStorage.setItem('lgcy-coach-classement', JSON.stringify(CLASSEMENT)); localStorage.setItem('lgcy-coach-muscles', JSON.stringify(MUSCLES_MANUEL)); } catch (e) {}
+  envoyerReglages();
+}
+function ouvrirEdition(nom) {
+  if (LECTURE) return;
+  edNom = nom; edQ = '';
+  renderEdition();
+  $('edit').classList.add('on');
+}
+function fermerEdition() { $('edit').classList.remove('on'); edNom = null; }
+function renderEdition() {
+  if (!edNom) return;
+  var nom = edNom, kf = canonF(nom), princ = estPrinc(nom), mus = musclesDe(nom), cat = categorie(A, nom);
+  var auto = nom.charAt(0).toUpperCase() + nom.slice(1), alias = aliasDe(kf);
+  var cands = [];
+  if (edQ) {
+    var q = cleNom(edQ);
+    cands = tousLesExos().filter(function (n) { return canonF(n) !== kf && cleNom(nomVu(n) + ' ' + n).indexOf(q) >= 0; }).slice(0, 8);
+  }
+  var h = '<div class="ed-poignee"></div><div class="ed-t"><b>' + esc(nomVu(nom)) + '</b><button id="ed-x" aria-label="Fermer">✕</button></div>' +
+    '<label class="ed-l">Nom affiché</label><input id="ed-nom" value="' + esc(nomVu(nom)) + '" placeholder="' + esc(auto) + '" autocomplete="off">' +
+    (NOMS[kf] ? '<div class="ed-note">Dans le Sheet : « ' + esc(nom) + ' » · <button id="ed-nom-r">revenir</button></div>' : '') +
+    (princ ? '' : '<label class="ed-l">C\'est le même exercice que…</label><input id="ed-q" value="' + esc(edQ) + '" placeholder="Chercher le bon exercice" autocomplete="off">' +
+      (cands.length ? '<div class="ed-cands">' + cands.map(function (n) { return '<button data-meme="' + esc(n) + '">' + esc(nomVu(n)) + '</button>'; }).join('') + '</div>' :
+       edQ ? '<div class="ed-note">Aucun exercice trouvé</div>' : '')) +
+    (alias.length ? '<div class="ed-note">Réunit aussi : ' + alias.map(function (a) { return esc(a) + ' <button data-sep2="' + esc(canon(a)) + '">séparer</button>'; }).join(' · ') + '</div>' : '') +
+    '<label class="ed-l">Muscles <span>' + (mus.length ? 'le 1er = principal' : 'aucun') + '</span></label><div class="ed-chips">' +
+      Object.keys(MUSCLES).map(function (m) { var i = mus.indexOf(m); return '<button class="chip' + (i >= 0 ? ' on' : '') + '" data-edmu="' + m + '">' + (i === 0 ? '● ' : '') + MUSCLES[m].nom + '</button>'; }).join('') + '</div>' +
+    (MUSCLES_MANUEL[kf] || MUSCLES_MANUEL[cleNom(nom)] ? '<div class="ed-note"><button id="ed-mu-r">muscles automatiques</button></div>' : '') +
+    (princ ? '' : '<label class="ed-l">Catégorie</label><div class="ed-chips">' + CATS.map(function (c) {
+      return '<button class="chip' + (c === cat ? ' on' : '') + '" data-edcat="' + esc(c) + '">' + esc(joli(c)) + '</button>'; }).join('') + '</div>' +
+      '<button class="ed-masquer" id="ed-masquer">Masquer cet exercice</button>');
+  $('edit-p').innerHTML = h;
+  var apres = function () { sauverReglagesExo(); renderRec(); };
+  $('ed-x').onclick = fermerEdition;
+  var inN = $('ed-nom');
+  inN.onchange = function () {
+    var v = inN.value.trim();
+    if (!v || v === auto) delete NOMS[kf]; else NOMS[kf] = v;
+    envoyerReglages(); renderRec(); renderEdition();
+  };
+  inN.onkeydown = function (e) { if (e.key === 'Enter') inN.blur(); };
+  if ($('ed-nom-r')) $('ed-nom-r').onclick = function () { delete NOMS[kf]; envoyerReglages(); renderRec(); renderEdition(); };
+  var inQ = $('ed-q');
+  if (inQ) inQ.oninput = function () { edQ = inQ.value; var pos = inQ.selectionStart; renderEdition(); var n2 = $('ed-q'); n2.focus(); n2.setSelectionRange(pos, pos); };
+  $('edit-p').querySelectorAll('[data-meme]').forEach(function (b) {
+    b.onclick = function () {
+      var dans = canonF(b.dataset.meme);
+      Object.keys(FUSIONS).forEach(function (k) { if (FUSIONS[k] === kf) FUSIONS[k] = dans; });
+      FUSIONS[canon(nom)] = dans; if (canon(nom) !== kf) FUSIONS[kf] = dans;
+      delete NOMS[kf]; delete MASQUES[kf];
+      ecrireFusions(); fermerEdition(); renderRec(); construireGraphiques(); toast(nomVu(b.dataset.meme), 'fusionné');
+    };
+  });
+  $('edit-p').querySelectorAll('[data-sep2]').forEach(function (b) {
+    b.onclick = function () { delete FUSIONS[b.dataset.sep2]; ecrireFusions(); renderRec(); renderEdition(); };
+  });
+  $('edit-p').querySelectorAll('[data-edmu]').forEach(function (b) {
+    b.onclick = function () {
+      var liste = mus.slice(), i = liste.indexOf(b.dataset.edmu);
+      if (i >= 0) liste.splice(i, 1); else liste.push(b.dataset.edmu);
+      if (cleNom(nom) !== kf) delete MUSCLES_MANUEL[cleNom(nom)];
+      MUSCLES_MANUEL[kf] = liste;
+      apres(); renderEdition();
+    };
+  });
+  if ($('ed-mu-r')) $('ed-mu-r').onclick = function () { delete MUSCLES_MANUEL[kf]; delete MUSCLES_MANUEL[cleNom(nom)]; apres(); renderEdition(); };
+  $('edit-p').querySelectorAll('[data-edcat]').forEach(function (b) {
+    b.onclick = function () { if (cleNom(nom) !== kf) delete CLASSEMENT[cleNom(nom)]; CLASSEMENT[kf] = b.dataset.edcat; apres(); construireGraphiques(); renderEdition(); };
+  });
+  if ($('ed-masquer')) $('ed-masquer').onclick = function () {
+    MASQUES[kf] = 1; if (corps.exo === kf) corps.exo = null;
+    envoyerReglages(); fermerEdition(); renderRec(); toast(nomVu(nom), 'masqué');
+  };
+}
+/* appui long (~0,5 s) sur un nom d'exercice ; le clic qui suit est avalé pour ne pas ouvrir/fermer autre chose */
+(function () {
+  var appui = null;
+  var annuler = function () { if (appui && !appui.fait) { clearTimeout(appui.t); appui = null; } };
+  document.addEventListener('pointerdown', function (ev) {
+    if (LECTURE) return;
+    var el = ev.target.closest && ev.target.closest('[data-exo]'); if (!el) return;
+    appui = { x: ev.clientX, y: ev.clientY, fait: false };
+    appui.t = setTimeout(function () { if (!appui) return; appui.fait = true; ouvrirEdition(el.dataset.exo); }, 480);
+  }, true);
+  document.addEventListener('pointermove', function (ev) {
+    if (appui && !appui.fait && Math.abs(ev.clientX - appui.x) + Math.abs(ev.clientY - appui.y) > 10) annuler();
+  }, true);
+  document.addEventListener('pointerup', function () {
+    if (appui && appui.fait) { var a = appui; setTimeout(function () { if (appui === a) appui = null; }, 400); } else annuler();
+  }, true);
+  document.addEventListener('pointercancel', annuler, true);
+  document.addEventListener('click', function (ev) { if (appui && appui.fait) { ev.stopPropagation(); ev.preventDefault(); appui = null; } }, true);
+  document.addEventListener('contextmenu', function (ev) { if (ev.target.closest && ev.target.closest('[data-exo]')) ev.preventDefault(); });
+})();
+if ($('edit')) $('edit').addEventListener('click', function (ev) { if (ev.target === $('edit')) fermerEdition(); });
+
 function toast(n, cat) {
   if (cat && CATS.indexOf(cat) < 0 && cat !== 'fusionné') { var el0 = document.createElement('div'); el0.className = 'toast'; el0.textContent = n + ' · ' + cat;
     document.body.appendChild(el0); setTimeout(function () { el0.classList.add('on'); }, 10); setTimeout(function () { el0.classList.remove('on'); setTimeout(function () { el0.remove(); }, 300); }, 2600); return; }
@@ -1937,6 +2092,7 @@ function chargerTout(forcer) {
 function appliquerReglages(r) {
   if (!r) return;
   CLASSEMENT = r.classement || {}; MUSCLES_MANUEL = r.muscles || {}; FUSIONS = r.fusions || {};
+  NOMS = r.noms || {}; MASQUES = r.masques || {};
   DATA.athletes.forEach(function (a) { if (a.semaines) preparerDonnees(a); });
 }
 var minuteurReglages = null;
@@ -1944,7 +2100,7 @@ function envoyerReglages() {
   if (MAQUETTE || LECTURE) return;
   clearTimeout(minuteurReglages);
   minuteurReglages = setTimeout(function () {
-    var r = { classement: CLASSEMENT, muscles: MUSCLES_MANUEL, fusions: FUSIONS };
+    var r = { classement: CLASSEMENT, muscles: MUSCLES_MANUEL, fusions: FUSIONS, noms: NOMS, masques: MASQUES };
     lsEcrire('lgcy-coach-reglages', r);
     api({ action: 'coachReglages', reglages: r }).catch(function (e) { toast('Réglage non enregistré', e.message || 'réseau'); });
   }, 500);
@@ -1986,6 +2142,7 @@ function demarrer() {
 /* hôte : l'app LEGACY (retour Android, déconnexion, retour à ma séance) */
 window.LegacyCoach = {
   retour: function () {
+    if ($('edit') && $('edit').classList.contains('on')) { fermerEdition(); return true; }
     if ($('fiche').classList.contains('on')) { $('retour').click(); return true; }
     return false;
   }
