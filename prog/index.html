@@ -1004,6 +1004,7 @@
     prog = j;
     if (j.rpeOptions && j.rpeOptions.length) RPE = j.rpeOptions;
     setTimeout(chargerRecords, 60);
+    setTimeout(chargerHistorique, 90);
     if (!fromCache) progSet(j);
     $('h-name').textContent = j.prenom ? j.prenom : 'Ma séance';
     $('h-block').textContent = (j.block || '') + (j.blockDebut ? ' · depuis le ' + j.blockDebut : '');
@@ -1211,12 +1212,18 @@
     $('f-note').oninput = function () { e.note = $('f-note').value; saveRun(); };
   }
 
-  /* rappel de la semaine precedente (rien en semaine 1, rien si pas de donnee) */
+  /* Derniere fois que l'athlete a fait cet exercice : la semaine d'avant, ou plus loin,
+     jusque dans les blocs precedents (un renfo garde d'un bloc a l'autre). */
+  function titreDerniere(p) {
+    if (!p.bloc) return (p.ecart > 1) ? 'Il y a ' + p.ecart + ' sem.' : 'Sem. derni\u00e8re';
+    var m = String(p.date || '').match(/^(\d{4})-(\d\d)-(\d\d)$/);
+    return 'Derni\u00e8re fois \u00b7 ' + (m ? m[3] + '/' + m[2] : p.bloc + ' S' + p.semaine);
+  }
   function ligneDerniere(e) {
     var p = e.prev;
     if (!p) return '';
     var eq = function (a, b) {
-      var f = function (x) { return (x === null || x === undefined) ? '' : String(x).trim(); };
+      var f = function (x) { return (x === null || x === undefined) ? '' : String(x).trim().toLowerCase(); };
       return f(a) === f(b);
     };
     var vide = function (x) { return x === null || x === undefined || String(x).trim() === ''; };
@@ -1227,17 +1234,18 @@
               : (vide(p.reps) ? fmt(p.sets) + ' x' : fmt(p.sets) + ' x ' + fmt(p.reps));
       if (sch) bits.push('en ' + esc(sch));
     }
-    var chg = [];
-    if (!eq(p.variante, e.variante) && !vide(p.variante)) chg.push(p.variante);
-    if (!eq(p.tempo, e.tempo) && !vide(p.tempo)) chg.push(p.tempo);
-    if (chg.length) bits.push('format ' + esc(chg.join(' \u00b7 ')));
+    /* format different de celui du jour : on dit lequel, « standard » s'il n'y en avait pas */
+    if (!eq(p.variante, e.variante) || !eq(p.tempo, e.tempo)) {
+      var chg = [p.variante, p.tempo].filter(function (x) { return !vide(x); });
+      bits.push('format ' + esc(chg.length ? chg.join(' \u00b7 ') : 'standard'));
+    }
     var r = [];
     if (!vide(p.rpe1)) r.push(rpeTxt(p.rpe1));
     if (!vide(p.rpeLast)) r.push(rpeTxt(p.rpeLast));
     if (r.length) bits.push('RPE ' + esc(r.join(' \u2192 ')));
     if (!vide(p.note)) bits.push('\u00ab\u202f' + esc(p.note) + '\u202f\u00bb');
     if (!bits.length) return '';
-    return '<div class="last" id="f-last"><u>Sem. derni\u00e8re</u>' + bits.join(' \u00b7 ') + '</div>';
+    return '<div class="last" id="f-last"><u>' + esc(titreDerniere(p)) + '</u>' + bits.join(' \u00b7 ') + '</div>';
   }
 
   function chips(box, cur, cb) {
@@ -1507,6 +1515,35 @@
       rafraichirExos();
       if (seance && $('run').classList.contains('on')) majPastillePr();
     }).catch(function () { prog._recDemandes = false; });
+  }
+
+  /* « Dernière fois » dans les blocs précédents : lecture de tous les anciens onglets BLOCK,
+     donc à part, comme les records. Le serveur la garde ensuite 6 h en mémoire. */
+  function chargerHistorique() {
+    if (!prog || prog.historiquePret !== false || prog._histDemande) return;
+    prog._histDemande = true;
+    var pourSemaine = prog.semaine, pourBlock = prog.block;
+    call({ action: 'historique', code: code, semaine: pourSemaine }).then(function (j) {
+      if (!prog || prog.semaine !== pourSemaine || prog.block !== pourBlock) return;
+      var m = j.prev || {};
+      prog.seances.forEach(function (s) {
+        s.exos.forEach(function (e) { if (!e.prev && m[e.row]) e.prev = m[e.row]; });
+      });
+      prog.historiquePret = true;
+      progSet(prog);
+      rafraichirExos();
+      if (seance && $('run').classList.contains('on')) majDerniere();
+    }).catch(function () { prog._histDemande = false; });
+  }
+  /* sans redessiner l'écran : la saisie en cours (charge, note) reste intacte */
+  function majDerniere() {
+    var e = seance && seance.exos[idx];
+    if (!e || $('f-last')) return;
+    var h = ligneDerniere(e), ref = $('r-body').querySelector('.presc');
+    if (!h || !ref) return;
+    ref.insertAdjacentHTML('afterend', h);
+    var last = $('f-last');
+    last.onclick = function () { last.classList.toggle('open'); };
   }
 
   /* Un record se bat à la charge, pour un format et un schéma donnés.
