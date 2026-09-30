@@ -39,9 +39,9 @@
   .screen{display:none;flex:1;min-height:0;flex-direction:column;}
   /* l'iframe ne connaît pas l'encoche ni l'heure de l'iPhone (env() y vaut 0) : la marge se pose ici,
      sinon « ‹ Athlètes » passe sous la barre d'état et ne répond plus */
-  #coach2{position:fixed;inset:0;z-index:40;background:#0a0a0b;box-sizing:border-box;
+  #coach2,#recs{position:fixed;inset:0;z-index:40;background:#0a0a0b;box-sizing:border-box;
     padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px);}
-  #coach2 iframe{width:100%;height:100%;border:0;display:block;background:#0a0a0b;}
+  #coach2 iframe,#recs iframe{width:100%;height:100%;border:0;display:block;background:#0a0a0b;}
   .screen.on{display:flex;}
 
   /* ---------- GATE ---------- */
@@ -493,6 +493,7 @@
         <div class="t1" id="h-name">—</div>
         <div class="t2" id="h-block">—</div>
       </div>
+      <button class="icobtn" id="h-recs" aria-label="Mes records">🏆</button>
       <button class="icobtn" id="h-tool" aria-label="Chrono">⏱</button>
       <button class="icobtn" id="h-coach" style="display:none">👥</button>
       <button class="icobtn" id="h-reload">↻</button>
@@ -602,6 +603,7 @@
 
   <!-- ══════════ VUE COACH v2 : page à part (coach.html), jamais téléchargée par les athlètes ══════════ -->
   <section class="screen" id="coach2"></section>
+  <section class="screen" id="recs"></section>
 
   <!-- ══════════ OK ══════════ -->
   <section class="screen" id="ok">
@@ -720,7 +722,7 @@
   /* ───── helpers ───── */
   var $ = function (id) { return document.getElementById(id); };
   function show(id) {
-    ['gate','home','run','end','week','ok','coach','coach2'].forEach(function (s) { $(s).classList.toggle('on', s === id); });
+    ['gate','home','run','end','week','ok','coach','coach2','recs'].forEach(function (s) { $(s).classList.toggle('on', s === id); });
     /* à la réouverture, on revient là où on était — tout de suite (voir reprendreEcran) */
     sSet(LS_ECRAN, (id === 'run' || id === 'end') && seance ? JSON.stringify({ ecran: id, cle: cleSeance() }) : '');
 
@@ -747,6 +749,12 @@
     if (ecranOn('week')) { $('k-back').click(); return true; }
     if (ecranOn('ok')) { if (prog) renderHome(); show('home'); return true; }
     if (ecranOn('coach') && coachSel !== null) { $('c-back').click(); return true; }
+    if (ecranOn('recs')) {
+      var fa = $('recs').querySelector('iframe');
+      try { if (fa && fa.contentWindow.LegacyCoach && fa.contentWindow.LegacyCoach.retour()) return true; } catch (e) {}
+      if (prog) renderHome();
+      show('home'); return true;
+    }
     if (ecranOn('coach2')) {
       var fr = $('coach2').querySelector('iframe');
       try { if (fr && fr.contentWindow.LegacyCoach && fr.contentWindow.LegacyCoach.retour()) return true; } catch (e) {}
@@ -935,8 +943,8 @@
 
   $('h-out').onclick = function () {
     if (!confirm('Se déconnecter ?')) return;
-    sDel(LS_CODE); sDel(LS_PROG); clearRun();
-    code = ''; prog = null; $('code').value = ''; show('gate');
+    sDel(LS_CODE); sDel(LS_PROG); clearRun(); sDel('lgcy-ath-prenom');
+    code = ''; prog = null; $('code').value = ''; $('recs').innerHTML = ''; show('gate');
   };
   $('h-reload').onclick = function () { load(prog ? prog.semaine : null, true); };
 
@@ -1761,9 +1769,14 @@
     deconnexion: function () {
       if (!confirm('Se déconnecter ?')) return;
       sDel(LS_CODE); sDel(LS_PROG); sDel(LS_ROLE); clearRun();
-      code = ''; prog = null; $('code').value = ''; $('coach2').innerHTML = ''; show('gate');
+      code = ''; prog = null; $('code').value = ''; $('coach2').innerHTML = ''; $('recs').innerHTML = ''; show('gate');
     }
   };
+  /* Mes records : la vue coach en lecture seule (coach.html?athlete=1), chargée une fois puis gardée */
+  function ouvrirRecords() {
+    show('recs');
+    if (!$('recs').querySelector('iframe')) $('recs').innerHTML = '<iframe src="coach.html?athlete=1" title="Mes records"></iframe>';
+  }
   function loadCoach() {
     show('coach2');
     if (!$('coach2').querySelector('iframe')) $('coach2').innerHTML = '<iframe src="coach.html" title="Vue coach"></iframe>';
@@ -1954,6 +1967,7 @@
 
   $('c-reload').onclick = loadCoach;
   $('h-coach').onclick = function () { coachSel = null; loadCoach(); };
+  $('h-recs').onclick = ouvrirRecords;
   $('c-back').onclick = function () {
     if (coachSel !== null) { coachSel = null; renderCoach(coachList); return; }
     renderHome(); show('home');
