@@ -37,6 +37,8 @@
 
   .app{height:100%;display:flex;flex-direction:column;max-width:520px;margin:0 auto;position:relative;}
   .screen{display:none;flex:1;min-height:0;flex-direction:column;}
+  #coach2{position:fixed;inset:0;z-index:40;background:#0a0a0b;}
+  #coach2 iframe{width:100%;height:100%;border:0;display:block;background:#0a0a0b;}
   .screen.on{display:flex;}
 
   /* ---------- GATE ---------- */
@@ -595,6 +597,9 @@
     <div class="body" id="c-body"></div>
   </section>
 
+  <!-- ══════════ VUE COACH v2 : page à part (coach.html), jamais téléchargée par les athlètes ══════════ -->
+  <section class="screen" id="coach2"></section>
+
   <!-- ══════════ OK ══════════ -->
   <section class="screen" id="ok">
     <div class="done-wrap">
@@ -712,12 +717,12 @@
   /* ───── helpers ───── */
   var $ = function (id) { return document.getElementById(id); };
   function show(id) {
-    ['gate','home','run','end','week','ok','coach'].forEach(function (s) { $(s).classList.toggle('on', s === id); });
+    ['gate','home','run','end','week','ok','coach','coach2'].forEach(function (s) { $(s).classList.toggle('on', s === id); });
     /* à la réouverture, on revient là où on était — tout de suite (voir reprendreEcran) */
     sSet(LS_ECRAN, (id === 'run' || id === 'end') && seance ? JSON.stringify({ ecran: id, cle: cleSeance() }) : '');
 
     var b = document.querySelector('#' + id + ' .body'); if (b) b.scrollTop = 0;
-    if (id !== 'home' && id !== 'gate' && id !== 'coach') armerRetour();
+    if (id !== 'home' && id !== 'gate' && id !== 'coach' && id !== 'coach2') armerRetour();
   }
 
   /* ───── bouton retour d'Android (et glissement retour du navigateur) ─────
@@ -739,12 +744,18 @@
     if (ecranOn('week')) { $('k-back').click(); return true; }
     if (ecranOn('ok')) { if (prog) renderHome(); show('home'); return true; }
     if (ecranOn('coach') && coachSel !== null) { $('c-back').click(); return true; }
+    if (ecranOn('coach2')) {
+      var fr = $('coach2').querySelector('iframe');
+      try { if (fr && fr.contentWindow.LegacyCoach && fr.contentWindow.LegacyCoach.retour()) return true; } catch (e) {}
+      if (sGet(LS_ROLE) === 'duo' && prog) { renderHome(); show('home'); return true; }
+    }
     return false;
   }
   window.addEventListener('popstate', function () {
     retourArme = false;
     var fait = retourApp();
     if (fait && !ecranOn('home') && !ecranOn('gate') && !(ecranOn('coach') && coachSel === null)) armerRetour();
+    else if (fait && ecranOn('coach2')) armerRetour();
     else if (!fait) toast('Appuie encore sur retour pour quitter l\'app');
   });
   function toast(msg, bad) {
@@ -1703,7 +1714,23 @@
   /* ───── vue coach ───── */
   var coachList = [], coachNom = '', coachSel = null, coachBackAff = null;
 
+  /* La vue coach v2 vit dans coach.html : chargée une seule fois, gardée ensuite (ses données sont en cache). */
+  window.LegacyCoachHote = {
+    armer: function () { armerRetour(); },
+    accueil: function () { if (prog) { renderHome(); show('home'); } else load(null); },
+    deconnexion: function () {
+      if (!confirm('Se déconnecter ?')) return;
+      sDel(LS_CODE); sDel(LS_PROG); sDel(LS_ROLE); clearRun();
+      code = ''; prog = null; $('code').value = ''; $('coach2').innerHTML = ''; show('gate');
+    }
+  };
   function loadCoach() {
+    show('coach2');
+    if (!$('coach2').querySelector('iframe')) $('coach2').innerHTML = '<iframe src="coach.html" title="Vue coach"></iframe>';
+    else armerRetour();
+    return Promise.resolve();
+  }
+  function loadCoachAncienne() {
     show('coach');
     $('c-body').innerHTML = '<div class="spin"></div>';
     return call({ action: 'coach', code: code }).then(function (j) {
