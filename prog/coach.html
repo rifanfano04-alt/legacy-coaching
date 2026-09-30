@@ -540,9 +540,6 @@
   .ed-cands button{text-align:left;padding:10px 12px;font-size:14px;border-top:1px solid var(--line);}
   .ed-cands button:first-child{border-top:0;}
   .ed-masquer{display:block;margin:20px auto 0;color:#e2837a;font-size:13px;font-weight:600;}
-  .masques{margin-top:14px;text-align:center;}
-  .masques > button{font-size:12px;color:var(--grey-2);text-decoration:underline;}
-  .masques .cats{justify-content:center;margin-top:8px;}
 </style>
 
 </head>
@@ -1657,11 +1654,12 @@ function corpsHtml() {
     '<button class="bloupe" id="pivoter" aria-label="Pivoter">↻</button></div>' + detailPrinc();
   if (corps.muscle) h += detailExo();
   var sans = exosSansMuscle();
-  var masques = LECTURE ? [] : Object.keys(MASQUES);
-  if (masques.length) h += '<div class="masques"><button id="voir-masques">' + masques.length + ' exercice' + (masques.length > 1 ? 's' : '') + ' masqué' + (masques.length > 1 ? 's' : '') + '</button>' +
-    (voirMasques ? '<div class="cats">' + masques.map(function (k) { return '<button class="chip" data-demasque="' + esc(k) + '">↺ ' + esc(NOMS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + '</button>'; }).join('') + '</div>' : '') + '</div>';
   if (sans.length && !LECTURE) h += '<div class="grp' + (ouvertG === 'SANS' ? ' open' : '') + '" style="margin-top:12px"><button class="gh" data-g="SANS"><div class="tt"><b>Sans muscle</b><span>' + sans.length + ' exercice' + (sans.length > 1 ? 's' : '') +
-    '</span></div><span class="chev">›</span></button><div class="gb">' + sans.map(function (e) { e.associer = true; return rexHtml(e, sans); }).join('') + '</div></div>';
+    '</span></div><span class="chev">›</span></button><div class="gb">' + sans.map(function (e) {
+      /* à régler : toucher = le panneau (muscles, « c'est le même que… », supprimer) */
+      return '<div class="rex"><button class="rh" data-exo="' + esc(e.nom) + '" data-regler="1"><div><b>' + esc(nomVu(e.nom)) + '</b><br><span>' +
+        (e.rows.length ? e.rows.length + ' record' + (e.rows.length > 1 ? 's' : '') + ' · ' : '') + 'toucher pour régler</span></div><span class="chev">›</span></button></div>';
+    }).join('') + '</div></div>';
   return h;
 }
 /* 1. traits lumineux de la silhouette ouverte vers les muscles qu'elle travaille (sur la face visible) */
@@ -1874,10 +1872,7 @@ function brancherCorps() {
   $('v-rec').querySelectorAll('[data-sep]').forEach(function (b) {
     b.onclick = function () { var k = b.dataset.sep, cible = FUSIONS[k]; delete FUSIONS[k]; ecrireFusions(); renderRec(); ouvrirRex(cible); };
   });
-  if ($('voir-masques')) $('voir-masques').onclick = function () { voirMasques = !voirMasques; renderRec(); };
-  $('v-rec').querySelectorAll('[data-demasque]').forEach(function (b) {
-    b.onclick = function () { delete MASQUES[b.dataset.demasque]; envoyerReglages(); renderRec(); toast('Réaffiché', 'de retour dans les records'); };
-  });
+  $('v-rec').querySelectorAll('[data-regler]').forEach(function (b) { b.onclick = function () { ouvrirEdition(b.dataset.exo); }; });
   $('v-rec').querySelectorAll('.bassoc').forEach(function (b) { b.onclick = function () { corps.associer = corps.associer === b.dataset.n ? null : b.dataset.n; renderRec(); }; });
   $('v-rec').querySelectorAll('[data-mu2]').forEach(function (b) {
     b.onclick = function () {
@@ -1899,7 +1894,7 @@ function ouvrirRex(kf) {
 /* ==================== MODIFIER UN EXERCICE (appui long, coach seulement) ====================
    Nom affiché, « c'est le même que… », muscles, catégorie, masquer : tout au même endroit,
    sans bouton à l'écran. Enregistré dans les réglages du coach : s'applique aussi chez les athlètes. */
-var voirMasques = false, edNom = null, edQ = '';
+var edNom = null, edQ = '';
 function tousLesExos() {
   var vus = {}, out = [];
   A.pr.forEach(function (g) { g.exos.forEach(function (e) { var k = canonF(e.nom); if (!vus[k] && !MASQUES[k]) { vus[k] = 1; out.push(e.nom); } }); });
@@ -1945,7 +1940,7 @@ function renderEdition() {
     (MUSCLES_MANUEL[kf] || MUSCLES_MANUEL[cleNom(nom)] ? '<div class="ed-note"><button id="ed-mu-r">muscles automatiques</button></div>' : '') +
     (princ ? '' : '<label class="ed-l">Catégorie</label><div class="ed-chips">' + CATS.map(function (c) {
       return '<button class="chip' + (c === cat ? ' on' : '') + '" data-edcat="' + esc(c) + '">' + esc(joli(c)) + '</button>'; }).join('') + '</div>' +
-      '<button class="ed-masquer" id="ed-masquer">Masquer cet exercice</button>');
+      '<button class="ed-masquer" id="ed-masquer">Supprimer cet exercice</button>');
   $('edit-p').innerHTML = h;
   var apres = function () { sauverReglagesExo(); renderRec(); };
   $('ed-x').onclick = fermerEdition;
@@ -1984,9 +1979,11 @@ function renderEdition() {
   $('edit-p').querySelectorAll('[data-edcat]').forEach(function (b) {
     b.onclick = function () { if (cleNom(nom) !== kf) delete CLASSEMENT[cleNom(nom)]; CLASSEMENT[kf] = b.dataset.edcat; apres(); construireGraphiques(); renderEdition(); };
   });
+  /* supprimé des records (chez le coach et ses athlètes) ; le Sheet n'est pas touché */
   if ($('ed-masquer')) $('ed-masquer').onclick = function () {
+    if (!confirm('Supprimer « ' + nomVu(nom) + ' » des records ?\nTon Sheet n\'est pas modifié.')) return;
     MASQUES[kf] = 1; if (corps.exo === kf) corps.exo = null;
-    envoyerReglages(); fermerEdition(); renderRec(); toast(nomVu(nom), 'masqué');
+    envoyerReglages(); fermerEdition(); renderRec(); construireGraphiques(); toast(nomVu(nom), 'supprimé');
   };
 }
 /* appui long (~0,5 s) sur un nom d'exercice ; le clic qui suit est avalé pour ne pas ouvrir/fermer autre chose */
