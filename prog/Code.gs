@@ -66,6 +66,7 @@ function doPost(e) {
     else if (action === 'weekly')  out = apiWeekly(body);
     else if (action === 'coach')   out = apiCoach(body);
     else if (action === 'records') out = apiRecords(body);
+    else if (action === 'historique') out = apiHistorique(body);
     else if (action === 'coachAthletes') out = apiCoachAthletes(body);
     else if (action === 'coachFiche')    out = apiCoachFiche(body);
     else if (action === 'coachReglages') out = apiCoachReglages(body);
@@ -269,7 +270,7 @@ function lireSemaineDe_(vals, semaine) {
   var get = function (r, off) { return vals[r - 1][col - 1 + off]; };
 
   var pl = plan_(vals);
-  var seances = [];
+  var seances = [], indexBloc = null;
   pl.seances.forEach(function (S, sIdx) {
     var hRow = S.head;
     var exos = [], rempli = 0, prescrits = 0, avecRpe = 0;
@@ -282,20 +283,24 @@ function lireSemaineDe_(vals, semaine) {
       var chg  = num_(get(r, OFF.charge));
       // ligne de gabarit (code muscle présent mais rien de programmé) : on l'ignore
       if (!code || (!sets && !reps && !vari && chg === null)) continue;
-      // Semaine precedente : elle est deja dans vals (on lit depuis la colonne A),
-      // donc aucune lecture supplementaire. Rien en semaine 1.
+      // Derniere fois : on remonte les semaines precedentes DU BLOC (meme ligne, meme exercice).
+      // Tout est deja dans vals (lecture depuis la colonne A) : aucune lecture de plus.
+      // Si rien, on cherche l'exercice par son nom dans tout le bloc ; les blocs
+      // precedents viennent ensuite, a part (attacherHistorique_).
       var prev = null;
-      if (semaine > 1) {
-        var pc = col - 18;
-        var pg = function (off) { return vals[r - 1][pc - 1 + off]; };
-        var pch = num_(pg(OFF.charge));
-        var pr1 = rpe_(pg(OFF.rpe1)), pr2 = rpe_(pg(OFF.rpeLast)), pnt = txt_(pg(OFF.note));
-        if (pch !== null || pr1 || pr2 || pnt) {
-          prev = { charge: pch, rpe1: pr1, rpeLast: pr2, note: pnt,
-                   sets: num_(pg(OFF.sets)), reps: num_(pg(OFF.reps)),
-                   variante: (code === 'R') ? '' : txt_(pg(OFF.variante)),
-                   tempo: txt_(pg(OFF.tempo)) };
+      var cles = clesExo_(code, nom, vari, txt_(get(r, OFF.tempo)), sets, reps);
+      for (var w = semaine - 1; w >= 1 && !prev; w--) {
+        var pc = WEEK_COLS[w - 1];
+        if (txt_(vals[r - 1][pc - 1 + OFF.code]).toUpperCase() !== code) continue;
+        var o = occurrence_(vals, r, pc, true);
+        if (o && memeExo_(o.cles[3], cles[3])) prev = entreeHist_(o, vals, w, S.head, true, semaine);
+      }
+      if (!prev && semaine > 1) {
+        if (!indexBloc) {
+          indexBloc = { e: [], k: {} };
+          for (var w2 = semaine - 1; w2 >= 1; w2--) indexerSemaine_(indexBloc, vals, pl, w2, { memeBloc: true, depuis: semaine });
         }
+        prev = chercherHist_(indexBloc, cles);
       }
 
       var libelle = (code === 'R') ? (vari || 'Renfo') : nom;
@@ -357,6 +362,213 @@ function lireSemaineDe_(vals, semaine) {
   });
 
   return { seances: seances, recup: recup };
+}
+
+/* ───────────────────────── DERNIERE FOIS ─────────────────────────
+ * Ce que l'athlete a fait la derniere fois sur un exercice, meme dans un bloc
+ * precedent (un renfo garde d'un bloc a l'autre). On compare les NOMS :
+ * d'abord meme format et meme schema, puis meme format, puis nom + variante, puis le nom seul
+ * (l'app signale alors le format different).
+ */
+
+/** Nom normalise : casse, accents, ponctuation et pluriels ignores (« Push ups » = « push-up »). */
+function canonH_(s) {
+  s = String(s == null ? '' : s).toLowerCase();
+  if (s.normalize) s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return s.replace(/[^a-z0-9°%+]+/g, ' ').trim().split(' ').map(function (m) {
+    return (m.length >= 3 && /s$/.test(m) && !/ss$/.test(m)) ? m.slice(0, -1) : m;
+  }).join(' ');
+}
+
+/** Meme ligne d'une semaine a l'autre : meme exercice si un nom contient l'autre
+ *  (« emom » = « pompe emom » raccourci) ; un autre exercice mis a sa place ne compte pas. */
+function memeExo_(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  var A = a.split(' '), B = b.split(' ');
+  var dans = function (x, y) { return x.every(function (m) { return y.indexOf(m) >= 0; }); };
+  return dans(A, B) || dans(B, A);
+}
+
+/** Pour un renfo (code R) le nom de l'exercice est dans la colonne variante. */
+function clesExo_(code, nom, vari, tempo, sets, reps) {
+  var R = String(code).toUpperCase() === 'R';
+  var n = canonH_(R ? vari : nom), v = R ? '' : canonH_(vari), t = canonH_(tempo);
+  if (!n) return [null, null, null, null];
+  // le schema d'abord : deux lignes « squat » (serie lourde + series de retour) ne se confondent pas
+  return [n + '|' + v + '|' + t + '|' + (sets || '') + 'x' + (reps || ''), n + '|' + v + '|' + t, n + '|' + v, n];
+}
+
+/** Une ligne d'une semaine, si elle a ete faite. Charge seule = ecrite a l'avance : il faut un RPE ou une note. */
+function occurrence_(vals, r, col, chargeSeuleOk) {
+  var g = function (off) { return vals[r - 1][col - 1 + off]; };
+  var code = txt_(g(OFF.code)).toUpperCase();
+  var nom = txt_(g(OFF.nom)), vari = txt_(g(OFF.variante)), tempo = txt_(g(OFF.tempo));
+  if (!code) return null;
+  var ch = num_(g(OFF.charge)), r1 = rpe_(g(OFF.rpe1)), r2 = rpe_(g(OFF.rpeLast)), nt = txt_(g(OFF.note));
+  if (!(r1 || r2 || nt || (chargeSeuleOk && ch !== null))) return null;
+  var cles = clesExo_(code, nom, vari, tempo, num_(g(OFF.sets)), num_(g(OFF.reps)));
+  if (!cles[3]) return null;
+  return { cles: cles, code: code, charge: ch, rpe1: r1, rpeLast: r2, note: nt,
+           sets: num_(g(OFF.sets)), reps: num_(g(OFF.reps)),
+           variante: (code === 'R') ? '' : vari, tempo: tempo };
+}
+
+/** Ce que l'app recoit : les valeurs + d'ou elles viennent (bloc, semaine, date de la seance). */
+function entreeHist_(o, vals, semaine, head, memeBloc, depuis, bloc) {
+  var debut = vals[11] ? vals[11][WEEK_COLS[semaine - 1] - 1] : null;   // ligne 12 : date de la semaine
+  var jour = txt_(vals[head - 2] ? vals[head - 2][WEEK_COLS[semaine - 1] - 1 + OFF.nom] : '');
+  var d = (debut instanceof Date) ? (dateSeance_(debut, jour) || debut) : null;
+  var e = { charge: o.charge, rpe1: o.rpe1, rpeLast: o.rpeLast, note: o.note,
+            sets: o.sets, reps: o.reps, variante: o.variante, tempo: o.tempo,
+            semaine: semaine,
+            date: d ? Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd') : '' };
+  if (memeBloc) e.ecart = depuis - semaine;
+  else e.bloc = bloc || '';
+  return e;
+}
+
+/** Range les exercices faits d'une semaine dans l'index (le premier range = le plus recent).
+ *  index = { e: [entrees], k: { cle: rang dans e } } : chaque entree n'est stockee qu'une fois. */
+function indexerSemaine_(index, vals, pl, semaine, meta) {
+  var col = WEEK_COLS[semaine - 1];
+  for (var i = pl.seances.length - 1; i >= 0; i--) {        // fin de semaine d'abord
+    var S = pl.seances[i];
+    var reelle = false, occ = [];
+    for (var r = S.premier; r <= S.dernier; r++) {
+      var o = occurrence_(vals, r, col, true);
+      if (!o) continue;
+      if (o.rpe1 || o.rpeLast) reelle = true;
+      occ.push(o);
+    }
+    occ.forEach(function (o) {
+      if (!(o.rpe1 || o.rpeLast || o.note) && !reelle) return;  // charges notees a l'avance, seance pas faite
+      var rang = -1;
+      o.cles.forEach(function (k, n) {
+        var cle = (n + 1) + ':' + k;
+        if (index.k[cle] !== undefined) return;
+        if (rang < 0) rang = index.e.push(entreeHist_(o, vals, semaine, S.head, meta.memeBloc, meta.depuis, meta.bloc)) - 1;
+        index.k[cle] = rang;
+      });
+    });
+  }
+}
+
+function chercherHist_(index, cles) {
+  if (!cles[3] || !index || !index.k) return null;
+  for (var i = 0; i < cles.length; i++) {
+    var n = index.k[(i + 1) + ':' + cles[i]];
+    if (n !== undefined) return index.e[n];
+  }
+  // fautes de frappe du Sheet (« leg extess » / « leg extenss ») : 1 lettre d'ecart des 6
+  // caracteres, 2 des 10 ; a egalite, le plus recent
+  var nom = cles[3], max = nom.length >= 10 ? 2 : (nom.length >= 6 ? 1 : 0), best = null;
+  if (!max) return null;
+  Object.keys(index.k).forEach(function (k) {
+    if (k.indexOf('4:') !== 0) return;
+    var d = ecart_(nom, k.slice(2), max);
+    if (d <= max && (!best || d < best.d || (d === best.d && index.k[k] < best.n))) best = { d: d, n: index.k[k] };
+  });
+  return best ? index.e[best.n] : null;
+}
+
+/** Distance d'edition (Levenshtein), arretee des qu'elle depasse max. */
+function ecart_(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  var prec = [], i, j;
+  for (j = 0; j <= b.length; j++) prec[j] = j;
+  for (i = 1; i <= a.length; i++) {
+    var cur = [i], mini = i;
+    for (j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prec[j] + 1, cur[j - 1] + 1, prec[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (cur[j] < mini) mini = cur[j];
+    }
+    if (mini > max) return max + 1;
+    prec = cur;
+  }
+  return prec[b.length];
+}
+
+/** Numero d'un onglet « BLOCK 4 » ; les onglets sans numero passent apres. */
+function numBloc_(sh) {
+  var m = sh.getName().match(/(\d+)/);
+  return m ? Number(m[1]) : -1;
+}
+
+/**
+ * Index des exercices faits dans les blocs PRECEDENTS. Il ne bouge pas quand l'athlete
+ * enregistre (l'app n'ecrit que dans le bloc en cours) : on le garde 6 h en memoire.
+ */
+function indexBlocsPrecedents_(sheetId, ss, sit, seulementCache) {
+  var cle = 'hist:' + sheetId + ':' + sit.sheet.getSheetId(), cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) {}
+  if (cache) {
+    var hit = cache.get(cle);
+    if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  }
+  if (seulementCache) return null;
+  var ref = sit.sheet, refNum = numBloc_(ref);
+  var refDebut = sit.debut ? sit.debut.getTime() : null;
+  var autres = [];
+  blocksOf_(ss).forEach(function (sh) {
+    if (sh.getSheetId() === ref.getSheetId()) return;
+    var d = sh.getRange(12, 4).getValue();
+    var t = (d instanceof Date) ? d.getTime() : null;
+    var avant = (t !== null && refDebut !== null) ? t < refDebut : numBloc_(sh) < refNum;
+    if (avant) autres.push({ sh: sh, t: t, n: numBloc_(sh) });
+  });
+  autres.sort(function (a, b) {
+    if (a.t !== null && b.t !== null) return b.t - a.t;
+    return b.n - a.n;
+  });
+  var index = { e: [], k: {} };
+  autres.forEach(function (b) {
+    var nbSem = Math.min(dureeSemaines_(b.sh.getRange(12, 16).getValue()), WEEK_COLS.length);
+    var vals = grille_(b.sh, WEEK_COLS[nbSem - 1] + 16);
+    var pl = plan_(vals);
+    for (var w = nbSem; w >= 1; w--) indexerSemaine_(index, vals, pl, w, { memeBloc: false, bloc: b.sh.getName().trim() });
+  });
+  if (cache) {
+    try {
+      var json = JSON.stringify(index);
+      if (json.length < 95000) cache.put(cle, json, 21600);
+    } catch (e) {}
+  }
+  return index;
+}
+
+/** Complete « derniere fois » avec les blocs precedents pour les exos qui n'ont rien dans le bloc en cours. */
+function attacherHistorique_(sheetId, ss, sit, seances, seulementCache) {
+  var manquants = [];
+  seances.forEach(function (s) {
+    s.exos.forEach(function (e) { if (!e.prev) manquants.push(e); });
+  });
+  if (!manquants.length) return true;
+  var index = indexBlocsPrecedents_(sheetId, ss, sit, seulementCache);
+  if (!index) return false;
+  manquants.forEach(function (e) {
+    var p = chercherHist_(index, clesExo_(e.code, e.nomBrut, e.varBrut, e.tempo, e.sets, e.reps));
+    if (p) e.prev = p;
+  });
+  return true;
+}
+
+/** Les blocs precedents seuls : appel separe, comme les records, pour ne pas ralentir l'ouverture. */
+function apiHistorique(body) {
+  var a = athleteFromCode_(body.code);
+  if (!a.sheetId) return { ok: true, prev: {} };
+  var ss = SpreadsheetApp.openById(a.sheetId);
+  var sit = situation_(ss);
+  var semaine = Number(body.semaine) || sit.semaine;
+  if (semaine < 1) semaine = 1;
+  if (semaine > sit.nbSem) semaine = sit.nbSem;
+  var w = lireSemaine_(sit.sheet, semaine);
+  attacherHistorique_(a.sheetId, ss, sit, w.seances, false);
+  var out = {};
+  w.seances.forEach(function (s) {
+    s.exos.forEach(function (e) { if (e.prev) out[e.row] = e.prev; });
+  });
+  return { ok: true, semaine: semaine, block: sit.sheet.getName(), prev: out };
 }
 
 /** Plan de l'onglet pour les ecritures : une lecture etroite suffit (colonnes A a T). */
@@ -502,6 +714,9 @@ function apiProgram(body) {
   // records seulement s'ils sont deja en memoire ; sinon l'app les demandera a part
   var recPrets = false;
   try { recPrets = attacherRecords_(a.sheetId, w.seances, true); } catch (e) {}
+  // blocs precedents seulement s'ils sont deja en memoire ; sinon action « historique »
+  var histPret = false;
+  try { histPret = attacherHistorique_(a.sheetId, ss, sit, w.seances, true); } catch (e) {}
   return {
     ok: true,
     role: 'athlete',
@@ -515,6 +730,7 @@ function apiProgram(body) {
     rpeOptions: optionsRpe_(sit.sheet, WEEK_COLS[semaine - 1],
                             w.seances.length ? w.seances[0].ligne + 2 : 0),
     recordsPrets: !!recPrets,
+    historiquePret: !!histPret,
     seances: w.seances,
     recup: w.recup
   };
