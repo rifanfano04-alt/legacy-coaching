@@ -67,6 +67,7 @@ function doPost(e) {
     else if (action === 'coach')   out = apiCoach(body);
     else if (action === 'records') out = apiRecords(body);
     else if (action === 'historique') out = apiHistorique(body);
+    else if (action === 'maFiche')    out = apiMaFiche(body);
     else if (action === 'coachAthletes') out = apiCoachAthletes(body);
     else if (action === 'coachFiche')    out = apiCoachFiche(body);
     else if (action === 'coachReglages') out = apiCoachReglages(body);
@@ -1232,6 +1233,16 @@ function apiCoachFiche(body) {
   var fiche = body.forcer ? null : ficheEnCache_(cible.id);
   if (!fiche) { fiche = extraireFiche_(cible.id); mettreFicheEnCache_(cible.id, fiche); }
   return { ok: true, code: cible.code, prenom: cible.prenom, fiche: fiche };
+}
+
+/** L'athlete, onglet Records : SA fiche (meme extraction que la vue coach) + le classement du coach.
+ *  Le code ne donne acces qu'a son propre Sheet. */
+function apiMaFiche(body) {
+  var a = athleteFromCode_(body.code);
+  if (!a.sheetId) throw new Error('Aucun Sheet pour ce code.');
+  var fiche = body.forcer ? null : ficheEnCache_(a.sheetId);
+  if (!fiche) { fiche = extraireFiche_(a.sheetId); mettreFicheEnCache_(a.sheetId, fiche); }
+  return { ok: true, prenom: a.prenom, fiche: fiche, reglages: lireReglages_() };
 }
 
 function apiCoachReglages(body) {
