@@ -1249,7 +1249,7 @@ function apiCoachReglages(body) {
   coachAutorise_(body);
   var r = lireReglages_();
   if (body.reglages) {
-    ['classement', 'muscles', 'fusions'].forEach(function (k) {
+    ['classement', 'muscles', 'fusions', 'noms', 'masques'].forEach(function (k) {
       if (body.reglages[k] && typeof body.reglages[k] === 'object') r[k] = body.reglages[k];
     });
     var s = JSON.stringify(r);
