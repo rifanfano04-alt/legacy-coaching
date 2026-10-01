@@ -249,6 +249,7 @@ dialog#dlg .ligne-liste { margin-top: 2px; }
 #traits line { stroke: var(--accent); stroke-width: 1; opacity: .75; } #traits circle { fill: var(--accent); }
 .etiq { position: absolute; transform: translate(0, -50%); max-width: 46vw; overflow: hidden; text-overflow: ellipsis; font: 600 10px/1.25 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink); white-space: nowrap; padding: 4px 7px; background: rgba(5, 7, 10, .62); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px); }
 .etiq.gauche { transform: translate(-100%, -50%); }
+@media (max-width: 500px) { .etiq { white-space: normal; max-width: 38vw; text-overflow: clip; font-size: 9.5px; } .etiq.att { font-size: 8.5px; } }
 .etiq.att { font-size: 9px; color: var(--ink-2); }
 .etiq small { display: block; font-weight: 600; font-size: 8px; color: var(--accent); letter-spacing: .18em; }
 body[data-panneau="plein"] #etiquettes { opacity: 0; }
@@ -986,10 +987,12 @@ function placerEtiquettes(t) {
   }
   let svg = '';
   for (const [c, l] of Object.entries(cotes)) {
-    l.sort((a, b) => a.y - b.y); let dernier = -1e9;
+    l.sort((a, b) => a.y - b.y); let dernier = -1e9, hPrec = 0;
     for (const e of l) {
-      const ty = Math.max(e.y, dernier + 30); dernier = ty;
-      const dx = e.type === 'nom' ? 64 : 42, lx = c === 'd' ? Math.min(W - 16, e.x + dx) : Math.max(16, e.x - dx);
+      const hE = e.el.offsetHeight || 24, lE = e.el.offsetWidth || 80;
+      const ty = Math.max(e.y, dernier + (hPrec + hE) / 2 + 6); dernier = ty; hPrec = hE;
+      const dx = e.type === 'nom' ? (W < 500 ? 40 : 64) : (W < 500 ? 28 : 42);
+      const lx = c === 'd' ? Math.min(W - 10 - lE, e.x + dx) : Math.max(10 + lE, e.x - dx); // l'étiquette reste entière à l'écran
       // 1) l'étiquette arrive du bord de l'écran ; 2) le trait part d'elle et vient se poser sur le muscle
       const a = e3((now - e.nait) / ARRIVEE), d = e3((now - e.nait - ARRIVEE * 0.75) / DEPOT);
       const bord = c === 'd' ? W + 30 : -30, ex = bord + (lx - bord) * a;
@@ -1353,7 +1356,8 @@ function cadrerSur(cles, px = decalCible, masque = 0) {
   const visible = Math.max(0.25, (innerHeight - px - masque) / innerHeight);
   const demiFov = THREE.MathUtils.degToRad(camera.fov / 2) * visible;
   const ext = Math.max(t.y, Math.max(t.x, t.z) / camera.aspect * visible);
-  const dist = Math.min(hauteur * 3, Math.max(hauteur * 0.32, (ext / 2) / Math.tan(demiFov) * 1.35 + Math.max(t.x, t.z) / 2));
+  const etroit = camera.aspect < 0.85; // téléphone en portrait : on recule pour laisser de la place aux étiquettes sur les côtés
+  const dist = Math.min(hauteur * 3, Math.max(hauteur * (etroit ? 0.6 : 0.32), (ext / 2) / Math.tan(demiFov) * (etroit ? 1.9 : 1.35) + Math.max(t.x, t.z) / 2));
   let dir = camera.position.clone().sub(controls.target).setY(0).normalize();
   const off = new THREE.Vector3(c.x - centre.x, 0, c.z - centre.z);
   const profonds = m.length && m.every(p => p.couche === 'p');
