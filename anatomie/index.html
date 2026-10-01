@@ -763,10 +763,19 @@ donnees().then(({ bin, man, noms, delta, tendon, attaches }) => {
 
 function vueInitiale() {
   const portrait = innerWidth < innerHeight;
-  // en portrait : corps un peu plus petit et centré entre le titre (+ encoche de l'iPhone) et les icônes du bas
-  const cible = centre.clone().add(new THREE.Vector3(0, -hauteur * (portrait ? 0.035 : 0.02), 0));
-  const dist = hauteur * (portrait ? 2.95 : 1.9);
-  return { cible, pos: new THREE.Vector3(centre.x, centre.y + hauteur * 0.05, centre.z + dist) };
+  if (!portrait) {
+    const cible = centre.clone().add(new THREE.Vector3(0, -hauteur * 0.02, 0)), dist = hauteur * 1.9;
+    return { cible, pos: new THREE.Vector3(centre.x, centre.y + hauteur * 0.05, centre.z + dist) };
+  }
+  // portrait (téléphone) : le corps est centré dans la bande réellement libre de l'écran, entre le bas du titre
+  // (encoche comprise) et le haut des icônes de mode, mesurés sur la page
+  const H = innerHeight, bord = (sel, cote, def) => { const e = document.querySelector(sel); const r = e && e.getBoundingClientRect(); return r && r.height ? r[cote] : def; };
+  const yHaut = bord('.haut', 'bottom', H * 0.08) + 12, yBas = bord('.modes', 'top', H * 0.86) - 12;
+  const bande = Math.max(H * 0.4, yBas - yHaut), tanF = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const dist = (hauteur * 1.16) / (2 * tanF * (bande / H));        // le corps entier tient dans la bande
+  const yEcran = (yHaut + yBas) / 2, ndc = 1 - 2 * yEcran / H;        // milieu de la bande, en coordonnées écran
+  const cible = centre.clone().add(new THREE.Vector3(0, -ndc * dist * tanF, 0));
+  return { cible, pos: new THREE.Vector3(centre.x, cible.y + hauteur * 0.07, centre.z + dist) };
 }
 function cadrer() {
   const v = vueInitiale();
