@@ -288,7 +288,7 @@ body[data-panneau="plein"] #etiquettes { opacity: 0; }
 .intro-passer { right: 20px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); margin: 0; font: 500 9px/1 var(--mono); letter-spacing: .3em; text-transform: uppercase; color: var(--ink-3); }
 #intro[data-phase="fin"] .intro-passer { opacity: 0; }
 /* l'interface s'allume à la fin de l'intro */
-body[data-intro] .hud-droite, body[data-intro] .console, body[data-intro] .onglets, body[data-intro] .credit { opacity: 0; pointer-events: none; }
+body[data-intro] .reglages, body[data-intro] .hud-droite, body[data-intro] .console, body[data-intro] .onglets, body[data-intro] .credit { opacity: 0; pointer-events: none; }
 body[data-intro]:not([data-marque]) .haut .gauche { opacity: 0; }
 .haut .gauche { transition: opacity .35s ease; }
 .hud-droite, .console, .onglets { transition: opacity .7s ease; }
@@ -917,7 +917,9 @@ function majVisuel() {
 const NOMS_COUCHES = ['Surface', '2e couche', '3e couche', '4e couche', 'Couche la plus profonde'];
 const curseur = document.getElementById('curseurCouche');
 curseur.oninput = () => { couche = +curseur.value; document.getElementById('nomCouche').textContent = NOMS_COUCHES[couche - 1]; majVisuel(); majSelection(true); };
-document.querySelectorAll('.styles button').forEach(b => b.addEventListener('click', () => { if (b.dataset.s === style) return; style = b.dataset.s; appliquer(); lancerIntro(STYLES[style].nom); }));
+document.querySelectorAll('.styles button').forEach(b => b.addEventListener('click', () => { if (b.dataset.s === style) return; style = b.dataset.s; appliquer();
+  reglages.hidden = true; bReglages.setAttribute('aria-pressed', false); // le choix est fait : le bloc des styles se range avant l'intro
+  lancerIntro(STYLES[style].nom); }));
 const bReglages = document.getElementById('bReglages'), reglages = document.getElementById('reglages');
 bReglages.onclick = () => { reglages.hidden = !reglages.hidden; bReglages.setAttribute('aria-pressed', !reglages.hidden); };
 document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => {
@@ -1072,7 +1074,7 @@ function compterCompteurs() {
 window.rejouerIntro = lancerIntro; // outil de vérification
 window.introA = (t) => { if (!intro) lancerIntro(); intro.t = t; avancerIntro(0); }; // outil de vérification
 window.figerTemps = (t) => { tempsFige = t; if (t != null) communs.uTemps.value = t; }; let tempsFige = null; // outil de vérification
-const DUREE_INTRO = 7.6; let introFinie = 0;
+const DUREE_INTRO = 7.6; const vTmpIntro = new THREE.Vector3(); let introFinie = 0;
 const LOG_INTRO = [[0.2, 'Initialisation · <b>LEGACY OS</b>'], [1.7, 'Squelette · <b>204</b> os'], [3.2, 'Muscles profonds'], [4.3, 'Muscles superficiels · <b>222</b>'], [5.6, 'Tendons · couches · fonctions'], [6.3, '<b>Système prêt</b>']];
 function finirIntro() {
   if (!intro) return;
@@ -1104,8 +1106,11 @@ function avancerIntro(dt) {
   if (t > 1.6 && t < 6.2) poserScan('h', t < 3.4 ? hOs : t < 4.5 ? hMu : hSu); else scan.visible = false;
   // caméra : le corps entier reste cadré, lent quart de tour vers la vue de face
   const k = eio((t - 1.2) / 5.6), ang = -0.85 * (1 - k), d0 = intro.p1.distanceTo(intro.c1);
-  const dist = d0 * (1.12 - 0.12 * k), haut = intro.p1.y + hauteur * 0.06 * (1 - k);
-  camera.position.set(intro.c1.x + Math.sin(ang) * dist, haut, intro.c1.z + Math.cos(ang) * dist); controls.target.copy(intro.c1); camera.lookAt(intro.c1);
+  // pendant l'intro il n'y a pas d'interface : le corps est centré (visée au milieu du corps), puis la visée glisse
+  // vers la vue finale (plus basse en portrait, pour laisser la place à la console) quand l'interface arrive
+  const g = eio((t - 5.6) / 1.4), cib = vTmpIntro.set(intro.c1.x, centre.y + (intro.c1.y - centre.y) * g, intro.c1.z);
+  const dist = d0 * (1.12 - 0.12 * k), haut = cib.y + (intro.p1.y - intro.c1.y) + hauteur * 0.06 * (1 - k);
+  camera.position.set(intro.c1.x + Math.sin(ang) * dist, haut, intro.c1.z + Math.cos(ang) * dist); controls.target.copy(cib); camera.lookAt(cib);
   // compteur et journal système
   document.getElementById('introPct').textContent = String(Math.min(100, Math.max(0, Math.round(e3((t - 1.6) / 4.4) * 100)))).padStart(2, '0');
   const log = document.getElementById('introLog');
