@@ -1,5 +1,5 @@
 // Service worker : l'appli et le modèle 3D sont gardés en cache pour marcher hors connexion.
-const VERSION = 'anatomie-36d6b3c51a';
+const VERSION = 'anatomie-41d3005ea9';
 const FICHIERS = ["./", "ui.js", "donnees/conseils.js", "donnees/exercices-base.js", "donnees/exos-complements.js", "donnees/exos-dos.js", "donnees/exos-haut-du-corps.js", "donnees/exos-jambes.js", "donnees/exos-rehab-mobilite.js", "donnees/exos-street.js", "donnees/exos-tronc-athle.js", "donnees/fiches-membre-inf.js", "donnees/fiches-membre-sup.js", "donnees/fiches-tete.js", "donnees/fiches-tronc-cou.js", "donnees/os.js", "donnees/rehab.js", "donnees/symptomes.js", "donnees/vocabulaire.js", "modele/corps.bin", "modele/corps-delta.bin", "modele/tendon.bin", "modele/attaches.json", "modele/corps.json", "modele/structures.json", "icon-192.png", "icon-512.png", "icon-512-maskable.png", "apple-touch-icon.png", "manifest.webmanifest"];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(FICHIERS)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('anatomie-') && k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

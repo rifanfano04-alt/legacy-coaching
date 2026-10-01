@@ -763,9 +763,9 @@ donnees().then(({ bin, man, noms, delta, tendon, attaches }) => {
 
 function vueInitiale() {
   const portrait = innerWidth < innerHeight;
-  // en portrait, la console occupe le bas : on vise plus bas pour que le corps remonte à l'écran
-  const cible = centre.clone().add(new THREE.Vector3(0, -hauteur * (portrait ? 0.13 : 0.02), 0));
-  const dist = hauteur * (portrait ? 2.75 : 1.9);
+  // en portrait : corps un peu plus petit et centré entre le titre (+ encoche de l'iPhone) et les icônes du bas
+  const cible = centre.clone().add(new THREE.Vector3(0, -hauteur * (portrait ? 0.035 : 0.02), 0));
+  const dist = hauteur * (portrait ? 2.95 : 1.9);
   return { cible, pos: new THREE.Vector3(centre.x, centre.y + hauteur * 0.05, centre.z + dist) };
 }
 function cadrer() {
