@@ -38,7 +38,7 @@ var OFF = {
   pct:       10,  // N  %
   chargeReco:11,  // O  charge recommandée
   charge:    12,  // P  charge utilisée           <- athlète
-  note:      13   // Q  note                      <- athlète
+  note:      13   // Q  consigne du coach (lecture seule pour l'app depuis le 03/10/2026)
 };
 var OFF_DIFF = 13;          // colonne difficulté, sur la ligne "total série" (+9)
 var RECUP_ROWS = { sommeil: 94, nutrition: 95, steps: 96, humeur: 97, poids: 99 };
@@ -326,7 +326,8 @@ function lireSemaineDe_(vals, semaine) {
         charge: charge,
         rpe1: rpe_(get(r, OFF.rpe1)),
         rpeLast: rpe_(get(r, OFF.rpeLast)),
-        note: txt_(get(r, OFF.note))
+        consigne: txt_(get(r, OFF.note)),   // colonne Note = consigne du coach
+        note: ''                           // note perso de l'athlete : attacherNotes_ (memoire du serveur)
       };
       if (e.charge !== null || e.rpe1 || e.rpeLast || e.note) rempli++;
       if (aUnRpe_(e)) avecRpe++;
@@ -406,7 +407,7 @@ function occurrence_(vals, r, col, chargeSeuleOk) {
   var code = txt_(g(OFF.code)).toUpperCase();
   var nom = txt_(g(OFF.nom)), vari = txt_(g(OFF.variante)), tempo = txt_(g(OFF.tempo));
   if (!code) return null;
-  var ch = num_(g(OFF.charge)), r1 = rpe_(g(OFF.rpe1)), r2 = rpe_(g(OFF.rpeLast)), nt = txt_(g(OFF.note));
+  var ch = num_(g(OFF.charge)), r1 = rpe_(g(OFF.rpe1)), r2 = rpe_(g(OFF.rpeLast)), nt = '';   // colonne Note = consigne du coach : ni preuve de seance faite, ni note d'athlete
   if (!(r1 || r2 || nt || (chargeSeuleOk && ch !== null))) return null;
   var cles = clesExo_(code, nom, vari, tempo, num_(g(OFF.sets)), num_(g(OFF.reps)));
   if (!cles[3]) return null;
@@ -696,6 +697,28 @@ function attacherRecords_(sheetId, seances, seulementCache) {
   return true;
 }
 
+/* ───────────────────────── NOTES PERSO DES ATHLETES ─────────────────────────
+ * Gardees dans les proprietes du script (jamais dans le Sheet de l'athlete) :
+ * cle n|<id du Sheet>|<onglet BLOCK>|<semaine>|<ligne>. Lues d'un coup par requete. */
+var NOTES_CACHE_ = null;
+function notesTout_() {
+  if (!NOTES_CACHE_) NOTES_CACHE_ = PropertiesService.getScriptProperties().getProperties();
+  return NOTES_CACHE_;
+}
+function cleNote_(sheetId, block, semaine, row) { return 'n|' + sheetId + '|' + block + '|' + semaine + '|' + row; }
+function noteAth_(sheetId, block, semaine, row) { return notesTout_()[cleNote_(sheetId, block, semaine, row)] || ''; }
+function attacherNotes_(sheetId, block, semaine, seances) {
+  (seances || []).forEach(function (s) {
+    (s.exos || []).forEach(function (e) { e.note = noteAth_(sheetId, block, semaine, e.row); });
+  });
+}
+function ecrireNote_(sheetId, block, semaine, row, texte) {
+  if (!sheetId || !block || !semaine || !row) return;
+  var p = PropertiesService.getScriptProperties(), k = cleNote_(sheetId, block, semaine, row);
+  if (texte) p.setProperty(k, String(texte).slice(0, 2000)); else p.deleteProperty(k);
+  NOTES_CACHE_ = null;
+}
+
 function apiLogin(body) {
   var a = athleteFromCode_(body.code);
   if (!a.sheetId) return { ok: true, role: 'coach', coach: true, prenom: a.prenom };
@@ -712,6 +735,7 @@ function apiProgram(body) {
   if (semaine < 1) semaine = 1;
   if (semaine > sit.nbSem) semaine = sit.nbSem;
   var w = lireSemaine_(sit.sheet, semaine);
+  attacherNotes_(a.sheetId, sit.sheet.getName(), semaine, w.seances);
   // records seulement s'ils sont deja en memoire ; sinon l'app les demandera a part
   var recPrets = false;
   try { recPrets = attacherRecords_(a.sheetId, w.seances, true); } catch (e) {}
@@ -801,8 +825,10 @@ function apiSave(body) {
       if (en.charge   !== undefined && en.charge  !== '' && en.charge !== null) {
         ecrire(r, col + OFF.charge, Number(en.charge), 'charge');
       }
-      if (en.note !== undefined && String(en.note).trim() !== '') {
-        ecrire(r, col + OFF.note, String(en.note).trim(), 'note');
+      // la note perso ne va JAMAIS dans le Sheet (colonne Note = consigne du coach) : memoire du serveur
+      if (en.note !== undefined && en.note !== null) {
+        try { ecrireNote_(a.sheetId, body.block, Number(body.semaine), r, String(en.note).trim()); }
+        catch (e) { refuser(r, 'note', en.note, String((e && e.message) || e).slice(0, 200)); }
       }
     });
     if (body.difficulte) {
@@ -989,6 +1015,7 @@ function apiCoach(body) {
       var ss  = SpreadsheetApp.openById(id);
       var sit = situation_(ss);
       var semaines = lireBloc_(sit.sheet, sit.nbSem);   // une seule lecture pour tout le bloc
+      semaines.forEach(function (wk, i) { attacherNotes_(id, sit.sheet.getName(), i + 1, wk.seances); });
       var w   = semaines[sit.semaine - 1] || semaines[semaines.length - 1];
 
       var faites = 0, alertes = [];
@@ -1135,7 +1162,7 @@ function extraireFiche_(id) {
             lignes.push({ row: rr, code: txtV2_(cell(rr, c - 1)), nom: nom.toLowerCase(), 'var': txtV2_(cell(rr, c + 1)).toLowerCase(),
               tempo: txtV2_(cell(rr, c + 2)), sets: s, reps: numV2_(cell(rr, c + 5)) || 0, repsTxt: txtV2_(cell(rr, c + 5)),
               rpeCible: txtV2_(cell(rr, c + 6)), rpe1: txtV2_(cell(rr, c + 7)), rpeLast: txtV2_(cell(rr, c + 8)),
-              charge: numV2_(cell(rr, c + 12)), note: txtV2_(cell(rr, c + 13)), ton: numV2_(cell(rr, c + 14)) || 0,
+              charge: numV2_(cell(rr, c + 12)), note: noteAth_(id, sh.getName(), w, rr), ton: numV2_(cell(rr, c + 14)) || 0,
               // une cellule mal remplie a donné -2881,7 chez Mathias : on écarte l'aberrant
               e1rm: (e1 !== null && e1 > 0 && e1 < 400) ? e1 : null });
           }
