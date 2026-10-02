@@ -2237,9 +2237,9 @@ window.Chg={
       '<div class="blk"><label>RPE dernière série</label><div id="f-rpe2"></div></div>' +
       '<div class="blk notes2"><label>Notes</label>' +
         (consigne ? '<div class="coachnote' + (lu ? ' lu' : '') + '" id="f-consigne"><span class="cav">C</span><div class="cn"><div class="cnh"><b>Note du coach</b><span>depuis ton programme</span>' + (lu ? '' : '<i class="new">nouveau</i>') + '</div><p>' + esc(consigne) + '</p></div></div>' : '') +
-        '<div class="mynote"><div class="mnh"><b>Ta note</b><span class="lock"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>reste dans l\'app</span></div>' +
+        '<div class="mynote"><div class="mnh"><b>Ta note</b></div>' +
         '<textarea id="f-note" placeholder="Ressenti, technique, reps réelles… (facultatif)">' + esc(e.note || '') + '</textarea>' +
-        '<div class="keep' + ((e.note || '').trim() ? ' on' : '') + '" id="f-keep"><i></i>Reste dans l\'app · pas envoyée dans le Sheet</div></div></div>';
+        '</div></div>';
 
     $('r-body').innerHTML = h;
     $('r-body').scrollTop = 0;
@@ -2302,7 +2302,7 @@ window.Chg={
     if (last) last.onclick = function () { last.classList.toggle('open'); };
     jaugeRpe($('f-rpe1'), e.rpe1, e.rpeCible, function (v) { e.rpe1 = v; saveRun(); });
     jaugeRpe($('f-rpe2'), e.rpeLast, e.rpeCible, function (v) { e.rpeLast = v; saveRun(); });
-    $('f-note').oninput = function () { e.note = $('f-note').value; $('f-keep').classList.toggle('on', !!e.note.trim()); saveRun(); };
+    $('f-note').oninput = function () { e.note = $('f-note').value; saveRun(); };
   }
 
   /* Derniere fois que l'athlete a fait cet exercice : la semaine d'avant, ou plus loin,
