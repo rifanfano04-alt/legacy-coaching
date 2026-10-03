@@ -393,6 +393,34 @@ const ALIAS = { // mot du coach -> régions musculaires (début du nom de groupe
   lombaire: ['lombaires', 'erecteurs'], hanche: ['flechisseurs de hanche', 'fessiers', 'pelvi', 'adducteurs'], adducteur: ['adducteurs'], cou: ['cou', 'nuque'], nuque: ['nuque', 'cou'],
 };
 const racine = (w) => w.length > 3 ? w.replace(/(aux|s|x)$/, '') : w;
+/* Langage de salle -> termes de l'appli (03/10/2026) : « pull up », « muscle-up », « bench », « rdl »… */
+const PHRASES = [
+  [/\bpull\s*ups?\b/g, 'traction'], [/\bchin\s*ups?\b/g, 'chin'], [/\bmuscle\s*ups?\b/g, 'muscle up'], [/\bpush\s*ups?\b/g, 'pompe'],
+  [/\bbench(\s*press)?\b/g, 'developpe couche'], [/\bdc\b/g, 'developpe couche'], [/\bohp\b/g, 'developpe militaire'],
+  [/\brdl\b/g, 'souleve de terre roumain'], [/\b(deadlift|sdt)\b/g, 'souleve de terre'], [/\bhip\s*thrusts?\b/g, 'hip thrust'],
+];
+const prepRecherche = (q) => { let t = norm(q).replace(/[-_/]+/g, ' '); for (const [re, v] of PHRASES) t = t.replace(re, v); return t; };
+/* Atlas : abréviations et pluriels du coach -> début de mots à chercher dans les noms (muscles, os, exos) */
+const SYN_ATLAS = {
+  abdo: ['abdom', 'grand droit', 'oblique', 'transverse'], pec: ['pectoral'], pecto: ['pectoral'], lat: ['grand dorsal'], dorsaux: ['grand dorsal'],
+  trap: ['trapeze'], delt: ['deltoide'], delto: ['deltoide'], tri: ['triceps'], tricep: ['triceps'], bi: ['biceps'], bicep: ['biceps'],
+  quad: ['quadriceps', 'vaste', 'droit femoral'], quadri: ['quadriceps', 'vaste', 'droit femoral'], ischio: ['ischio', 'biceps femoral', 'semi'],
+  mollet: ['mollet', 'gastrocnem', 'soleaire'], glute: ['fessier'], fesse: ['fessier'], lombaire: ['lombaire', 'erecteur', 'carre des lombes'],
+  obliques: ['oblique', 'abdom'],
+};
+/* un mot de la recherche se retrouve-t-il dans un texte ? 2 = mot entier, 1 = début de mot, 0 = non
+   (début de mot seulement : « traction » ne doit plus sortir « protraction ») */
+function trouveMot(txt, w) {
+  const alts = SYN_ATLAS[w] || SYN_ATLAS[racine(w)] || [w, racine(w)];
+  let best = 0, n = 0;
+  for (const a of alts) {
+    const i = (' ' + txt).indexOf(' ' + a); if (i < 0) continue;
+    const apres = txt.charAt(i + a.length), fin = (c) => !c || /[\s,·.()’]/.test(c);   // l'occurrence commence à i dans txt
+    best = Math.max(best, (fin(apres) || (/[sx]/.test(apres) && fin(txt.charAt(i + a.length + 1)))) ? 2 : 1); n++;
+  }
+  return best ? best + (n - 1) * 0.1 : 0;
+}
+const scoreTexte = (txt, mots) => { let t = 0; for (const w of mots) { const v = trouveMot(txt, w); if (!v) return 0; t += v; } return t; };
 function scoreMot(e, w) {
   const r = racine(w), reg = ALIAS[r] || ALIAS[w];
   const dans = (niv) => reg ? e.grp[niv].some(g => reg.some(c => g.startsWith(c))) : e.txt[niv].includes(r);
@@ -440,7 +468,7 @@ function vueExercices() {
       const compte = el('p', 'compte'); const liste = el('div', 'liste'); c.append(compte, liste);
       const zoneCles = (z) => new Set([...Corps.structures].filter(([, s]) => s.g === z).map(([k]) => k));
       function maj() {
-        const q = norm(filtres.q).split(/\s+/).filter(Boolean), zc = filtres.zone ? zoneCles(filtres.zone) : null;
+        const q = prepRecherche(filtres.q).split(/\s+/).filter(Boolean), zc = filtres.zone ? zoneCles(filtres.zone) : null;
         const res = EXOS.filter(e => (!filtres.cat.size || filtres.cat.has(e.cat)) && (!filtres.mat.size || e.mat.some(m => filtres.mat.has(m))) && (!filtres.niv.size || filtres.niv.has(e.niv))
           && (!zc || [...e.niveaux].some(([k, n]) => n !== 'st' && zc.has(k))));
         if (q.length) { // chaque mot doit se retrouver dans le nom, ou dans les muscles travaillés ; muscle principal d'abord
@@ -473,17 +501,24 @@ function vueAtlas() {
       const parGroupe = (l) => { const m = new Map(); l.forEach(x => { if (!m.has(x.g)) m.set(x.g, []); m.get(x.g).push(x); }); return [...m].sort((a, b) => a[0].localeCompare(b[0], 'fr')); };
       const listeStructures = (parent, l) => { const w = el('div', 'liste'); l.sort((a, b) => a.fr.localeCompare(b.fr, 'fr')).forEach(x => { const b = el('button', 'ligne-liste'); b.type = 'button'; b.append(el('span', '', x.fr), el('span', 'le-meta', x.t === 'o' ? 'os' : { s: 'superficiel', p: 'profond', t: 'tendon', c: 'cartilage' }[x.couche] || '')); b.onclick = () => vueStructure(x.k); w.append(b); }); parent.append(w); };
       function maj() {
-        zone.replaceChildren(); const q = norm(atlasQ).split(/\s+/).filter(Boolean);
+        zone.replaceChildren(); const q = prepRecherche(atlasQ).split(/\s+/).filter(Boolean);
         seg.hidden = q.length > 0;
         if (q.length) {
-          const ok = (t) => q.every(w => t.includes(w));
-          const st = struct.filter(x => ok(x.txt)).slice(0, 40);
-          const fn = [...D.fonctions.values()].filter(f => ok(norm(f.artLib + ' ' + f.mvLib))).slice(0, 30);
-          const ex = EXOS.filter(e => ok(e.texte)).slice(0, 40);
-          if (st.length) { const b = section(zone, 'Muscles et os (' + st.length + ')'); listeStructures(b, st); }
-          if (fn.length) { const b = section(zone, 'Mouvements (' + fn.length + ')'); const w = el('div', 'puces'); fn.forEach(f => w.append(puce(f.artLib + ' \u00b7 ' + f.mvLib, () => vueFonction(f.code)))); b.append(w); }
-          if (ex.length) { const b = section(zone, 'Exercices (' + ex.length + ')'); const l = el('div', 'liste'); ex.forEach(e => l.append(ligneExo(e))); b.append(l); }
-          if (!st.length && !fn.length && !ex.length) zone.append(el('p', 'aide-txt', 'Aucun résultat. Essaie un autre mot (ex. « deltoïde », « abduction », « fémur »).'));
+          const trie = (l, txt) => l.map(x => [x, scoreTexte(txt(x), q)]).filter(x => x[1]).sort((a, b) => b[1] - a[1]);
+          const stS = trie(struct, x => x.txt), fnS = trie([...D.fonctions.values()], f => norm(f.artLib + ' ' + f.mvLib)), exS = trie(EXOS, e => e.texte);
+          const st = stS.slice(0, 40).map(x => x[0]), fn = fnS.slice(0, 30).map(x => x[0]), ex = exS.slice(0, 40).map(x => x[0]);
+          const meilleur = (l) => l.length ? l[0][1] : 0;
+          const blocs = [
+            [meilleur(stS), () => { if (st.length) { const b = section(zone, 'Muscles et os (' + st.length + ')'); const w = el('div', 'liste'); st.forEach(x => { const bt = el('button', 'ligne-liste'); bt.type = 'button'; bt.append(el('span', '', x.fr), el('span', 'le-meta', x.t === 'o' ? 'os' : { s: 'superficiel', p: 'profond', t: 'tendon', c: 'cartilage' }[x.couche] || '')); bt.onclick = () => vueStructure(x.k); w.append(bt); }); b.append(w); } }],
+            [meilleur(fnS), () => { if (fn.length) { const b = section(zone, 'Mouvements (' + fn.length + ')'); const w = el('div', 'puces'); fn.forEach(f => w.append(puce(f.artLib + ' \u00b7 ' + f.mvLib, () => vueFonction(f.code)))); b.append(w); } }],
+            [meilleur(exS) + 0.5, () => { if (ex.length) { const b = section(zone, 'Exercices (' + ex.length + ')'); const l = el('div', 'liste'); ex.forEach(e => l.append(ligneExo(e))); b.append(l); } }],
+          ];
+          if (q.some(w => /^(tendin|douleur|mal$|blessure|bless)/.test(w))) {
+            const h = el('button', 'btn', 'Une douleur ? Décris-la dans l\u2019onglet Réhab \u203a'); h.type = 'button';
+            h.onclick = () => { const b = document.querySelector('button[aria-label="Réhab"]'); if (b) b.click(); }; zone.append(h);
+          }
+          blocs.sort((a, b) => b[0] - a[0]).forEach(b => b[1]());   // la section qui colle le mieux à la recherche passe en premier
+          if (!st.length && !fn.length && !ex.length && !zone.querySelector('.btn')) zone.append(el('p', 'aide-txt', 'Aucun résultat. Essaie un autre mot (ex. « deltoïde », « abduction », « fémur »).'));
           return;
         }
         if (atlasOnglet === 'mouvements') {
