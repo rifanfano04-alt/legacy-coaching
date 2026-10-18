@@ -347,6 +347,54 @@ body[data-fond="real"] #fond::after { opacity: 1; content: "LEGACY"; inset: auto
 @media (prefers-reduced-motion: reduce) { .fiche, #fond, .modes button::after { transition: none; } }
 </style>
 
+<!-- (18/10/2026, demande du coach) L'APPLI EST À LUI : un CODE d'accès, demandé une fois par appareil (souvenu ensuite).
+     Seule l'EMPREINTE du code est ici (PBKDF2-SHA-256), jamais le code. La vue d'un protocole (?vue=…, ouverte par LEGACY pour
+     les athlètes) reste SANS code. Simple barrière : la page reste publique (GitHub Pages), le coach le sait et c'est voulu. -->
+<style>
+#verrou { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 24px; background: radial-gradient(ellipse at 50% 40%, #0d1016, #05070a 70%); transition: opacity .45s; }
+#verrou[hidden] { display: none; }
+#verrou.ouvert { opacity: 0; pointer-events: none; }
+html.verrouille body > :not(#verrou):not(script):not(style) { visibility: hidden; }
+.vr-boite { width: min(340px, 100%); display: grid; gap: 14px; justify-items: center; text-align: center; color: #e9edf1; font-family: system-ui, sans-serif; }
+.vr-marque { font: 900 28px/1 system-ui, sans-serif; letter-spacing: .18em; }
+.vr-marque small { display: block; margin-top: 6px; font: 600 10px ui-monospace, monospace; letter-spacing: .5em; color: rgba(233,237,241,.6); }
+.vr-boite p { margin: 0; font: 600 10px ui-monospace, monospace; letter-spacing: .3em; text-transform: uppercase; color: #ff3b3b; }
+#vrForm { width: 100%; display: grid; gap: 10px; margin-top: 8px; }
+#vrCode { width: 100%; box-sizing: border-box; padding: 14px; text-align: center; font: 700 18px ui-monospace, monospace; letter-spacing: .35em; text-transform: uppercase; color: #e9edf1; background: rgba(255,255,255,.04); border: 1px solid rgba(233,237,241,.25); border-radius: 2px; outline: none; }
+#vrCode:focus { border-color: #ff3b3b; }
+#vrForm button { padding: 14px; font: 700 12px ui-monospace, monospace; letter-spacing: .3em; color: #fff; background: #ff3b3b; border: 0; border-radius: 2px; cursor: pointer; }
+.vr-boite .vr-err { color: rgba(233,237,241,.75); letter-spacing: .14em; }
+</style>
+<div id="verrou" hidden>
+  <div class="vr-boite">
+    <div class="vr-marque">LEGACY<small>ANATOMIE</small></div>
+    <p>Accès coach</p>
+    <form id="vrForm" autocomplete="off"><input id="vrCode" type="password" inputmode="text" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="CODE" aria-label="Code d'accès"><button type="submit">ENTRER</button></form>
+    <p class="vr-err" id="vrErr" hidden>Code incorrect</p>
+  </div>
+</div>
+<script>
+(function () {
+  if (new URLSearchParams(location.search).has('vue')) return;   // la vue d'un protocole (athlètes) : sans code
+  const CLE = 'legacy-anatomie-acces', EMP = '126fa56ea4504835872de686c5c3babe383546cb61e01bcfa1c6b357249f530f', SEL = 'legacy-anatomie·2026', N = 150000;
+  try { if (localStorage.getItem(CLE) === EMP) return; } catch (e) {}
+  const v = document.getElementById('verrou'); v.hidden = false; document.documentElement.classList.add('verrouille');
+  async function empreinte(code) {
+    const enc = new TextEncoder(), k = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveBits']);
+    const b = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: enc.encode(SEL), iterations: N, hash: 'SHA-256' }, k, 256);
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+  document.getElementById('vrForm').onsubmit = async (ev) => {
+    ev.preventDefault(); const champ = document.getElementById('vrCode'), c = champ.value.trim().toUpperCase(); if (!c) return;
+    if (await empreinte(c) === EMP) {
+      try { localStorage.setItem(CLE, EMP); } catch (e) {}
+      champ.blur(); document.documentElement.classList.remove('verrouille'); v.classList.add('ouvert');
+      setTimeout(() => { v.remove(); if (window.rejouerIntro) window.rejouerIntro(); }, 450);   // l'intro se joue pour lui, une fois entré
+    } else { document.getElementById('vrErr').hidden = false; champ.select(); }
+  };
+  setTimeout(() => document.getElementById('vrCode').focus(), 300);
+})();
+</script>
 <div id="fond"></div>
 <canvas id="scene"></canvas>
 <div id="etiquettes" aria-hidden="true"><svg id="traits"></svg></div>
