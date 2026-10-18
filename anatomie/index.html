@@ -1192,6 +1192,8 @@ window.auditer = (n = 70) => {
 // capture haute définition du rendu (outil de vérification)
 // caméra libre (outil de vérification) : position et cible en coordonnées du monde
 window.placerCamera = (px, py, pz, tx, ty, tz) => { controls.autoRotate = false; camera.position.set(px, py, pz); controls.target.set(tx, ty, tz); controls.update(); return [centre.x, bas, hauteur, centre.z]; };
+window.vitesseRotation = (v) => { controls.autoRotate = v > 0; controls.autoRotateSpeed = v; }; // outil de montage vidéo
+window.dessinerDans = (ctx, ...r) => { if (bloom.strength === 0) renderer.render(scene, camera); else composer.render(); ctx.drawImage(canvas, ...r); }; // outil de montage vidéo
 window.photo = () => { if (bloom.strength === 0) renderer.render(scene, camera); else composer.render(); return canvas.toDataURL('image/jpeg', 0.85); }; // outil de vérification
 window.capturer = (angle, cy, dist) => {
   camera.position.set(centre.x + Math.sin(angle) * dist, cy, centre.z + Math.cos(angle) * dist);
@@ -1255,6 +1257,7 @@ controls.addEventListener('start', () => { document.getElementById('aide').style
 function majSelection(immediat) {
   pieces.forEach(p => {
     p.cible = surb.get(p.key) || 0;
+    if (coteVue && p.cible && cotePiece(p) === -coteVue) p.cible = 0;   // (18/10) mode « vue » : seul le côté qui fait mal s'allume
     p.cibleDim = surb.size && !p.cible ? 1 : 0;
     if (immediat) { p.sel = p.cible; p.dim = p.cibleDim; }
     peindre(p);
@@ -1354,8 +1357,14 @@ let finPret; const Corps = window.Corps = { pret: new Promise(r => finPret = r),
 };
 // cadre la caméra sur des structures dans la zone visible (au-dessus du panneau) ; passe de dos si elles sont dorsales
 // masque : hauteur (px) cachée en bas sans décalage de vue (carte du muscle) -> le muscle est cadré au-dessus
+// (18/10) mode « vue » des athlètes : cadrer sur UN côté du corps (-1 = droit, +1 = gauche ; gauche = +X), 0 = les deux (usage normal)
+let coteVue = 0;
+window.coteVue = c => { coteVue = c || 0; };
+const cotePiece = p => { const b = p.mesh.geometry.boundingBox || (p.mesh.geometry.computeBoundingBox(), p.mesh.geometry.boundingBox); const x = (b.min.x + b.max.x) / 2 - centre.x; return Math.abs(x) < 0.02 ? 0 : Math.sign(x); };
 function cadrerSur(cles, px = decalCible, masque = 0) {
-  const box = new THREE.Box3(), m = cles.length ? cles.flatMap(k => parCle.get(k) || []).filter(p => p.mesh.visible || p.fantome) : [];
+  const box = new THREE.Box3(); let m = cles.length ? cles.flatMap(k => parCle.get(k) || []).filter(p => p.mesh.visible || p.fantome).filter(p => !coteVue || cotePiece(p) !== -coteVue) : [];
+  // un côté demandé : la caméra vise les muscles de CE côté (un muscle à cheval sur les deux, comme le trapèze, reste allumé sans élargir le cadre)
+  if (coteVue && m.some(p => cotePiece(p) === coteVue)) m = m.filter(p => cotePiece(p) === coteVue);
   if (m.length) m.forEach(p => box.union(p.mesh.geometry.boundingBox || (p.mesh.geometry.computeBoundingBox(), p.mesh.geometry.boundingBox)));
   if (box.isEmpty()) {
     if (!px) { recentrer(); return; }
@@ -1366,7 +1375,8 @@ function cadrerSur(cles, px = decalCible, masque = 0) {
   const demiFov = THREE.MathUtils.degToRad(camera.fov / 2) * visible;
   const ext = Math.max(t.y, Math.max(t.x, t.z) / camera.aspect * visible);
   const etroit = camera.aspect < 0.85; // téléphone en portrait : on recule pour laisser de la place aux étiquettes sur les côtés
-  const dist = Math.min(hauteur * 3, Math.max(hauteur * (etroit ? 0.6 : 0.32), (ext / 2) / Math.tan(demiFov) * (etroit ? 1.9 : 1.35) + Math.max(t.x, t.z) / 2));
+  const vueLim = document.body.classList.contains('vue-lim'); // (18/10) mode « vue » des athlètes : pas d'étiquettes, on peut s'approcher
+  const dist = Math.min(hauteur * 3, Math.max(hauteur * (etroit ? (vueLim ? 0.36 : 0.6) : 0.32), (ext / 2) / Math.tan(demiFov) * (etroit && !vueLim ? 1.9 : 1.35) + Math.max(t.x, t.z) / 2));
   let dir = camera.position.clone().sub(controls.target).setY(0).normalize();
   const off = new THREE.Vector3(c.x - centre.x, 0, c.z - centre.z);
   const profonds = m.length && m.every(p => p.couche === 'p');
@@ -1406,6 +1416,58 @@ renderer.setAnimationLoop(() => {
 });
 </script>
 <script type="module" src="ui.js"></script>
+
+<!-- (18/10/2026, demande du coach) MODE « VUE » POUR LES ATHLÈTES : ?vue=<id du protocole> (ex. ?vue=coiffe).
+     Ouvert depuis LEGACY quand le coach a donné un protocole de douleur : l'intro, puis SEULEMENT les muscles du protocole allumés,
+     la caméra dessus, le nom du protocole et des muscles, rotation au doigt ; rien d'autre à toucher (menus, recherche, fiches cachés) ;
+     ‹ RETOUR = message au parent (iframe LEGACY : anat:retour), sinon page d'avant. Sans ?vue, l'appli ne change pas. -->
+<style id="vue-lim">
+body.vue-lim header .ico, body.vue-lim .compteurs, body.vue-lim .console, body.vue-lim .coupe-zone, body.vue-lim .reglages, body.vue-lim .panneau,
+body.vue-lim .onglets, body.vue-lim #toast, body.vue-lim dialog, body.vue-lim .etiquettes, body.vue-lim [class*="etiq"] { display: none !important; }
+/* (18/10, coach : « que des traits avec des points, sans nom ») : tout le calque des étiquettes part (traits, points, noms) ; les noms sont listés en bas */
+body.vue-lim #etiquettes, body.vue-lim #traits { display: none !important; }
+.vl { position: fixed; left: 0; right: 0; z-index: 50; pointer-events: none; padding: 0 18px; font-family: system-ui, sans-serif; color: #e9edf1; opacity: 0; transition: opacity .8s }
+.vl.on { opacity: 1 }
+.vl-h { top: calc(env(safe-area-inset-top, 0px) + 64px); text-align: center }
+.vl-h small { display: block; font: 600 10px ui-monospace, monospace; letter-spacing: .26em; color: #ff3b3b }
+.vl-h b { display: block; margin-top: 6px; font: 800 19px/1.2 system-ui, sans-serif; text-transform: uppercase; letter-spacing: .03em }
+.vl-b { bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); display: grid; justify-items: center; gap: 12px }
+.vl-b p { margin: 0; max-width: 460px; text-align: center; font: 500 12px/1.45 system-ui, sans-serif; color: rgba(233,237,241,.7) }
+.vl-b button { pointer-events: auto; padding: 14px 26px; font: 700 12px ui-monospace, monospace; letter-spacing: .22em; color: #fff; background: rgba(8,8,10,.6); border: 1px solid #ff3b3b; border-radius: 2px; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px) }
+</style>
+<div class="vl vl-h" id="vlH" hidden><small>◆ TON PROTOCOLE · VUE 3D</small><b id="vlNom"></b></div>
+<div class="vl vl-b" id="vlB" hidden><p id="vlMus"></p><button type="button" id="vlRetour">‹ RETOUR</button></div>
+<script>
+(function () {
+  const id = new URLSearchParams(location.search).get('vue'); if (!id) return;
+  document.body.classList.add('vue-lim');
+  const H = document.getElementById('vlH'), B = document.getElementById('vlB'); H.hidden = B.hidden = false;
+  const retour = () => { try { parent.postMessage({ anat: 'retour' }, '*'); } catch (e) {} if (parent === window) { if (history.length > 1) history.back(); else window.close(); } };
+  document.getElementById('vlRetour').onclick = retour;
+  const attendre = (f, ms = 120) => new Promise(ok => { const t = () => f() ? ok() : setTimeout(t, ms); t(); });
+  (async () => {
+    await attendre(() => window.Corps && window.REHAB);
+    await window.Corps.pret;
+    const r = window.REHAB.find(x => x.id === id);
+    if (!r) { document.getElementById('vlNom').textContent = 'Protocole introuvable'; H.classList.add('on'); B.classList.add('on'); return; }
+    document.getElementById('vlNom').textContent = r.nom;
+    await attendre(() => r.cles && r.cles.size);
+    // après l'intro (le logo qui s'envole) : seuls les muscles du protocole s'allument, la caméra vient dessus
+    await attendre(() => { const el = document.getElementById('intro'); return !el || el.dataset.phase === 'fin'; }, 150);
+    const cles = [...r.cles], carte = Object.fromEntries(cles.map(k => [k, 1]));
+    window.Corps.surligner(carte, null);
+    // le côté qui fait mal (LEGACY envoie &cote=d ou &cote=g) : la caméra vient sur ce côté seulement
+    const cote = { d: -1, g: 1 }[new URLSearchParams(location.search).get('cote')] || 0;
+    if (cote && window.coteVue) { window.coteVue(cote); H.querySelector('small').textContent = '◆ TON PROTOCOLE · CÔTÉ ' + (cote < 0 ? 'DROIT' : 'GAUCHE'); }
+    setTimeout(() => window.Corps.cadrerSur(cles), 60);
+    const noms = cles.map(k => window.Corps.structures.get(k)).filter(Boolean).map(s => s.fr.replace(/,\s*(chef|faisceau|partie|portion).*$/i, ''));
+    document.getElementById('vlMus').textContent = [...new Set(noms)].slice(0, 6).join(' · ');
+    H.classList.add('on'); B.classList.add('on'); try { parent.postMessage({ anat: 'pret' }, '*'); } catch (e) {}
+    // rien d'autre à toucher : le corps tourne au doigt, mais toucher un muscle ne fait plus rien
+    window.Corps.surligner = () => {}; window.Corps.isoler = () => {}; window.choisirStructure = () => {};
+  })();
+})();
+</script>
 <script>
 if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 </script>
