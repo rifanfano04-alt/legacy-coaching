@@ -6502,7 +6502,17 @@ function labDemo() {
   return out;
 }
 let LAB = (() => { try { return JSON.parse(localStorage.getItem("lgcy-os-lab-v3") || "null"); } catch (e) { return null; } })();
-if (!LAB || !DATA.every(a => LAB[a.code])) LAB = labDemo();
+if (!LAB) LAB = {};
+(() => { let fait = false; try { fait = !!localStorage.getItem("beta-lab-vrai"); } catch (e) {} if (fait) return;
+  Object.keys(LAB).forEach(c => { const L = LAB[c]; if (!L || typeof L !== "object") return;
+    Object.keys(L.ex || {}).forEach(k => { const e = L.ex[k]; Object.keys(e.pts || {}).forEach(p => { if (e.pts[p] && e.pts[p].demo) delete e.pts[p]; }); if (!Object.keys(e.pts || {}).length) delete L.ex[k]; });
+    Object.keys(L.spec || {}).forEach(m => { Object.keys(L.spec[m] || {}).forEach(v => { if (["14.09", "21.09", "28.09"].includes((L.spec[m][v] || {}).date)) delete L.spec[m][v]; }); if (!Object.keys(L.spec[m] || {}).length) delete L.spec[m]; });
+    if (L.cali) Object.keys(L.cali).forEach(k => { if (L.cali[k] && L.cali[k].demo) delete L.cali[k]; });
+    L.cali = L.cali || {}; L.nb = Object.values(L.ex || {}).reduce((s, e) => s + Object.keys(e.pts || {}).length, 0); });
+  try { localStorage.setItem("beta-lab-vrai", "1"); } catch (e) {} })();
+DATA.forEach(a => { if (!LAB[a.code]) LAB[a.code] = { taille: 1.75, pc: 75, ex: {}, spec: {}, nb: 0, mvtPerso: {}, cali: {} }; });
+if (LAB.RICHARD && !LAB.RICHARD.maj1007b && !LAB.RICHARD.ex["dips|dips"]) LAB.RICHARD.ex["dips|dips"] = { mvt: "dips", exo: "Dips", pts: {} };
+try { localStorage.setItem("lgcy-os-lab-v3", JSON.stringify(LAB)); } catch (e) {}
 (() => { const R = LAB && LAB.RICHARD; if (!R || R.maj1007b) return; R.pc = 77; R.taille = 1.79; R.maj1007b = true;
   const e = R.ex && R.ex["dips|dips"]; if (e) { e.pts = { "1×1|117.5": { fmt: "1×1", kg: 117.5, v: .13, date: "07.10", max: true }, "4×3|92.5": { fmt: "4×3", kg: 92.5, v: .26, date: "07.10" } }; }
   R.mvtPerso = Object.assign({}, R.mvtPerso, { dips: { v: .13, kg: 117.5, date: "07.10" } });
@@ -14064,6 +14074,156 @@ window.betaBilan = function (a, n, BV) {
   const garder = () => Object.entries(T).forEach(([k, f]) => { try { const j = JSON.stringify(f()); if (j !== der[k]) { localStorage.setItem(k, j); der[k] = j; } } catch (e) {} });
   setInterval(garder, 5000); addEventListener('visibilitychange', () => { if (document.hidden) garder(); }); addEventListener('pagehide', garder); window.betaGarderTout = garder; }
 
+/* ════════════ ÉTAPE 2 (20/10) : alertes Telegram, vidéos et photos dans le Drive, accueil complet ════════════ */
+const nomFichier = (base, blob) => { const ext = /quicktime/.test(blob.type) ? 'mov' : /webm/.test(blob.type) ? 'webm' : /mp4/.test(blob.type) ? 'mp4' : /png/.test(blob.type) ? 'png' : /jpe?g/.test(blob.type) ? 'jpg' : (blob.name || '').split('.').pop() || 'bin';
+  const d = new Date(); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}h${p2(d.getMinutes())} · ${base}.${ext}`; };
+const prenom = () => { try { return DATA[idx].prenom; } catch (e) { return ''; } };
+const versBlob = u => fetch(u).then(r => r.blob());
+
+/* ---- les alertes de LEX (le fil de la maquette) → aussi sur le Telegram du coach ---- */
+let sansTg = false;
+{ const o = alerte; alerte = function (k, t) {
+  const n = FIL.length, r = o.apply(this, arguments);
+  if (FIL.length > n && !sansTg) { const tag = (typeof TAGS !== 'undefined' && TAGS[k]) || String(k).toUpperCase();
+    const p = { action: 'alerte', tag, texte: String(t) };
+    betaApi(p).catch(e => { if (e.reseau) betaGarder(p); }); }
+  return r;
+}; }
+
+/* ---- les vidéos : celles du LAB et celles filmées en séance → le Drive du coach ---- */
+const choisirVideoIA0 = choisirVideoIA;   // sans envoi (la séance range sa vidéo elle-même, dans « Séances filmées »)
+{ const o = choisirVideoIA; choisirVideoIA = function (mvt, ctx, opts, ouvrir) {
+  const base = ouvrir || (f => openIA(f, mvt, ctx, opts));
+  return o.call(this, mvt, ctx, opts, f => {
+    try { const nm = ((typeof IA_MVT !== 'undefined' && IA_MVT[mvt]) || (typeof CALI !== 'undefined' && CALI[mvt]) || {}).nom || 'analyse';
+      betaEnvoyerFichier(f, { nom: nomFichier('LAB · ' + nm + (ctx && ctx.s ? ' ' + ctx.s : '') + (ctx && ctx.charge ? ' à ' + virg(ctx.charge) + ' kg' : ''), f), dossier: 'videos', description: 'LEGACY LAB' }); } catch (e) {}
+    return base(f);
+  });
+}; }
+// la séance : « Filme ma série » → la vraie caméra (60 images/s) ou une vidéo du téléphone, rangée dans « Séances filmées »,
+// le coach reçoit l'alerte avec le lien ; puis l'analyse IA si le mouvement en a une
+filmerSerie = function () {
+  if (!S) return; const x = S.s.exos[S.i], e = S.ex[S.i], a = S.a, c = numOu(e.charge) ?? numOu(e.chargeReco), mvt = mvtDe(x), ctx = ctxSeance();
+  lexFermer();
+  choisirVideoIA0(mvt, ctx, null, f => {
+    const txt = `${a.prenom} a filmé une série : ${e.nom.toLowerCase()} ${x.sets} × ${x.reps}${c ? ` à ${virg(c)} kg` : ''}.`;
+    sansTg = true; try { alerte('video', txt); } finally { sansTg = false; }
+    betaEnvoyerFichier(f, { nom: nomFichier(`${S.s.jour} · ${e.nom} ${x.sets}×${x.reps}${c ? ' à ' + virg(c) + ' kg' : ''}`, f), dossier: 'seances', description: txt, alerte: 'VIDÉO · ' + txt });
+    const ov = $('#tentOv'); ov.hidden = false;
+    ov.innerHTML = `<div class="tv"><div class="k">● VIDÉO GARDÉE</div><h2>${e.nom}</h2>
+      <p class="s-p">Elle part dans le Drive de ton coach (même sans réseau : elle partira dès que tu le retrouves).</p>
+      ${mvt ? `<button class="btn ghost" type="button" id="f-ia" style="border-color:rgba(255,59,59,.55)">◆ ANALYSER CETTE SÉRIE AVEC L'IA</button>` : ''}
+      <button class="btn" type="button" id="f-ok">RETOUR À LA SÉANCE</button></div>`;
+    sfx.ok(); $('#f-ok').onclick = () => { ov.hidden = true; };
+    if ($('#f-ia')) $('#f-ia').onclick = () => { ov.hidden = true; openIA(f, mvt, ctx); };
+  });
+};
+// les photos (carte, mur, progression, bilan) : aussi rangées dans le Drive du coach
+{ const o = choisirPhotoCarte; choisirPhotoCarte = function (fini) {
+  return o.call(this, u => { try { if (!(typeof ACC !== 'undefined' && ACC)) versBlob(u).then(b => betaEnvoyerFichier(b, { nom: nomFichier('photo', b), dossier: 'photos' })); } catch (e) {} return fini(u); });
+}; }
+
+/* ---- L'ACCUEIL COMPLET (maquette du 07/10) : à la première ouverture de l'app installée, après le code ----
+   bande-annonce « Bienvenue dans la LEGACY », LEX, le bilan de départ (vidéos + photos → Drive, alerte au coach), le tour de l'app,
+   puis l'app s'ouvre comme d'habitude. L'installation s'est faite avant le code (boot.js) : l'étape est sautée. Une fois par téléphone. */
+const ACC_FAIT = 'beta-accueil-fait';
+const accueilFait = () => { try { return !!localStorage.getItem(ACC_FAIT); } catch (e) { return true; } };
+$('#start').onclick = () => {
+  if (accueilFait()) return start();
+  if ('speechSynthesis' in window) { try { voixBloquee = false; speechSynthesis.cancel(); const w = new SpeechSynthesisUtterance(' '); w.volume = 0; speechSynthesis.speak(w); } catch (e) {} }
+  openAccueil(DATA[idx].code);
+};
+{ const o = terminerAccueil; terminerAccueil = function () { try { localStorage.setItem(ACC_FAIT, new Date().toISOString()); } catch (e) {} return o.apply(this, arguments); }; }
+{ const o = etapes; etapes = function (k) {
+  if (k === 'installer') k = 'lex';
+  // « ENVOYER À MON COACH » : le bilan de départ part dans le Drive (dossier « Bilan de départ ») + l'alerte au coach
+  if (k === 'tour' && typeof ACC !== 'undefined' && ACC && ACC.etape === 'bilan') envoyerBilanDepart(ACC.a, ACC.R || {});
+  return o.call(this, k);
+}; }
+function envoyerBilanDepart(a, R) {
+  const vids = Object.keys(R.videos || {}), phs = Object.keys(R.photos || {});
+  if (!vids.length && !phs.length) return;
+  vids.forEach(k => { const u = ACC_VID[a.code + '|' + k]; if (u) versBlob(u).then(b => betaEnvoyerFichier(b, { nom: nomFichier('Bilan de départ · ' + k, b), dossier: 'depart' })).catch(() => {}); });
+  phs.forEach(k => versBlob(R.photos[k]).then(b => betaEnvoyerFichier(b, { nom: nomFichier('Bilan de départ · photo ' + k.toLowerCase(), b), dossier: 'depart' })).catch(() => {}));
+  const p = { action: 'alerte', tag: 'BILAN DE DÉPART', texte: `${a.prenom} a envoyé son bilan de départ : ${vids.length} vidéo${vids.length > 1 ? 's' : ''}, ${phs.length} photo${phs.length > 1 ? 's' : ''}. Tout arrive dans ton Drive, dossier « LEGACY · App / ${a.prenom} ».` };
+  betaApi(p).catch(e => { if (e.reseau) betaGarder(p); });
+}
+
+/* ---- tes choix d'alertes (les cases et la marge de l'écran TELEGRAM) : gardés (et rangés en ligne) ---- */
+const CLE_AL = 'lgcy-alertes';
+try { const o = JSON.parse(localStorage.getItem(CLE_AL) || 'null'); if (o) { Object.assign(ALERTES_REG, o.reg || {}); if (o.marge && MARGES[o.marge]) MARGE = o.marge; } } catch (e) {}
+function garderAlertes() { setTimeout(() => { try { localStorage.setItem(CLE_AL, JSON.stringify({ reg: ALERTES_REG, marge: MARGE })); } catch (e) {} }, 60); }
+
+/* ---- TELEGRAM : brancher le bot du coach (LEX : « Brancher Telegram ») ---- */
+const stTg = document.createElement('style');
+stTg.textContent = `.btg{margin:4px 0 6px;padding:14px;border:1px solid var(--line);border-left:3px solid #29a9eb;background:rgba(41,169,235,.05);display:grid;gap:10px}
+.btg b.k{font:600 9px var(--f-mono);letter-spacing:.22em;color:#5cc3f5}
+.btg p{margin:0;font:400 13px/1.5 var(--f-holo);color:var(--dim)}
+.btg p strong{color:var(--data);font-weight:600}
+.btg ol{margin:0;padding-left:18px;display:grid;gap:6px;font:400 13px/1.45 var(--f-holo);color:var(--dim)}
+.btg input{min-width:0;width:100%;box-sizing:border-box;background:rgba(0,0,0,.4);border:1px solid var(--line);color:var(--data);font:500 13px var(--f-mono);padding:12px;outline:none}
+.btg input:focus{border-color:#29a9eb}
+.btg .ok{color:#3ddc84}
+.btg .err{color:#ff8a8a}
+.btg .l2{display:flex;flex-wrap:wrap;gap:8px}`;
+document.head.appendChild(stTg);
+{ const o = openTelegram; openTelegram = function () {
+  const r = o.apply(this, arguments);
+  const ref = document.querySelector('#bilan .s-p'); if (!ref) return r;
+  const box = document.createElement('section'); box.className = 'btg'; box.id = 'btg'; ref.insertAdjacentElement('afterend', box);
+  const peindre = (h) => { if (box.isConnected) box.innerHTML = h; };
+  const err = e => `<p class="err">${String(e && e.message || e).replace(/</g, '&lt;')}</p>`;
+  const etat = (msg) => {
+    peindre(`<b class="k">TON BOT TELEGRAM</b><p>Vérification…</p>`);
+    betaApi({ action: 'telegramEtat' }).then(j => {
+      if (j.lie) return peindre(`<b class="k">TON BOT TELEGRAM</b><p class="ok">✓ Branché : <strong>@${j.bot}</strong>. LEX t'écrit là-bas à chaque alerte cochée ci-dessous.</p>${msg || ''}
+        ${j.gerer ? `<div class="l2"><button class="btn ghost" type="button" id="btg-test">ENVOYER UN TEST</button><button class="btn ghost" type="button" id="btg-chg">CHANGER DE BOT</button></div>` : ''}`), brancher(j);
+      if (!j.gerer) return peindre(`<b class="k">TON BOT TELEGRAM</b><p>Le bot de ton coach n'est pas encore branché.</p>`);
+      if (j.configure && j.lien) return relier(j);
+      demander();
+    }, e => peindre(`<b class="k">TON BOT TELEGRAM</b>${err(e)}`));
+  };
+  const brancher = () => {
+    const t = $('#btg-test'), c = $('#btg-chg');
+    if (t) t.onclick = () => { t.disabled = true; betaApi({ action: 'telegramTest' }).then(() => { t.textContent = 'ENVOYÉ ✓'; sfx.ok(); }, e => { t.disabled = false; lexInfo(String(e.message || e)); }); };
+    if (c) c.onclick = () => demander();
+  };
+  const demander = (msg) => {
+    peindre(`<b class="k">BRANCHE TON BOT · 2 MINUTES</b>
+      <ol><li>Dans Telegram, ouvre <strong>@BotFather</strong> et envoie <strong>/newbot</strong>.</li>
+        <li>Donne-lui un nom (ex. <strong>LEX LEGACY</strong>), puis un identifiant qui finit par <strong>bot</strong>.</li>
+        <li>BotFather te répond avec un <strong>jeton</strong> (123456789:AA…) : copie-le et colle-le ici.</li></ol>
+      <input id="btg-j" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="JETON DU BOT" aria-label="Jeton du bot Telegram">
+      <button class="btn" type="button" id="btg-go">BRANCHER</button>${msg || ''}`);
+    $('#btg-go').onclick = () => {
+      const v = $('#btg-j').value.trim(); if (!v) return;
+      $('#btg-go').disabled = true; $('#btg-go').textContent = 'VÉRIFICATION…';
+      betaApi({ action: 'telegramConfig', jeton: v }).then(j => { sfx.ok(); relier(j); }, e => demander(err(e)));
+    };
+  };
+  const relier = (j, msg) => {
+    peindre(`<b class="k">DERNIÈRE ÉTAPE</b><p>Ton bot <strong>@${j.bot}</strong> est prêt. Ouvre-le et touche <strong>DÉMARRER</strong>, puis reviens ici.</p>
+      <a class="btn" id="btg-ouvrir" href="${j.lien}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">OUVRIR @${j.bot} DANS TELEGRAM</a>
+      <button class="btn ghost" type="button" id="btg-lier">C'EST FAIT</button>${msg || ''}`);
+    $('#btg-lier').onclick = () => { $('#btg-lier').disabled = true; betaApi({ action: 'telegramLier' }).then(r2 => {
+      if (r2.lie) { sfx.ok(); lexInfo('Telegram branché. Regarde ton bot.'); etat(); }
+      else relier(j, `<p class="err">Je ne vois pas encore ton DÉMARRER. Touche-le dans Telegram, attends 2 secondes, puis C'EST FAIT.</p>`);
+    }, e => relier(j, err(e))); };
+  };
+  etat();
+  try { $('#bilan').addEventListener('click', garderAlertes); } catch (e) {}
+  return r;
+}; }
+{ const o = lexOuvrir; lexOuvrir = function () { const r = o.apply(this, arguments);
+  try { if (!S && !coachOuvert()) { const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Brancher Telegram'; $('#lx-cmds').appendChild(b); } } catch (e) {}
+  return r; }; }
+{ const o = lexCommande; lexCommande = function (txt) {
+  if (/telegram|t[ée]l[ée]gramme|alertes/i.test(String(txt))) { try { lexFermer(); closeRecs(); } catch (e) {} return ecran(openTelegram); }
+  return o.apply(this, arguments);
+}; }
+// au lancement : les envois en attente repartent
+try { betaPousserEnvois(); } catch (e) {}
+
 /* ---- tes données mises à jour en arrière-plan : la semaine se redessine si elle est à l'écran ---- */
 window.betaApresMaj = function () {
   try { const h = document.getElementById('home'); if (h && !h.hidden && typeof openHome === 'function' && !(typeof S !== 'undefined' && S)) openHome(true); } catch (e) {}
@@ -14339,6 +14499,115 @@ window.betaVider = function () {
 };
 addEventListener('online', () => { if (boite().length) window.betaVider(); });
 
+/* ---- ce que tu fais dans l'app (labo, cartes, mur, compétitions, douleurs, objectifs, bilans…) : rangé EN LIGNE ----
+   L'app garde tout dans le téléphone (clés « lgcy-… ») : chaque changement est aussi envoyé au serveur (un fichier par athlète dans
+   le Drive du coach), et retrouvé sur un autre téléphone ou après une réinstallation. La plus récente gagne, clé par clé. */
+const MIROIR = k => (/^lgcy-/.test(k) && !/^lgcy-(prog-code|os-code|os-chrono|os-voix)$/.test(k)) || /^beta-(fil|douleurs|obj|bilans)$/.test(k);
+const CLE_ATT = 'beta-etat-attente', CLE_T = 'beta-etat-t';
+const S0 = Storage.prototype.setItem, R0 = Storage.prototype.removeItem;
+const json = (k, d) => { try { return JSON.parse(lire(k) || '') || d; } catch (e) { return d; } };
+const brut = (k, v) => { try { S0.call(localStorage, k, v); } catch (e) {} };
+let horsMiroir = false, tEnvoi = null;
+function noter(k, v) {
+  const t = Date.now(), att = json(CLE_ATT, {}), T = json(CLE_T, {});
+  att[k] = { v, t }; T[k] = t; brut(CLE_ATT, JSON.stringify(att)); brut(CLE_T, JSON.stringify(T));
+  clearTimeout(tEnvoi); tEnvoi = setTimeout(envoyerEtat, 4000);
+}
+try {
+  Storage.prototype.setItem = function (k, v) {
+    const m = this === localStorage && !horsMiroir && MIROIR(String(k)), avant = m ? this.getItem(k) : null;
+    S0.call(this, k, v); if (m && avant !== String(v)) noter(String(k), String(v)); };
+  Storage.prototype.removeItem = function (k) { R0.call(this, k); if (this === localStorage && !horsMiroir && MIROIR(String(k))) noter(String(k), null); };
+} catch (e) {}
+let envoiEtat = null;
+function envoyerEtat() {
+  if (envoiEtat || !lire(CLE_CODE)) return envoiEtat;
+  const att = json(CLE_ATT, {}); if (!Object.keys(att).length) return null;
+  envoiEtat = api({ action: 'etatEcrire', code: lire(CLE_CODE), changes: att }, 90000).then(() => {
+    const now = json(CLE_ATT, {}); Object.keys(att).forEach(k => { if (now[k] && now[k].t === att[k].t) delete now[k]; }); brut(CLE_ATT, JSON.stringify(now));
+  }, () => {}).then(() => { envoiEtat = null; });
+  return envoiEtat;
+}
+window.betaEnvoyerEtat = envoyerEtat;
+// ce que le serveur a de plus récent → dans le téléphone (pris en compte à l'ouverture suivante si l'app tourne déjà)
+function appliquerEtat(etat) {
+  const att = json(CLE_ATT, {}), T = json(CLE_T, {}); let n = 0;
+  horsMiroir = true;
+  try {
+    Object.keys(etat || {}).forEach(k => { const e = etat[k]; if (!MIROIR(k) || !e || att[k] || !(e.t > (T[k] || 0))) return;
+      try { e.v === null ? R0.call(localStorage, k) : S0.call(localStorage, k, e.v); T[k] = e.t; n++; } catch (er) {} });
+  } finally { horsMiroir = false; }
+  brut(CLE_T, JSON.stringify(T));
+  // ce que le téléphone a et que le serveur n'a pas encore (la première fois) : envoyé
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (MIROIR(k) && !(k in (etat || {})) && !att[k]) noter(k, lire(k)); }
+  return n;
+}
+window.betaSyncEtat = () => api({ action: 'etatLire', code: lire(CLE_CODE) }, 60000).then(j => { const n = appliquerEtat(j.etat || {}); envoyerEtat(); return n; });
+addEventListener('online', () => { envoyerEtat(); pousserEnvois(); });
+
+/* ---- vidéos et photos → le Drive du coach : une file gardée dans le téléphone (IndexedDB), envoyée en morceaux de 4 Mo,
+   reprise au retour du réseau. D'abord directement à Google ; si le navigateur refuse, par le serveur. ---- */
+const ouvrirIDB = () => new Promise((ok, ko) => { const r = indexedDB.open('legacy-beta', 1); r.onupgradeneeded = () => r.result.createObjectStore('envois', { keyPath: 'id' }); r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error); });
+const idb = (mode, f) => ouvrirIDB().then(db => new Promise((ok, ko) => { const tx = db.transaction('envois', mode), q = f(tx.objectStore('envois')); tx.oncomplete = () => ok(q && q.result); tx.onerror = tx.onabort = () => ko(tx.error); }));
+const CLE_AV = 'beta-envois-avance';
+window.betaEnvoyerFichier = (blob, meta) => {
+  if (!blob || !blob.size) return Promise.resolve(null);
+  const id = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+  return idb('readwrite', st => st.put({ id, blob, nom: meta.nom || 'fichier', mime: blob.type || meta.mime || 'application/octet-stream', dossier: meta.dossier || 'videos',
+    description: meta.description || '', alerte: meta.alerte || '', cree: Date.now() })).then(() => { pousserEnvois(); return id; }, e => { console.error('bêta : file d\'envoi', e); return null; });
+};
+const enBase64 = b => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => ko(r.error); r.readAsDataURL(b); });
+const erreur = (m, k) => { const e = new Error(m); e[k] = true; return e; };
+async function envoyerUn(e) {
+  const code = lire(CLE_CODE), tot = e.blob.size, AV = json(CLE_AV, {}), av = AV[e.id] || {};
+  const garder = () => { const t = json(CLE_AV, {}); t[e.id] = av; brut(CLE_AV, JSON.stringify(t)); };
+  if (!av.url) { const j = await api({ action: 'envoiDebut', code, nom: e.nom, mime: e.mime, taille: tot, dossier: e.dossier, description: e.description, origine: location.origin }, 60000);
+    av.url = j.url; av.debut = 0; garder(); }
+  const M = 4 * 1024 * 1024; let debut = av.debut || 0, id = '';
+  while (debut < tot) {
+    const fin = Math.min(tot, debut + M), part = e.blob.slice(debut, fin);
+    if (av.mode !== 'relais') {
+      let r = null;
+      try { r = await fetch(av.url, { method: 'PUT', headers: { 'Content-Range': `bytes ${debut}-${fin - 1}/${tot}` }, body: part }); }
+      catch (er) { if (navigator.onLine === false) throw erreur('Pas de réseau.', 'reseau'); av.mode = 'relais'; garder(); continue; }
+      if (r.status === 308) debut = fin;
+      else if (r.ok) { const j = await r.json().catch(() => ({})); id = j.id || ''; debut = tot; }
+      else { const t = json(CLE_AV, {}); delete t[e.id]; brut(CLE_AV, JSON.stringify(t)); throw erreur('Envoi à reprendre (' + r.status + ').', 'serveur'); }
+    } else {
+      const j = await api({ action: 'envoiMorceau', code, url: av.url, debut, total: tot, donnees: await enBase64(part) }, 150000);
+      if (j.fini) { id = j.id || ''; debut = tot; } else debut = fin;
+    }
+    av.debut = debut; garder();
+  }
+  await api({ action: 'envoiFin', code, id, alerte: e.alerte }, 60000);
+  const t = json(CLE_AV, {}); delete t[e.id]; brut(CLE_AV, JSON.stringify(t));
+}
+let pousse = null;
+function pousserEnvois() {
+  if (pousse || !lire(CLE_CODE)) return pousse;
+  pousse = (async () => {
+    for (let tour = 0; tour < 50; tour++) {
+      let tous = []; try { tous = (await idb('readonly', st => st.getAll())) || []; } catch (er) { break; }
+      if (!tous.length) break;
+      // ce qui a échoué passe derrière (un envoi refusé ne bloque pas les autres) ; rien n'est jamais jeté tout seul
+      const e = tous.sort((x, y) => ((x.essais || 0) - (y.essais || 0)) || (x.cree - y.cree))[0];
+      if ((e.essais || 0) > tour) break;
+      try {
+        await envoyerUn(e); await idb('readwrite', st => st.delete(e.id));
+        try { window.lexInfo && lexInfo(e.dossier === 'photos' ? 'Photo rangée dans le Drive de ton coach.' : 'Vidéo rangée dans le Drive de ton coach.'); } catch (x) {}
+      } catch (er) {
+        if (er.reseau || !er.serveur) break;
+        e.essais = (e.essais || 0) + 1; e.erreur = er.message;
+        await idb('readwrite', st => st.put(e)).catch(() => {});
+        if (e.essais === 3) try { window.lexInfo && lexInfo('Un envoi vers le Drive bloque : ' + er.message + ' Il sera réessayé.'); } catch (x) {}
+      }
+    }
+  })().then(() => { pousse = null; }, () => { pousse = null; });
+  return pousse;
+}
+window.betaPousserEnvois = pousserEnvois;
+window.betaEnvoisEnAttente = () => idb('readonly', st => st.count()).catch(() => 0);
+
 // l'écran d'entrée de la bêta (par-dessus tout, avant l'app)
 document.documentElement.style.setProperty('--logo-blanc', 'url("logo-blanc.png")');
 const css = `#beta-porte{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 50% 38%,#121417,#050607 70%);color:#e9edf1;font-family:'Saira',system-ui,sans-serif;transition:opacity .45s}
@@ -14438,7 +14707,9 @@ function entree() {
 }
 function premierChargement() {
   porte(`<p>Liaison avec ton Sheet…</p><div class="bp-l"><i></i></div>`);
-  charger(false).then(a => { window.BETA_DATA.push(a); lancer(); }, e => {
+  // tes données + ce que tu as fait dans l'app (rangé en ligne) : un autre téléphone, ou une réinstallation, retrouve tout
+  const etat = window.betaSyncEtat().catch(() => 0);
+  charger(false).then(a => etat.then(() => { window.BETA_DATA.push(a); lancer(); }), e => {
     if (e.serveur) { ecrire(CLE_CODE, null); return demanderCode(e.message); }
     const p = porte(`<p class="bp-err">${e.message} La première ouverture a besoin d'internet.</p><button type="button" id="bp-r">RÉESSAYER</button><button type="button" class="bp-2" id="bp-a">CHANGER DE CODE</button>`);
     p.querySelector('#bp-r').onclick = premierChargement; p.querySelector('#bp-a').onclick = () => { ecrire(CLE_CODE, null); demanderCode(); };
@@ -14459,7 +14730,8 @@ function demarrer() {
   if (cache && cache.a) {
     window.BETA_DATA.push(cache.a); lancer();
     // en arrière-plan : les envois en attente, puis tes données à jour
-    window.betaVider().then(() => window.betaRafraichir(false)).then(() => { if (window.betaApresMaj) window.betaApresMaj(); }, () => {});
+    window.betaVider().then(() => window.betaRafraichir(false)).then(() => { if (window.betaApresMaj) window.betaApresMaj(); }, () => {})
+      .then(() => window.betaSyncEtat()).catch(() => {}).then(() => pousserEnvois());
     return;
   }
   premierChargement();
