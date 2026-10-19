@@ -1,6 +1,6 @@
 // LEGACY · bêta : l'app et ses fichiers gardés sur le téléphone (jamais les envois au serveur, qui sont des POST).
-const VERSION = 'legacy-beta-9b93ea80ad';
-const COEUR = ["./", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
+const VERSION = 'legacy-beta-534ff52b16';
+const COEUR = ["./", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "logo-blanc.png"];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(COEUR)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('legacy-beta-') && k !== VERSION && k !== 'legacy-beta-modeles').map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
