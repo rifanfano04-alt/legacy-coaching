@@ -5263,7 +5263,7 @@ function closeRecs() { $("#recs").hidden = true; }
 const LEX_DIT = new Set();   // les rappels de LEX déjà dits depuis l'ouverture de l'app
 function openCoach() {
   const f = $("#recs").querySelector("iframe");
-  if (!f || f.dataset.a !== "coach") $("#recs").innerHTML = `<iframe src="../prog/coach.html?v=${typeof COACH_V !== "undefined" ? COACH_V : ""}" data-a="coach" title="Vue coach"></iframe>`;
+  if (!f || f.dataset.a !== "coach") $("#recs").innerHTML = `<iframe src="coach.html?v=${typeof COACH_V !== "undefined" ? COACH_V : ""}" data-a="coach" title="Vue coach"></iframe>`;
   $("#recs").hidden = false; $("#lexTap").hidden = false;
   const nouv = DATA.filter(a => a.semaine === a.duree && !(OBJ[cleObj(a, a.cycle.bloc + 1)] || {}).objectifs?.length);
   // (12/10, coach) les rappels de LEX en vue coach : une seule fois par ouverture de l'app (la page « À FAIRE » les montre déjà)
@@ -13941,6 +13941,19 @@ const virgule = v => String(v).replace('.', ',');
     if (sa.charge !== null && sa.charge !== undefined && sa.charge !== '') e.charge = sa.charge;
     if (sa.rpe1) e.rpe1 = virgule(sa.rpe1); if (sa.rpeLast) e.rpeLast = virgule(sa.rpeLast); if (sa.note) e.note = sa.note;
   }); } catch (er) { console.error('bêta : séance', er); }
+  // (20/10, coach) ce que tu avais déjà rempli dans cette séance revient, et le check-in ne se refait pas
+  try { if (S && S.s && typeof lireSea === 'function') {
+    const G = lireSea(S.a, S.s);
+    if (G && Array.isArray(G.ex)) { G.ex.forEach((o, k) => { if (S.ex[k] && o) Object.assign(S.ex[k], o); }); if (G.diff) S.diff = G.diff; if (G.mobFait) S.mobFait = G.mobFait; }
+    const dejaFaite = S.s.exos.some(x => x.saisie && (x.saisie.rpe1 || x.saisie.rpeLast));
+    const ck = (G && G.checkin) || ((dejaFaite || (G && G.envoyee)) ? { ok: true, zones: [], jauges: {}, repris: true } : null);
+    if (ck) {
+      S.checkin = ck; CI = null; S.i = Math.min(Math.max(0, (G && G.i) || 0), S.ex.length - 1);
+      ++run; try { speechSynthesis.cancel(); } catch (e) {} speaking = 0;
+      $('#rnav').hidden = false; renderRun();
+      try { lexInfo(G && G.checkin && !G.envoyee ? 'On reprend ta séance où tu l\'avais laissée.' : 'Ta séance, avec ce que tu as déjà rempli.'); } catch (e) {}
+    }
+  } } catch (er) { console.error('bêta : reprise de séance', er); }
   return r;
 }; }
 
@@ -14003,6 +14016,70 @@ try {
   $('#lx-close').onclick = () => lexFermer();
 }
 
+/* ---- LA SÉANCE NE SE PERD PLUS (retour du coach le 20/10) ----
+   Tout ce que tu remplis (charges, RPE, notes, échec, difficulté, l'exercice où tu en es) est gardé dans le téléphone au fur et à mesure
+   (et rangé en ligne) : tu quittes l'app, même fermée, tu la rouvres → « Toucher pour entrer » te ramène directement dans ta séance.
+   Le check-in (« Ça va aujourd'hui ? », douleurs) : UNE fois par séance ; une séance déjà faite ou envoyée ne le redemande pas. */
+const SEA = 'lgcy-seance-';
+const cleSea = (a, s) => { const b = (a && a.beta) || {}; return SEA + [String(b.block || '').replace(/\D/g, ''), b.semaine, s ? s.idx : ''].join('-'); };
+const lireSea = (a, s) => { try { return JSON.parse(localStorage.getItem(cleSea(a, s)) || 'null'); } catch (e) { return null; } };
+const PAS_GARDER = { consigne: 1, rpeCible: 1, rpeMax: 1, code: 1 };
+function garderSeance(envoyee) {
+  if (!S || !S.s || !S.a || !S.a.beta) return;
+  try {
+    const avant = lireSea(S.a, S.s) || {};
+    const ex = S.ex.map(e => { const o = {}; Object.keys(e || {}).forEach(k => { const v = e[k]; if (!PAS_GARDER[k] && typeof v !== 'function' && !(v instanceof Node)) o[k] = v; }); return o; });
+    localStorage.setItem(cleSea(S.a, S.s), JSON.stringify({ ex, i: S.i || 0, diff: S.diff || null, checkin: S.checkin || null, mobFait: S.mobFait || null,
+      envoyee: !!(envoyee || avant.envoyee), le: Date.now(), jour: S.s.jour }));
+  } catch (e) { console.error('bêta : séance gardée', e); }
+}
+window.betaGarderSeance = garderSeance;
+let tSea = null; const garderBientot = () => { clearTimeout(tSea); tSea = setTimeout(() => garderSeance(), 350); };
+{ const r0 = renderRun; renderRun = function () { const r = r0.apply(this, arguments); garderBientot(); return r; }; }
+try { const m0 = renderMobilite; renderMobilite = function () { const r = m0.apply(this, arguments); garderBientot(); return r; }; } catch (e) {}
+['input', 'change', 'click', 'pointerup'].forEach(t => $('#run').addEventListener(t, garderBientot, true));
+addEventListener('visibilitychange', () => { if (document.hidden) garderSeance(); }); addEventListener('pagehide', () => garderSeance());
+// les séances des semaines passées : retirées (on garde la semaine en cours)
+try { const a = DATA[idx], pref = cleSea(a, null); for (let k = localStorage.length - 1; k >= 0; k--) { const c = localStorage.key(k); if (c && c.indexOf(SEA) === 0 && c.indexOf(pref) !== 0) localStorage.removeItem(c); } } catch (e) {}
+// une séance commencée (check-in fait), pas encore envoyée, touchée ces 16 dernières heures : à reprendre
+function seanceEnCours() {
+  try { const a = DATA[idx]; let best = null;
+    a.seances.forEach((s, k) => { const G = lireSea(a, s); if (G && G.checkin && !G.envoyee && Date.now() - (G.le || 0) < 16 * 3600e3 && (!best || G.le > best.le)) best = { k, le: G.le }; });
+    return best ? best.k : null; } catch (e) { return null; }
+}
+
+/* ---- LA CAMÉRA DU LAB EN 60 IMAGES/S (retour du coach le 20/10 : il avait 30 IPS · 1080P) ----
+   L'iPhone donne 30 images/s par défaut à une page web (le réglage de l'appareil photo ne compte pas ici) : on DEMANDE 60 explicitement,
+   en 1080p puis en 720p, et on ne prend 30 qu'en dernier recours (avec le conseil d'importer une vidéo de l'appareil photo réglé en 60). */
+{ const md = navigator.mediaDevices;
+  if (md && md.getUserMedia && typeof filmerLabo === 'function') {
+    const gum0 = md.getUserMedia.bind(md);
+    const essais = [
+      { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { min: 50, ideal: 60 } },
+      { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { min: 50, ideal: 60 } },
+      { frameRate: { min: 50, ideal: 60 } }];
+    const ips = f => { try { return Math.round(f.getVideoTracks()[0].getSettings().frameRate || 0); } catch (e) { return 0; } };
+    const gum60 = async c => {
+      if (!c || !c.video || c.audio) return gum0(c);
+      for (const e of essais) {
+        try { const f = await gum0({ audio: false, video: Object.assign({ facingMode: { ideal: 'environment' } }, e) }); if (ips(f) >= 50) return f; f.getTracks().forEach(t => t.stop()); } catch (er) {}
+      }
+      return gum0(c);
+    };
+    const f0 = filmerLabo;
+    filmerLabo = async function () {
+      md.getUserMedia = gum60;
+      try { return await f0.apply(this, arguments); } finally { md.getUserMedia = gum0; }
+    };
+    // 30 images/s malgré tout : on le dit, avec la solution
+    const li0 = lexInfo;
+    lexInfo = function (t) {
+      if (/images par seconde ici, c'est son maximum/.test(String(t || ''))) t = String(t).replace(/c'est son maximum dans l'app : l'analyse fera au mieux\./, 'pas 60. Pour du 60 : filme avec l\'appareil photo de l\'iPhone (Réglages › Appareil photo › Enregistrer une vidéo › 1080p à 60 ips), puis ▣ IMPORTER.');
+      return li0.apply(this, arguments.length ? [t].concat([].slice.call(arguments, 1)) : arguments);
+    };
+  }
+}
+
 /* ---- vers le Sheet : les valeurs dans SA liste (RPE, difficulté) ---- */
 const sansAccent = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
 function rpeSheet(v, liste) {
@@ -14014,6 +14091,17 @@ function rpeSheet(v, liste) {
 }
 const diffSheet = d => sansAccent(d).toUpperCase().trim();
 
+/* ---- ÉCHEC SUR UNE SÉRIE (règle du coach du 18/10) : le détail part au serveur, qui l'écrit en commentaire sur la case charge
+   (« Échec S3 · 2×3 à 100 kg · suite 1×3 à 95 kg ») ; le Tableau de PR et ta fiche ne comptent que les séries réussies ---- */
+function echecDe(x, e) {
+  if (!e || !e.echec || typeof ecGroupes !== 'function') return null;
+  try {
+    const E = e.echec, c = numOu(e.charge) ?? numOu(e.chargeReco);
+    return { serie: E.serie || 1, unique: ecUnique(x), stop: !!E.stop, charge: c,
+      groupes: ecGroupes(x, e).map(g => ({ n: g.n, reps: g.reps || ecR(x) || x.reps, kg: g.c })) };
+  } catch (er) { return null; }
+}
+
 /* ---- l'envoi de la séance : le vrai serveur ---- */
 let RES = null;
 window.betaEnvoyer = function (S) {
@@ -14022,11 +14110,12 @@ window.betaEnvoyer = function (S) {
   const entries = s.exos.map((x, i) => {
     const e = S.ex[i] || {}, c = e.charge;
     return { row: x.row, charge: (c === null || c === undefined || c === '') ? '' : Number(String(c).replace(',', '.')),
-      rpe1: rpeSheet(e.rpe1, b.rpeOptions), rpeLast: rpeSheet(e.rpeLast, b.rpeOptions), note: String(e.note || '').trim() };
-  }).filter(en => en.row && (en.charge !== '' || en.rpe1 || en.rpeLast || en.note));
+      rpe1: rpeSheet(e.rpe1, b.rpeOptions), rpeLast: rpeSheet(e.rpeLast, b.rpeOptions), note: String(e.note || '').trim(), echec: echecDe(x, e) };
+  }).filter(en => en.row && (en.charge !== '' || en.rpe1 || en.rpeLast || en.note || en.echec));
   const difficulte = S.diff ? diffSheet(S.diff) : '';
   if (!entries.length && !difficulte) { RES = { vide: true }; return Promise.resolve(RES); }
-  const payload = { action: 'save', block: b.block, semaine: b.semaine, seance: s.idx, difficulte, entries };
+  // echecs : le serveur pose (ou retire) le commentaire « Échec … » sur la case charge de chaque ligne envoyée
+  const payload = { action: 'save', block: b.block, semaine: b.semaine, seance: s.idx, difficulte, entries, echecs: true };
   return betaApi(payload).then(j => {
     RES = { ok: true, refus: j.refus || [] };
     betaRafraichir(true).then(() => { if (window.betaApresMaj) betaApresMaj(); }, () => {});
@@ -14039,6 +14128,7 @@ window.betaEnvoyer = function (S) {
 // juste après l'attente de l'envoi : la vérité à l'écran (erreur → on revient au rapport, rien n'est perdu)
 window.betaApresEnvoi = function () {
   const R = RES || {}, run = document.getElementById('run');
+  if (!R.erreur && !R.vide) { try { garderSeance(true); } catch (e) {} }
   if (R.erreur) {
     run.insertAdjacentHTML('beforeend', `<div class="beta-msg"><b>PAS ENREGISTRÉE</b>${String(R.erreur).replace(/</g, '&lt;')}<br>Tes saisies sont gardées : reviens au rapport et renvoie.</div><button class="btn ghost" type="button" id="beta-retour" style="margin:14px 18px">‹ RETOUR AU RAPPORT</button>`);
     document.getElementById('beta-retour').onclick = () => finRun();
@@ -14129,7 +14219,15 @@ filmerSerie = function () {
 const ACC_FAIT = 'beta-accueil-fait';
 const accueilFait = () => { try { return !!localStorage.getItem(ACC_FAIT); } catch (e) { return true; } };
 $('#start').onclick = () => {
-  if (accueilFait()) return start();
+  if (accueilFait()) {
+    const k = seanceEnCours();
+    if (k === null) return start();
+    // (20/10, coach) une séance commencée et pas encore envoyée : on y retourne directement, avec tout ce qui était rempli
+    if ('speechSynthesis' in window) { try { voixBloquee = false; speechSynthesis.cancel(); const w = new SpeechSynthesisUtterance(' '); w.volume = 0; speechSynthesis.speak(w); } catch (e) {} }
+    ++run; speaking = 0; sfx.init();
+    $('#gate').classList.add('gone'); $('#bootin').hidden = true; document.body.classList.add('on'); try { ring.show(); } catch (e) {} $('#skip').hidden = true;
+    openHome(true); return openRun(k);
+  }
   if ('speechSynthesis' in window) { try { voixBloquee = false; speechSynthesis.cancel(); const w = new SpeechSynthesisUtterance(' '); w.volume = 0; speechSynthesis.speak(w); } catch (e) {} }
   openAccueil(DATA[idx].code);
 };
@@ -14246,6 +14344,8 @@ const rpe = l => { const rs = [f(l.rpe1), f(l.rpeLast)].filter(v => v); return r
 const exoN = l => l.nom === 'renfo' ? l.var : l.nom + (l.var ? ' ' + l.var : '');
 const fmt = l => `${Math.trunc(Number(l.sets))}×${l.repsTxt}`;
 const cle = l => [l.nom, l.var, l.tempo, Number(l.sets), l.repsTxt].join('|');
+// (20/10) échec sur une série : la ligne compte pour ses séries RÉUSSIES (commentaire « Échec … » du Sheet), chacune à son format
+const reussies = l => l.echec && Array.isArray(l.echec.groupes) ? l.echec.groupes.map(g => Object.assign({}, l, { sets: g.n, reps: g.reps, repsTxt: String(g.reps), charge: g.kg, echec: null })) : [l];
 const cleDe = (nom, v, tempo, sets, reps) => [nom, v, tempo, Number(sets), reps].join('|');
 const faite = se => se.lignes.some(l => rpe(l));
 const r1 = x => Math.round(x * 10) / 10, r2 = x => Math.round(x * 100) / 100;
@@ -14274,16 +14374,16 @@ window.betaConstruire = function (fiche, prog, prenom) {
   const passe = keys.filter(k => (ws[k].date || '') < prevd);
   const histo = (key, avant) => {
     const h = [];
-    [...avant].sort(parDate).forEach(k => ws[k].seances.forEach(se => se.lignes.forEach(l => {
+    [...avant].sort(parDate).forEach(k => ws[k].seances.forEach(se => se.lignes.forEach(l0 => reussies(l0).forEach(l => {
       if (l.sets && cle(l) === key && l.charge !== null && l.charge !== undefined && rpe(l)) h.push({ k, c: l.charge, r: rpe(l) });
-    })));
+    }))));
     return h;
   };
   // la semaine passée : séances, vrais records, nouveaux formats
   const S = prev ? ws[prev] : { date: prevd, seances: [] };
   const done = S.seances.filter(faite).length, tot = S.seances.filter(se => se.lignes.length).length;
   const prs = []; let news = 0; const vus = new Set();
-  S.seances.forEach(se => se.lignes.forEach(l => {
+  S.seances.forEach(se => se.lignes.forEach(l0 => reussies(l0).forEach(l => {
     if (!l.sets || l.charge === null || l.charge === undefined || !rpe(l)) return;
     const k = cle(l); if (vus.has(k)) return; vus.add(k);
     const h = histo(k, passe);
@@ -14291,7 +14391,7 @@ window.betaConstruire = function (fiche, prog, prenom) {
     const best = Math.max(...h.map(x => x.c));
     if (l.charge > best) prs.push({ exo: exoN(l), s: fmt(l).replace('×', ' × '), rec: l.charge ? kgTxt(l.charge) : 'PDC', avant: best,
       le: S.date.slice(8, 10) + '/' + S.date.slice(5, 7) + '/' + S.date.slice(2, 4) });
-  }));
+  })));
   // en hausse (plus gros gain de 1RM estimé) et la plus facile (RPE le plus bas)
   let up = null, easy = null;
   S.seances.forEach(se => se.lignes.forEach(l => {
@@ -14372,10 +14472,10 @@ window.betaConstruire = function (fiche, prog, prenom) {
       if (!se.lignes.length) return; prevues++; if (faite(se)) faites++;
       se.lignes.forEach(l => {
         if (l.e1rm && MAIN.includes(l.nom) && !l.var) { const pp = prog_[l.nom] || (prog_[l.nom] = [l.e1rm, l.e1rm]); pp[1] = l.e1rm; }
-        if (l.sets && l.charge !== null && l.charge !== undefined && rpe(l)) {
+        reussies(l).forEach(l => { if (l.sets && l.charge !== null && l.charge !== undefined && rpe(l)) {
           const h = histo(cle(l), keys.filter(x => (ws[x].date || '') < (ws[k].date || '')));
           if (h.length && l.charge > Math.max(...h.map(x => x.c))) recs.push({ exo: exoN(l), s: fmt(l), c: l.charge, avant: Math.max(...h.map(x => x.c)) });
-        }
+        } });
       });
     });
   });
