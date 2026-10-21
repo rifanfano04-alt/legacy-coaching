@@ -14127,7 +14127,9 @@ function seanceEnCours() {
   const r = o.apply(this, arguments);
   try {
     const g = document.querySelector('#mur .mur-g'), p = document.getElementById('mur-p'); if (!g) return r;
-    const T = murTeam(), rang = R => [MUR_FINS.indexOf(R.fin) + (ctxDe(R.ctx)[3] || 0), R.pts || 0];
+    // (21/10, coach : « Simon 200 kg à 73 kg reste devant mon record du monde à 182 à 80 kg ») : la PERF rapportée au poids de corps seule ;
+    // la finition (LEGACY, étoiles, compétition) reste sur la carte mais ne change pas sa place
+    const T = murTeam(), rang = R => [R.pts || 0, MUR_FINS.indexOf(R.fin) + (ctxDe(R.ctx)[3] || 0)];
     const cartes = [...g.querySelectorAll('.mur-c')].map(b => ({ b, m: b.dataset.m, R: T.cell[b.dataset.code + '|' + b.dataset.m] })).filter(x => x.R);
     const labs = [...g.querySelectorAll('.mur-lab')];
     g.innerHTML = ''; let large = 1;
@@ -14146,6 +14148,47 @@ function seanceEnCours() {
   } catch (e) { console.error('bêta : mur', e); }
   return r;
 }; }
+
+/* ---- (21/10, coach) LES CARTES DU MUR : le vrai poids de corps, et le bandeau drapeau + catégorie + âge aussi pour les invités ---- */
+// la catégorie de poids (streetlifting) : hommes −59 … −101, +101 ; femmes −52 … −70, +70
+const catPoids = (pc, femme) => { const L = femme ? [52, 57, 63, 70] : [59, 66, 73, 80, 87, 94, 101], n = Number(pc); if (!(n > 0)) return '';
+  const c = L.find(x => n <= x); return c ? `−${c} KG` : `+${L[L.length - 1]} KG`; };
+// ton poids : la dernière pesée de ton Sheet (tableau jaune), plus le profil du labo
+{ const o = murUn; murUn = function (a) { const R = o.apply(this, arguments); try { if (R && a && !a.invite && a.poidsPesee) R.pc = a.poidsPesee; } catch (e) {} return R; }; }
+{ const o = murTeam; murTeam = function () {
+  const T = o.apply(this, arguments);
+  try { const inv = invitesLus();
+    Object.values(T.cell).forEach(R => { if (!R || !R.a || !R.K) return;
+      if (R.a.invite) { const g = inv.find(x => 'INV-' + x.id === R.a.code) || {}; R.K.cat = catPoids(R.pc || g.pc, !!g.femme); R.K.age = g.age || null; }
+      else if (!R.K.cat) R.K.cat = catPoids(R.pc, false);
+    });
+  } catch (e) { console.error('bêta : cartes du mur', e); }
+  return T;
+}; }
+// le formulaire « Ajouter au mur » : + l'ÂGE (à côté du poids de corps)
+{ let age = '', prenomAge = '';
+  const poser = () => {
+    const ov = document.getElementById('murAjout'); if (!ov || ov.hidden || ov.querySelector('#mj-age')) return;
+    const pc = ov.querySelector('#mj-c'); if (!pc) return;
+    const p = (ov.querySelector('#mj-p') || {}).value || '';
+    if (p && p !== prenomAge) { const g = invitesLus().find(x => x.prenom.toLowerCase() === p.toLowerCase()); if (g && g.age && !age) age = String(g.age); }
+    const l = document.createElement('label'); l.innerHTML = 'ÂGE<input id="mj-age" inputmode="numeric" placeholder="25">';
+    pc.closest('label').insertAdjacentElement('afterend', l);
+    const i = l.querySelector('input'); i.value = age; i.oninput = () => { age = i.value.replace(/\D/g, '').slice(0, 2); };
+  };
+  new MutationObserver(poser).observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('click', ev => {
+    const b = ev.target.closest && ev.target.closest('#mj-ok'); if (!b) return;
+    const p = ((document.getElementById('mj-p') || {}).value || '').trim(), a = parseInt(age, 10);
+    setTimeout(() => {   // après l'enregistrement de la maquette : l'âge sur l'invité
+      if (!p) return; const l = invitesLus(), g = l.find(x => x.prenom.toLowerCase() === p.toLowerCase()); if (!g) return;
+      if (a > 5 && a < 100) g.age = a; else delete g.age;
+      try { localStorage.setItem(MUR_INV_CLE, JSON.stringify(l)); } catch (e) {}
+      age = ''; prenomAge = '';
+      if (document.getElementById('mur')) openMur({ calme: true });
+    }, 60);
+  }, true);
+}
 
 /* ---- vers le Sheet : les valeurs dans SA liste (RPE, difficulté) ---- */
 const sansAccent = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -14578,7 +14621,9 @@ window.betaConstruire = function (fiche, prog, prenom) {
       if (r.f !== 'Standard' || !m || kgRec(r.rec) === null) return;
       (vrais[mvt] = vrais[mvt] || []).push({ s: `${m[1]}×${m[2]}`, sets: +m[1], reps: +m[2], kg: kgRec(r.rec), le: r.le || '' }); });
   })));
-  return { code: String(prenom).toUpperCase(), prenom, bloc: cb, semaine: semNum(cur), duree, semPrev: prev ? String(semNum(prev)) : '', blocPrev: prev ? blocNum(prev) : cb,
+  // (21/10) le poids de corps : la dernière pesée du tableau jaune (pour la rareté des cartes du mur)
+  let poidsPesee = null; [...keys].sort(parDate).forEach(k => { const p = f((ws[k].recup || {}).poids); if (p && p > 30 && p < 250) poidsPesee = p; });
+  return { poidsPesee, code: String(prenom).toUpperCase(), prenom, bloc: cb, semaine: semNum(cur), duree, semPrev: prev ? String(semNum(prev)) : '', blocPrev: prev ? blocNum(prev) : cb,
     sem: { done, tot }, total, prs, news, up, easy, seances, semaines, cycle, rdv, plan, vrais,
     beta: { block: prog.block || ('BLOCK ' + cb), semaine: semNum(cur), lundi: LUNDI, rpeOptions: prog.rpeOptions || null } };
 };
