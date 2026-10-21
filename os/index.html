@@ -7752,7 +7752,7 @@ function openIA(fichier, mvtInit, ctx, opts) {
     feu(dfx.valides === reps.length ? "ok" : reps.some(r => r.juge.v === "no") ? "no" : "doute", `${dfx.valides}/${reps.length} VALIDÉE${dfx.valides > 1 ? "S" : ""}`);
     // la qualité vue pendant l'analyse (ne bloque rien)
     const nOk = serie.filter(f => f.R).length, visS = serie.filter(f => f.R).reduce((s2, f) => { const [s1, e1, w1, h1, k1, a1] = cote(f.R); return s2 + (mvt === "squat" ? [h1, k1, a1] : [s1, e1, w1]).reduce((q, k) => q + (f.brut.L[k].visibility || 0), 0) / 3; }, 0);
-    if (fps < 50) qualAna.push(`Vidéo à ${fps} images par seconde : filme en 60 (depuis le labo, c'est automatique) pour plus de précision sur les mouvements rapides.`);
+    if (fps < 50) qualAna.push(`Vidéo à ${fps} images par seconde : pour plus de précision sur les mouvements rapides, filme avec l'appareil photo réglé en 1080p à 60 ips, puis importe la vidéo.`);
     const nVu = serie.filter(f => f.ok).length;   // après l'affinage : toutes les images relues comptent
     if (serie.length > 10 && nVu / serie.length < .8) qualAna.push(`Je n'ai bien vu l'athlète que sur ${Math.round(nVu / serie.length * 100)} % des images (quelqu'un devant ? cadrage ? flou ?).`);
     if (nOk > 10 && visS / nOk < .6) qualAna.push("Les articulations sont mal visibles (vêtements amples, contre-jour, bras qui cache le corps) : vérifie les reps limites dans le VAR.");
@@ -13899,6 +13899,11 @@ body.beta .coachnote .cnh span{display:none}
    (sinon LEX passe sur le prénom et la constellation) */
 body.beta #home,body.beta #run,body.beta .scr{padding-top:calc(110px + env(safe-area-inset-top,0px))}
 body.beta #brief{padding-top:calc(118px + env(safe-area-inset-top,0px))}
+/* (21/10, coach : « je peux plus revenir en arrière » sur STYLES) les écrans par-dessus qui ignoraient la barre d'état de l'iPhone
+   (trouvés par le contrôle de tous les écrans avec la barre simulée : test_iphone.js) */
+body.beta .planche{padding-top:calc(14px + env(safe-area-inset-top,0px));padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+body.beta .mur-zoom{padding:calc(20px + env(safe-area-inset-top,0px)) 20px calc(20px + env(safe-area-inset-bottom,0px));overflow:auto}
+body.beta .mur{padding-top:calc(114px + env(safe-area-inset-top,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
 /* (20/10, coach) les 4 coins autour de l'écran : retirés (« ça n'encadre rien ») */
 body.beta .frame{display:none}
 /* LEX à la voix : le bouton micro à côté d'ENVOYER */
@@ -13928,6 +13933,20 @@ try {
   }
   return f0.apply(this, arguments);
 }; }
+
+/* ---- (21/10, coach : « je choisis une photo, OK, rien ne se passe ») sur iPhone, dans l'app installée, un sélecteur de fichier qui
+   n'est pas DANS la page ne prévient pas l'app du choix : tous les sélecteurs (photos, vidéos) sont accrochés à la page le temps du choix ---- */
+{ const c0 = HTMLInputElement.prototype.click;
+  HTMLInputElement.prototype.click = function () {
+    if (this.type === 'file' && !this.isConnected) {
+      this.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0';
+      document.body.appendChild(this);
+      const retirer = () => setTimeout(() => { try { this.remove(); } catch (e) {} }, 1500);
+      this.addEventListener('change', retirer, { once: true }); this.addEventListener('cancel', retirer, { once: true });
+    }
+    return c0.apply(this, arguments);
+  };
+}
 
 /* ---- la séance : ce que dit ton Sheet ---- */
 const virgule = v => String(v).replace('.', ',');
@@ -14080,6 +14099,54 @@ function seanceEnCours() {
   }
 }
 
+/* ---- (21/10, coach) sur iPhone, l'écran « Filmer / Importer » : IMPORTER d'abord (la seule façon d'avoir du 60 i/s : l'appareil photo),
+   « filmer ici · 30 i/s » en tout petit lien (« on va pas s'en servir ») ---- */
+{ const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || (() => { try { return !!localStorage.getItem('beta-force-ios'); } catch (e) { return false; } })();
+  const st = document.createElement('style');
+  st.textContent = '#filmOv .beta-imp{margin:-2px 0 2px;font:400 12.5px/1.45 var(--f-holo);color:var(--dim)}#filmOv .beta-imp b{color:var(--data);font-weight:600}' +
+    '#filmOv .beta-filmer{justify-self:center;background:none;border:0;padding:6px 8px;font:500 8.5px var(--f-mono);letter-spacing:.2em;color:rgba(233,237,241,.38);text-transform:uppercase}';
+  document.head.appendChild(st);
+  const ajuster = () => {
+    const ov = document.getElementById('filmOv'); if (!ios || !ov || ov.hidden || !ov.classList.contains('film-ch') || ov.querySelector('.beta-imp')) return;
+    const fc = ov.querySelector('.fc'), fi = fc && fc.querySelector('[data-a="filmer"]'), im = fc && fc.querySelector('[data-a="importer"]'); if (!fi || !im) return;
+    im.className = 'btn'; im.textContent = '▣ IMPORTER UNE VIDÉO';
+    const h = document.createElement('p'); h.className = 'beta-imp';
+    h.innerHTML = 'Pour du <b>60 images/s</b> : filme avec l\'<b>appareil photo</b> de l\'iPhone (Réglages › Appareil photo › Enregistrer une vidéo › <b>1080p à 60 ips</b>), puis importe-la.';
+    im.insertAdjacentElement('afterend', h);
+    fi.className = 'beta-filmer'; fi.textContent = 'filmer ici · 30 i/s';
+    const x = fc.querySelector('[data-a="fermer"]'); fc.insertBefore(fi, x || null);
+  };
+  new MutationObserver(ajuster).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+}
+
+/* ---- (21/10, coach) LE MUR DES RECORDS : une rangée par MOUVEMENT (muscle-up, traction, dips, squat, dans cet ordre), et dans chaque
+   rangée les perfs de TOUT LE MONDE en vrac (plus une colonne par athlète), classées par RARETÉ : la plus rare à gauche, puis de plus
+   en plus banales vers la droite (sinon le haut du mur ne serait que des squats). Rareté = la finition (LEGACY et ses étoiles de
+   record > obsidienne > titane > platine > or > argent > bronze), puis les points. ---- */
+{ const o = openMur; openMur = function () {
+  const r = o.apply(this, arguments);
+  try {
+    const g = document.querySelector('#mur .mur-g'), p = document.getElementById('mur-p'); if (!g) return r;
+    const T = murTeam(), rang = R => [MUR_FINS.indexOf(R.fin) + (ctxDe(R.ctx)[3] || 0), R.pts || 0];
+    const cartes = [...g.querySelectorAll('.mur-c')].map(b => ({ b, m: b.dataset.m, R: T.cell[b.dataset.code + '|' + b.dataset.m] })).filter(x => x.R);
+    const labs = [...g.querySelectorAll('.mur-lab')];
+    g.innerHTML = ''; let large = 1;
+    MUR_ORDRE.forEach((m, i) => {
+      const l = labs[i]; if (l) { l.style.gridRow = String(i + 1); l.style.gridColumn = '1'; g.appendChild(l); }
+      cartes.filter(x => x.m === m).sort((x, y) => { const a = rang(x.R), c = rang(y.R); return (c[0] - a[0]) || (c[1] - a[1]); })
+        .forEach((x, k) => { x.b.style.gridRow = String(i + 1); x.b.style.gridColumn = String(k + 2); g.appendChild(x.b); large = Math.max(large, k + 1); });
+    });
+    g.style.gridAutoFlow = ''; g.style.gridAutoColumns = ''; g.style.paddingBottom = '12px';
+    // les 4 rangées tiennent dans la hauteur visible (barre d'état et barre du bas comprises)
+    const H = p ? p.clientHeight - 10 - 12 - 3 * 6 : 400, k = Math.max(.2, Math.min(.36, H / 4 / 466)), cw = Math.round(300 * k), ch = Math.round(466 * k);
+    g.style.setProperty('--cw', cw + 'px'); g.style.setProperty('--ch', ch + 'px');
+    g.style.gridTemplateRows = `repeat(4, ${ch}px)`; g.style.gridTemplateColumns = `26px repeat(${large}, ${cw}px)`;
+    g.querySelectorAll('.mur-cs').forEach(c => c.style.setProperty('--k', k.toFixed(3)));
+    if (p) p.scrollLeft = 0;
+  } catch (e) { console.error('bêta : mur', e); }
+  return r;
+}; }
+
 /* ---- vers le Sheet : les valeurs dans SA liste (RPE, difficulté) ---- */
 const sansAccent = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
 function rpeSheet(v, liste) {
@@ -14209,9 +14276,25 @@ filmerSerie = function () {
   });
 };
 // les photos (carte, mur, progression, bilan) : aussi rangées dans le Drive du coach
-{ const o = choisirPhotoCarte; choisirPhotoCarte = function (fini) {
-  return o.call(this, u => { try { if (!(typeof ACC !== 'undefined' && ACC)) versBlob(u).then(b => betaEnvoyerFichier(b, { nom: nomFichier('photo', b), dossier: 'photos' })); } catch (e) {} return fini(u); });
-}; }
+choisirPhotoCarte = function (fini) {
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => {
+    const f = inp.files && inp.files[0]; if (!f) return;
+    const u = URL.createObjectURL(f), im = new Image();
+    im.onload = () => {
+      try {
+        const k = Math.min(1, 900 / im.height, 1200 / im.width), c = document.createElement('canvas');
+        c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(u); const d = c.toDataURL('image/jpeg', .84);
+        if (!(typeof ACC !== 'undefined' && ACC)) try { betaEnvoyerFichier(f, { nom: nomFichier('photo', f), dossier: 'photos' }); } catch (e) {}
+        fini(d);
+      } catch (e) { try { lexInfo('Cette photo n\'a pas pu être préparée : ' + (e.message || e)); } catch (x) {} }
+    };
+    im.onerror = () => { URL.revokeObjectURL(u); try { lexInfo('Cette photo ne s\'ouvre pas ici. Essaie une autre photo, ou une capture d\'écran de celle-ci.'); } catch (x) {} };
+    im.src = u;
+  };
+  inp.click();
+};
 
 /* ---- L'ACCUEIL COMPLET (maquette du 07/10) : à la première ouverture de l'app installée, après le code ----
    bande-annonce « Bienvenue dans la LEGACY », LEX, le bilan de départ (vidéos + photos → Drive, alerte au coach), le tour de l'app,
@@ -14610,7 +14693,8 @@ const brut = (k, v) => { try { S0.call(localStorage, k, v); } catch (e) {} };
 let horsMiroir = false, tEnvoi = null;
 function noter(k, v) {
   const t = Date.now(), att = json(CLE_ATT, {}), T = json(CLE_T, {});
-  att[k] = { v, t }; T[k] = t; brut(CLE_ATT, JSON.stringify(att)); brut(CLE_T, JSON.stringify(T));
+  // la valeur est relue au moment de l'envoi (pas de 2e copie des photos dans le téléphone)
+  att[k] = { t }; T[k] = t; brut(CLE_ATT, JSON.stringify(att)); brut(CLE_T, JSON.stringify(T));
   clearTimeout(tEnvoi); tEnvoi = setTimeout(envoyerEtat, 4000);
 }
 try {
@@ -14623,7 +14707,8 @@ let envoiEtat = null;
 function envoyerEtat() {
   if (envoiEtat || !lire(CLE_CODE)) return envoiEtat;
   const att = json(CLE_ATT, {}); if (!Object.keys(att).length) return null;
-  envoiEtat = api({ action: 'etatEcrire', code: lire(CLE_CODE), changes: att }, 90000).then(() => {
+  const changes = {}; Object.keys(att).forEach(k => { changes[k] = { v: lire(k), t: att[k].t }; });
+  envoiEtat = api({ action: 'etatEcrire', code: lire(CLE_CODE), changes }, 90000).then(() => {
     const now = json(CLE_ATT, {}); Object.keys(att).forEach(k => { if (now[k] && now[k].t === att[k].t) delete now[k]; }); brut(CLE_ATT, JSON.stringify(now));
   }, () => {}).then(() => { envoiEtat = null; });
   return envoiEtat;
