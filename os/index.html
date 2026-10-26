@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#050607">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5071,6 +5071,8 @@ function closeRun() { lexFermer(); $("#run").hidden = true; $("#rnav").hidden = 
 
 const numOu = v => (v === null || v === undefined || v === "" || isNaN(Number(v))) ? null : Number(v);
 const enJeu = (x, e) => { if (e && e.echec && typeof echRec === "function") return echRec(x, e).pr; const saisie = numOu(e.charge), c = saisie !== null ? saisie : numOu(e.chargeReco); return x.best !== null && c !== null && c > 0 && c > x.best; };
+const recValide = (x, e) => { if (!e || !enJeu(x, e) || numOu(e.charge) === null) return false; const f = v => String(v ?? "").trim() !== "";
+  return f(e.rpe1) && ((parseInt(x.sets, 10) || 1) <= 1 || f(e.rpeLast)); };
 const premierAuFormat = (x, e) => (e && e.echec && typeof echRec === "function") ? echRec(x, e).neuf : x.best === null && ((numOu(e.chargeReco) || 0) > 0 || (numOu(e.charge) || 0) > 0);
 const kgApp = n => { const v = numOu(n); return v === null ? "—" : v === 0 ? "PDC" : virg(v) + " kg"; };
 const fait = e => !!(String(e.rpe1 || "").trim() || String(e.rpeLast || "").trim());
@@ -6128,8 +6130,9 @@ function mesure(mvt, L, W, bar, brasRef) {
   // (11/10) la place des épaules sous la barre, en longueurs de bras TENDU : avant, divisée par le bras vu sur CETTE image, qui raccourcit
   // quand les coudes plient (surtout de face) → en haut, une traction pouvait ne pas être reconnue « en haut » (simulation : 1 rep sur 3)
   const tendu = (epaules - barre) / (brasRef || bras), a = angle(L[sh], L[el], L[wr]);
-  if (mvt === "traction") return { s: a, pos: epaules, ech: bras, ok: mentonY(L) < barre, bas: tendu > .9, haut: tendu < .5, inverse: true };
-  return { s: a, pos: epaules, ech: bras, ok: epaules < barre, bas: tendu > .9, haut: tendu < .3, inverse: true, mu: true };
+  const tient = Math.abs((L[15].y + L[16].y) / 2 - barre) < .6 * (brasRef || bras);   // (bêta 26/10) les mains à la barre
+  if (mvt === "traction") return { s: a, pos: epaules, ech: bras, ok: mentonY(L) < barre, bas: tendu > .9, haut: tendu < .5 && tient, tient, inverse: true };
+  return { s: a, pos: epaules, ech: bras, ok: epaules < barre, bas: tendu > .9, haut: tendu < .3 && tient, tient, inverse: true, mu: true };
 }
 // découpe en reps : départ en haut → passage en bas → retour en haut (traction / MU : départ bras tendus en bas)
 // puis la vraie montée : du point le plus bas au point le plus haut (sans la fin de la descente ni la pause)
@@ -6148,11 +6151,12 @@ function decouperReps(mvt, serie) {
     const debut = f.m.inverse ? f.m.bas : f.m.haut, milieu = f.m.inverse ? f.m.haut : f.m.bas;
     if (etat === "attente" && debut) { etat = "pret"; r = nouv(f.t); }
     else if (etat === "pret" && milieu) { etat = "milieu"; r.tm = f.t; r.ok = f.m.ok; suivre(r, f); }
-    else if (etat === "milieu") { suivre(r, f); if (f.m.ok) r.ok = true; if (debut) { r.t1 = f.t; brut.push(r); r = nouv(f.t); etat = "pret"; } }
-    else if (etat === "pret") { suivre(r, f); if (debut) r.t0 = f.t; }
+    else if (etat === "milieu") { suivre(r, f); if (f.m.ok) r.ok = true; if (milieu) r.tDer = f.t; if (debut) { r.t1 = f.t; brut.push(r); r = nouv(f.t); etat = "pret"; } }
+    else if (etat === "pret") { if (f.m.tient !== false) suivre(r, f); if (debut) r.t0 = f.t; }
   }
   const bas = mvt === "squat" || mvt === "dips";   // on descend d'abord, puis on remonte
   const fin = serie.length ? serie[serie.length - 1].t : 0;
+  if (!bas && r && etat === "milieu" && r.tm != null) { r.t1 = Math.min(fin, (r.tDer ?? r.tm) + .4); brut.push(r); r = null; etat = "attente"; }   // (bêta 26/10) arrivé en haut = rep
   // (12/10, coach) l'ÉCHEC : une rep entamée mais pas finie à la fin de la vidéo. Squat, dips : descendu en bas, puis une remontée
   // tentée (au moins 15 % du chemin) qui ne revient pas en haut (descendre pour quitter les barres, sans remonter, n'en est pas un) ;
   // tirages : une montée d'au moins 35 % d'une rep faite, qui n'arrive pas en haut. Le coach peut toujours corriger (OUI / NON).
@@ -6328,10 +6332,13 @@ function choisirPersonne(liste, suivi) {
   const c = liste.map((L, k) => ({ L, k, b: boite(L), t: torse(L) })).filter(p => p.b && p.t); if (!c.length) { suivi.perdu = (suivi.perdu || 0) + 1; return null; }
   let m = null;
   if (suivi.torse) {
-    // d'une image à la suivante, l'athlète bouge peu : moins d'un torse (plus s'il est perdu depuis longtemps), même taille à 25 % près
-    const ref = suivi.torse, tol = .7 + Math.min(1.3, (suivi.perdu || 0) / 15);
-    const ok = c.map(p => ({ p, d: Math.hypot(p.t.cx - ref.cx, p.t.cy - ref.cy) / ref.h, r: p.t.h / ref.h })).filter(x => x.d < tol && x.r > .75 && x.r < 1.33);
-    if (ok.length) m = ok.reduce((a, x) => !a || x.d + 2 * Math.abs(Math.log(x.r)) < a.d + 2 * Math.abs(Math.log(a.r)) ? x : a, null).p;
+    // d'une image à la suivante, l'athlète bouge peu : moins d'un torse, même taille à 25 % près ; (bêta 26/10) aux tirages, perdu plus de
+    // 12 images : une autre taille et une autre place sont acceptées (il s'est éloigné ou rapproché), mains au-dessus de la tête = lui
+    const tir = window.IA_TIRAGE === true, ref = suivi.torse, pl = suivi.perdu || 0, lb = tir && pl > 12;   // squat, dips : comme avant
+    const tol = .7 + Math.min(1.3, pl / 15) + (lb ? 5 : 0), rMin = lb ? .2 : .75, rMax = lb ? 5 : 1.33;
+    const bonus = p => tir && p.L[15].y < p.L[0].y && p.L[16].y < p.L[0].y ? (lb ? 3 : .6) : 0;
+    const ok = c.map(p => ({ p, d: Math.hypot(p.t.cx - ref.cx, p.t.cy - ref.cy) / ref.h, r: p.t.h / ref.h })).filter(x => x.d < tol && x.r > rMin && x.r < rMax);
+    if (ok.length) m = ok.reduce((a, x) => { const sc = x.d + 2 * Math.abs(Math.log(x.r)) - bonus(x.p); return !a || sc < a.sc ? { p: x.p, sc } : a; }, null).p;
   }
   else if (suivi.cible) m = c.reduce((a, p) => { const d = Math.hypot(p.b.cx - suivi.cible.x, p.b.cy - suivi.cible.y) - (suivi.cible.x > p.b.x0 && suivi.cible.x < p.b.x1 && suivi.cible.y > p.b.y0 && suivi.cible.y < p.b.y1 ? 1 : 0); return !a || d < a.d ? { p, d } : a; }, null).p;
   else m = c.reduce((a, p) => !a || p.b.aire > a.b.aire ? p : a, null);
@@ -6401,7 +6408,9 @@ const CHECKS = {
   traction: { face: ["depart", "scapula", "rebond", "menton", "genoux", "hanche", "redescente", "epaules", "asym", "lest"], profil: ["depart", "scapula", "rebond", "menton", "genoux", "hanche", "redescente", "kipping", "lest"] },
   mu: { face: ["depart", "scapula", "rebond", "amplitude", "pigeon", "genoux", "hanche", "brusque", "redescente", "lockout", "epaules"], profil: ["depart", "scapula", "rebond", "amplitude", "genoux", "hanche", "brusque", "redescente", "lockout", "kipping", "lest"] }
 };
-const checksPour = (mvt, vue) => vue === "face" ? CHECKS[mvt].face : vue === "3/4" && mvt === "mu" ? [...CHECKS.mu.profil, "pigeon"] : CHECKS[mvt].profil;
+const checksPour = (mvt, vue) => { const c = vue === "face" ? CHECKS[mvt].face : vue === "3/4" && mvt === "mu" ? [...CHECKS.mu.profil, "pigeon"] : CHECKS[mvt].profil;
+  let lp = false; try { lp = localStorage.getItem("lgcy-lab-lest-pieds") === "1"; } catch (e) {}
+  return lp && (mvt === "mu" || mvt === "traction") ? c.filter(k => !["genoux", "hanche", "brusque", "talons", "valgus", "bassin"].includes(k)) : c; };
 const NOM_VUE = { face: "de face", profil: "de profil", "3/4": "de trois quarts" };
 const DPR = () => Math.min(2, devicePixelRatio || 1);
 const jourAn = d => { const [j, m] = String(d).split(".").map(Number); return (m - 1) * 31 + j; };
@@ -6665,18 +6674,20 @@ function arbitre(mvt, serie, reps, vue, taille, cam) {
     }
     if (checks.includes("depart")) {   // départ bras tendus
       const deb = fr.filter(f => f.t <= r.tA + 1e-6 && f.t >= r.tA - .6);
-      if (deb.length) { const g = arg(deb, f => ang2(f, sh, el, wr), true), a = g.v; M.depart = a; tF = g.x.t; seuil("depart", a, T.tendu, 4, `bras à ${Math.round(a)}° au départ`, `bras presque tendus au départ (${Math.round(a)}°)`); }
+      if (deb.length) { const g = arg(deb, f => ang2(f, sh, el, wr), true), a = g.v; M.depart = a; tF = g.x.t; seuil("depart", a + (vue === "face" ? 6 : vue === "3/4" ? 3 : 0), T.tendu, 4, `bras à ${Math.round(a)}° au départ`, `bras presque tendus au départ (${Math.round(a)}°)`); }
     }
     if (checks.includes("scapula")) {
       // le corps (tête + hanches) par rapport à la barre : bras tendus, il est au plus bas quand les scapulas sont relâchées
-      const corps = f => (f.L[0].y + f.L[23].y + f.L[24].y) / 3 - barreAt(f);
-      const pend = serie.filter(f => f.L && f.ok !== false && f.m && f.m.bas), ref = pend.length ? Math.max(...pend.map(corps)) : null;
+      let lpS = false; try { lpS = localStorage.getItem("lgcy-lab-lest-pieds") === "1"; } catch (e) {}
+      const corps = f => (lpS ? (f.L[0].y + f.L[11].y + f.L[12].y) / 3 : (f.L[0].y + f.L[23].y + f.L[24].y) / 3) - barreAt(f);
+      const tient = f => { const yp = (f.L[15].y + f.L[16].y) / 2, ye = (f.L[11].y + f.L[12].y) / 2, br = Math.hypot(f.L[11].x - f.L[13].x, f.L[11].y - f.L[13].y) + Math.hypot(f.L[13].x - f.L[15].x, f.L[13].y - f.L[15].y); return yp < ye && Math.abs(yp - barreAt(f)) < br * .4; };
+      const pend = serie.filter(f => f.L && f.ok !== false && f.m && f.m.bas && f.t <= r.tA + 1e-6 && f.t > r.tA - 8 && tient(f)), pc = pend.map(corps).sort((u, v) => v - u), ref = pc.length ? pc[Math.floor(pc.length * .1)] : null;
       const w = fr.filter(f => f.t >= r.tA - .8 && f.t <= r.tA + 1e-6).map(f => ({ t: f.t, c: corps(f) }));
       if (ref !== null && w.length > 3) {
         // la position de départ : le point le plus bas juste avant de tirer
         const xb = w.filter(x => x.t >= r.tA - .4).reduce((a, x) => !a || x.c > a.c ? x : a, null), ib = w.indexOf(xb);
         const ecart = cm(ref - xb.c); M.scapula = ecart; tF = xb.t;
-        if (ecart > T.scapula) note("scapula", "no", `départ ${cmTxt(ecart)} au-dessus de la suspension relâchée`); else if (ecart > T.scapula * .6) note("scapula", "doute", `départ presque relâché (${cmTxt(ecart)} au-dessus)`);
+        if (ecart > T.scapula + (profil ? lim / 2 : lim)) note("scapula", "no", `départ ${cmTxt(ecart)} au-dessus de la suspension relâchée`); else if (ecart > T.scapula) note("scapula", "doute", `départ ${cmTxt(ecart)} au-dessus de la suspension relâchée, à la limite de la règle (${virg(Math.round(T.scapula * 10) / 10)} cm maxi)`); else if (ecart > T.scapula * .6) note("scapula", "doute", `départ presque relâché (${cmTxt(ecart)} au-dessus)`);
         // rebond : juste avant de tirer, le corps redescend (scapulas qui lâchent) et repart aussitôt, sans s'arrêter en bas
         const chute = cm(xb.c - Math.min(...w.filter(x => x.t <= xb.t && x.t >= xb.t - .6).map(x => x.c)));
         let tBas = xb.t; for (let i = ib; i >= 0; i--) { if (cm(xb.c - w[i].c) < 1) tBas = w[i].t; else break; }
@@ -6686,7 +6697,7 @@ function arbitre(mvt, serie, reps, vue, taille, cam) {
     }
     if (checks.includes("lockout")) {   // bras verrouillés en haut
       const haut = mvt === "dips" ? fr.filter(f => f.t >= r.tB - .3) : fr.filter(f => f.t >= r.tm && epY(f) < barreAt(f));
-      if (haut.length) { const g = arg(haut, f => ang2(f, sh, el, wr), true), a = g.v; M.lockout = a; tF = g.x.t; seuil("lockout", a, T.verrou, 4, `bras à ${Math.round(a)}° en haut`, `verrouillage limite (${Math.round(a)}°)`); }
+      if (haut.length) { const g = arg(haut, f => ang2(f, sh, el, wr), true), a = g.v; M.lockout = a; tF = g.x.t; seuil("lockout", a + (mvt !== "dips" && vue === "face" ? 6 : mvt !== "dips" && vue === "3/4" ? 3 : 0), T.verrou, 4, `bras à ${Math.round(a)}° en haut`, `verrouillage limite (${Math.round(a)}°)`); }
     }
     if (checks.includes("genoux")) {   // jambes tendues
       const s = mvt === "mu" ? R.mu.genou : R.traction.genou, g = arg(fr, f => ang2(f, hi, kn, an)), a = g.v; M.genoux = a; tF = g.x.t;
@@ -6711,11 +6722,16 @@ function arbitre(mvt, serie, reps, vue, taille, cam) {
       const rc = cm(rv); M.redescente = rc;
       if (rc > T.redescente) note("redescente", "no", `redescente de ${cmTxt(rc)} pendant la montée`); else if (rc > T.redescente * .6) note("redescente", "doute", `petit retour en arrière de ${cmTxt(rc)} pendant la montée`);
     }
-    if (checks.includes("pigeon")) {   // les deux coudes passent la barre en même temps (on les range par leur place dans l'image)
-      const passe = droite => { const f = fr.find(f => f.t >= r.t0 && f.t <= r.tB + .2 && (() => { const [a, b] = [13, 14].sort((i, j) => f.L[i].x - f.L[j].x); return f.L[droite ? b : a].y < barreAt(f) - .005; })()); return f ? f.t : null; };
-      const tg = passe(false), td = passe(true), s = vue === "face" ? R.mu.coudes : R.mu.coudes * 1.6, face = fr[0].L[11].x > fr[0].L[12].x;
-      if (tg !== null && td !== null) { const e = Math.abs(tg - td); M.coudes = e; tF = Math.max(tg, td); if (e > s) note("pigeon", e > s * 1.5 ? "no" : "doute", `coude ${(tg > td) === face ? "droit" : "gauche"} passé ${virg(e.toFixed(2))} s après l'autre`); }
-      else if ((tg === null) !== (td === null) && r.ok) { tF = tg ?? td; note("pigeon", "no", "un seul coude passé au-dessus de la barre"); }
+    if (checks.includes("pigeon")) {   // (bêta 26/10, coach) un coude au-dessus de la barre pendant que l'autre est encore nettement dessous
+      const PG = 7, w = fr.filter(f => f.t >= r.t0 && f.t <= r.tB + .3 && f.L[13] && f.L[14] && f.L[13].visibility > .5 && f.L[14].visibility > .5);
+      let pire = 0, tP = null; const vus = [false, false];
+      w.forEach(f => { const yb = barreAt(f), a = yb - f.L[13].y, b = yb - f.L[14].y;   // > 0 : coude au-dessus de la barre
+        if (a > 0) vus[0] = true; if (b > 0) vus[1] = true;
+        if (Math.max(a, b) > 0 && Math.min(a, b) < 0) { const ec = Math.min(Math.max(a, b), -Math.min(a, b)); if (ec > pire) { pire = ec; tP = f.t; } } });
+      const c = cm(pire); M.coudes = c; if (tP !== null) tF = tP;
+      if (c > PG * 1.5) note("pigeon", "no", `un coude passé au-dessus de la barre pendant que l'autre était encore ${cmTxt(c)} dessous`);
+      else if (c > PG) note("pigeon", "doute", `coudes décalés au passage de la barre (${cmTxt(c)})`);
+      else if (vus[0] !== vus[1] && r.ok) note("pigeon", "doute", "un seul coude vu au-dessus de la barre (l'autre caché ?)");
     }
     if (J.conf < .7) J.raisons.push({ c: "confiance", e: "doute", txt: `l'IA n'a bien vu que ${Math.round(J.conf * 100)} % des images de cette rep`, t: r.tA });
 
@@ -7571,7 +7587,7 @@ function openIA(fichier, mvtInit, ctx, opts) {
     st.textContent = "REPÉRAGE DE L'ATHLÈTE";
     const reperer = async zb => { const v = []; for (let i = 0; i < 12; i++) {
       vid.currentTime = debut + duree() * (i + .5) / 12; await attendre(vid, "seeked", 1200);
-      const o = lire(zb, liste => choisirPersonne(liste, { cible: IA_SUIVI.cible })); if (o.L) v.push(o.L); } return v; };
+      const o = lire(zb, liste => { if (window.IA_TIRAGE === true) { const h = liste.filter(L => L[15].y < L[0].y && L[16].y < L[0].y && boite(L)); if (h.length) { const g = h.reduce((a, L) => !a || boite(L).aire > boite(a).aire ? L : a, null), bg = boite(g); return choisirPersonne([g], { cible: { x: bg.cx, y: bg.cy } }); } } return choisirPersonne(liste, { cible: IA_SUIVI.cible }); }); if (o.L) v.push(o.L); } return v; };
     let vus = await reperer(null); if (vus.length < 3 && zoom.box) vus = await reperer(zoom.box);   // trop loin pour l'image entière : dans la zone touchée
     // le côté filmé, fixé pour toute l'analyse : celui que l'IA voit le mieux sur l'ensemble du repérage (épaule, coude, hanche, genou)
     if (vus.length) { const som = ks => vus.reduce((s2, L) => s2 + ks.reduce((q, k) => q + (L[k].visibility || 0), 0), 0); IA_COTE = som([11, 13, 23, 25]) >= som([12, 14, 24, 26]) ? COTE_G : COTE_D; }
@@ -7705,7 +7721,9 @@ function openIA(fichier, mvtInit, ctx, opts) {
       if (mvt === "traction" || mvt === "mu") {
         const med = a => { const q = [...a].sort((u, v) => u - v); return q[q.length >> 1]; };
         const vhP = vid.videoHeight || 1280, fpx = .714 * Math.max(vid.videoWidth || 720, vhP);
-        const pts = serie.filter(f => f.L && f.ok && doigtsVus(f.L)).map(f => ({ t: f.t, y: barreMilieu(f.L, f.W, vhP, fpx) })), tous = pts.length ? med(pts.map(p => p.y)) : null;
+        const pts0 = serie.filter(f => f.L && f.ok && doigtsVus(f.L)).map(f => ({ t: f.t, y: barreMilieu(f.L, f.W, vhP, fpx), tire: f.L[15].y < f.L[11].y && f.L[16].y < f.L[12].y }));
+        const tire = pts0.filter(p => p.tire), tous = tire.length >= 5 ? med(tire.map(p => p.y)) : pts0.length ? med(pts0.map(p => p.y)) : null;
+        const pts = tous === null ? pts0 : pts0.filter(p => Math.abs(p.y - tous) < .06);   // (bêta 26/10) la barre ne bouge pas : pas les mains aux hanches
         let j0 = 0;
         serie.forEach(f => { while (j0 < pts.length && pts[j0].t < f.t - .6) j0++; const v = []; for (let j = j0; j < pts.length && pts[j].t <= f.t + .6; j++) v.push(pts[j].y);
           f.bar = v.length >= 3 ? med(v) : tous; });
@@ -7725,7 +7743,8 @@ function openIA(fichier, mvtInit, ctx, opts) {
         const t = aLire[i]; vid.currentTime = t + demi; await attendre(vid, "seeked", 1200);   // au milieu de l'image : c'est bien elle qui s'affiche
         const ref = proche(t), rt = ref && torse(ref.brut.L);
         const o = lire(cadre, liste => { const c = liste.map((L, k) => ({ L, k, b: boite(L), t: torse(L) })).filter(p => p.b && p.t); if (!c.length) return null;
-          const m = rt ? c.map(p => ({ p, d: Math.hypot(p.t.cx - rt.cx, p.t.cy - rt.cy) / rt.h, r: p.t.h / rt.h })).filter(q => q.d < .6 && q.r > .75 && q.r < 1.33).sort((p, q) => p.d - q.d)[0] : null;   // l'image voisine est toute proche dans le temps : à moins d'un demi-torse
+          const tir = window.IA_TIRAGE === true, loin = tir && ref && Math.abs(ref.t - t) > .4, haut = p => tir && p.L[15].y < p.L[0].y && p.L[16].y < p.L[0].y;
+          const m = rt ? c.map(p => ({ p, d: Math.hypot(p.t.cx - rt.cx, p.t.cy - rt.cy) / rt.h, r: p.t.h / rt.h })).filter(q => loin ? q.d < 6 && q.r > .2 && q.r < 5 : q.d < .6 && q.r > .75 && q.r < 1.33).map(q => Object.assign(q, { sc: q.d + (loin ? 2 * Math.abs(Math.log(q.r)) - (haut(q.p) ? 3 : 0) : 0) })).sort((p, q) => p.sc - q.sc)[0] : null;   // l'image voisine est toute proche dans le temps : à moins d'un demi-torse
           const ch = m ? m.p : rt ? null : c.reduce((a, p) => !a || p.b.aire > a.b.aire ? p : a, null); return ch && { L: ch.L, k: ch.k, b: ch.b, autres: [] }; });
         // le point suivi (barre, lest) aussi sur les images relues : cherché autour de sa place à l'image lue la plus proche
         let P = null; if (trc) { const pr = serie.reduce((a, f) => f.P && f.P.ok && (!a || Math.abs(f.t - t) < Math.abs(a.t - t)) ? f : a, null); if (pr) P = trc.suivre({ x: pr.P.x, y: pr.P.y }); }
@@ -13782,7 +13801,7 @@ $("#lx-form").onsubmit = ev => { ev.preventDefault(); const v = $("#lx-in").valu
 async function aller(k) {
   const { s, i } = S, x = s.exos[i], v = S.ex[i];
   // record battu sur cet exercice : la plaque tombe avant de passer à la suite
-  if (k > i && enJeu(x, v) && !S.forges.has(i)) { S.forges.add(i); await forgeSeance(x, v); }
+  if (k > i && recValide(x, v) && !S.forges.has(i)) { S.forges.add(i); await forgeSeance(x, v); }
   if (k >= s.exos.length) return ecran(finRun, $("#r-next"));
   const dir = k >= i ? 1 : -1, rb = $("#r-body");
   if (rb && !reduce) { rb.style.setProperty("--dx", dir); rb.classList.add("ex-out"); await new Promise(r => setTimeout(r, 170)); }
@@ -13817,9 +13836,9 @@ function forgeSeance(x, v) {
 
 function finRun() {
   const { s } = S;
-  const lignes = s.exos.map((x, k) => { const v = S.ex[k], rec = enJeu(x, v), c = v.charge !== null && v.charge !== "" ? Number(v.charge) : null;
+  const lignes = s.exos.map((x, k) => { const v = S.ex[k], rec = recValide(x, v), c = v.charge !== null && v.charge !== "" ? Number(v.charge) : null;
     return `<div style="--i:${k}"><span>${v.nom} · ${x.sets}×${x.reps}</span><span class="${rec ? "g" : ""}">${c !== null ? virg(c) + " kg" : "—"}${rec ? " 🏆" : ""}</span><span>${v.rpeLast || v.rpe1 ? "RPE " + (v.rpeLast || v.rpe1) : "—"}</span></div>`; }).join("");
-  const nRec = s.exos.filter((x, k) => enJeu(x, S.ex[k])).length;
+  const nRec = s.exos.filter((x, k) => recValide(x, S.ex[k])).length;
   $("#rnav").hidden = true; lexFermer(); $("#lexTap").hidden = true;
   $("#run").innerHTML = `
     <div class="r-top"><button type="button" id="r-back2">‹ RETOUR À LA SÉANCE</button><span>${s.jour.toUpperCase()} · <b>RAPPORT</b></span></div>
@@ -13857,7 +13876,7 @@ function finRun() {
     }
     await envoi; if (betaApresEnvoi()) return;
     alerte("ok", `${S.a.prenom} a terminé sa séance du ${s.jour.toLowerCase()} : ${s.exos.length} exercices, difficulté ${S.diff || "non notée"}.`);
-    s.exos.forEach((x, k) => { if (enJeu(x, S.ex[k]) && !(S.recDirect && S.recDirect[k])) alerte("rec", `Record pour ${S.a.prenom} : ${S.ex[k].nom.toLowerCase()} ${x.sets} × ${x.reps} à ${virg(Number(S.ex[k].charge))} kg (+${virg(Math.round((Number(S.ex[k].charge) - x.best) * 100) / 100)} kg).`); });
+    s.exos.forEach((x, k) => { if (recValide(x, S.ex[k]) && !(S.recDirect && S.recDirect[k])) alerte("rec", `Record pour ${S.a.prenom} : ${S.ex[k].nom.toLowerCase()} ${x.sets} × ${x.reps} à ${virg(Number(S.ex[k].charge))} kg (+${virg(Math.round((Number(S.ex[k].charge) - x.best) * 100) / 100)} kg).`); });
     if (S.douleur) Object.entries(S.douleur.apres || {}).forEach(([z, o]) => alerte("dl", `${S.a.prenom} après la séance : ${zoneDe(z)[1].toLowerCase()}, ${o}.`));
     const sem = S.a.semaines.find(w => w.n === S.a.semaine), card = sem && sem.seances[S.j]; if (card) { card.etat = "faite"; card.remplis = card.total; }
     const tx = $("#run .tx");
@@ -14042,7 +14061,7 @@ try {
 const SEA = 'lgcy-seance-';
 const cleSea = (a, s) => { const b = (a && a.beta) || {}; return SEA + [String(b.block || '').replace(/\D/g, ''), b.semaine, s ? s.idx : ''].join('-'); };
 const lireSea = (a, s) => { try { return JSON.parse(localStorage.getItem(cleSea(a, s)) || 'null'); } catch (e) { return null; } };
-const PAS_GARDER = { consigne: 1, rpeCible: 1, rpeMax: 1, code: 1 };
+const PAS_GARDER = { consigne: 1, rpeCible: 1, rpeMax: 1, code: 1, chargeReco: 1 };
 function garderSeance(envoyee) {
   if (!S || !S.s || !S.a || !S.a.beta) return;
   try {
@@ -14189,6 +14208,112 @@ const catPoids = (pc, femme) => { const L = femme ? [52, 57, 63, 70] : [59, 66, 
     }, 60);
   }, true);
 }
+
+/* ════════════ RETOURS DU COACH DU 26/10 ════════════ */
+/* ---- 1. JAMAIS DE ZOOM : taper vite sur + / − zoomait l'app, pincer le calendrier zoomait toute l'app (le calendrier a son propre zoom) ---- */
+{ const st = document.createElement('style'); st.textContent = 'html{touch-action:manipulation;-webkit-text-size-adjust:100%}'; document.head.appendChild(st);
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, ev => ev.preventDefault(), { passive: false }));
+  document.addEventListener('touchmove', ev => { if (ev.touches && ev.touches.length > 1) ev.preventDefault(); }, { passive: false });
+}
+
+/* ---- 2. LA CHARGE : jamais pré-remplie avec une charge pas faite ; la fois précédente TOUJOURS affichée à part, pour adapter ----
+   · « Charge » (conseillée) : seulement celle du coach dans le Sheet (avant : la charge de la dernière fois quand il n'y en avait pas) ;
+   · « Charge utilisée » : remplie seulement si cette séance a vraiment été faite (un RPE ou une note) — une charge recopiée dans le Sheet
+     d'une semaine à l'autre ne se met plus à ta place ;
+   · DERNIÈRE FOIS : la charge, le format et le RPE de la dernière fois, sous l'exercice. */
+const estElastique = (x, e) => /[ée]last/i.test([x && x.nom, x && x.var, e && e.nom, e && e.variante, e && e.elastique ? 'elastique' : ''].join(' '));
+{ const o = openRun; openRun = function () {
+  // ce que le Sheet dit de cette séance AVANT que l'app ne le reprenne : la saisie compte seulement si elle a été faite
+  try { const a = DATA[idx], s = a.seances[arguments[0]]; if (s) s.exos.forEach(x => { const sa = x.saisie; if (sa && !(sa.rpe1 || sa.rpeLast || sa.note)) x.saisie = Object.assign({}, sa, { charge: null }); }); } catch (e) {}
+  const r = o.apply(this, arguments);
+  try { if (S && S.s) S.s.exos.forEach((x, i) => { const e = S.ex[i]; if (!e) return; const c = x.chargeReco;
+    if (c === null || c === undefined || c === '') e.chargeReco = null; }); } catch (er) {}
+  try { if (S && S.checkin) renderRun(); } catch (er) {}
+  return r;
+}; }
+const stPrev = document.createElement('style');
+stPrev.textContent = `.beta-prev{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:2px 0 12px;padding:9px 12px;border:1px solid var(--line);border-left:3px solid var(--exo,#888);background:rgba(233,237,241,.03)}
+.beta-prev small{font:600 8.5px var(--f-mono);letter-spacing:.22em;color:var(--dim)}
+.beta-prev b{font:700 15px/1.2 var(--f-holo);color:var(--data)}
+.beta-prev span{font:500 12.5px var(--f-holo);color:var(--dim)}`;
+document.head.appendChild(stPrev);
+{ const o = renderRun; renderRun = function () {
+  const r = o.apply(this, arguments);
+  try {
+    const x = S.s.exos[S.i], e = S.ex[S.i], el = estElastique(x, e), body = document.getElementById('r-body');
+    const p = x.prev, presc = body && body.querySelector('.presc');
+    if (presc && !body.querySelector('.beta-prev')) {
+      const d = p && p.d ? p.d.slice(8, 10) + '/' + p.d.slice(5, 7) : '';
+      const kg = p ? (p.c ? (Chg && Chg.pre ? Chg.pre(e) : '') + virg(p.c) + ' kg' : el ? 'élastique' : 'poids du corps') : '';
+      presc.insertAdjacentHTML('afterend', p ? `<div class="beta-prev"><small>DERNIÈRE FOIS${d ? ' · ' + d : ''}</small><b>${kg}</b><span>${p.s || ''}${p.r ? ' · RPE ' + virg(p.r) : ''}</span></div>`
+        : `<div class="beta-prev"><small>DERNIÈRE FOIS</small><span>pas encore fait</span></div>`);
+    }
+    // 3. ÉLASTIQUE : « PDC » seulement au poids du corps sans élastique
+    if (el) { const b = document.querySelector('#f-reco > b'); if (b && /PDC/.test(b.textContent)) b.textContent = 'ÉLASTIQUE';
+      const i = document.getElementById('r-c'); if (i) i.placeholder = 'élastique';
+      const cap = document.querySelector('#cap .dec'); if (cap) setTimeout(() => { if (cap.isConnected) cap.textContent = cap.textContent.replace(/poids du corps/g, 'élastique'); }, 900); }
+  } catch (er) { console.error('bêta : exercice', er); }
+  return r;
+}; }
+
+/* ---- (26/10, coach : « j'ai la voix de LEX mais plus les petits sons ») l'iPhone met le moteur des sons en pause quand LEX parle ou quand
+   l'app passe en arrière-plan ; il n'était relancé qu'au tout début → relancé à chaque toucher et après chaque phrase de LEX ---- */
+['pointerdown', 'touchend'].forEach(t => addEventListener(t, () => { try { sfx.init(); } catch (e) {} }, true));
+addEventListener('visibilitychange', () => { if (!document.hidden) try { sfx.init(); } catch (e) {} });
+
+/* ---- 4. LEX BAISSE TA MUSIQUE AU LIEU DE LA COUPER (iPhone : la session audio de la page) ----
+   les sons de l'app se mélangent à ta musique ; quand LEX parle, ta musique baisse, puis revient */
+const audioS = navigator.audioSession;
+const sessionAudio = t => { try { if (audioS && audioS.type !== t) audioS.type = t; } catch (e) {} };
+sessionAudio('ambient');
+/* ---- 5. LA VOIX DE LEX (briefing muet, texte d'un coup) : Audrey améliorée met parfois plus d'1,5 s à démarrer → 3 s pour la 1re phrase,
+   puis un 2e essai avec la voix française de base du téléphone (au lieu d'abandonner) ---- */
+let tRetour = null;
+speakAll = function (text, onPart) {
+  const parts = text.match(/[^.!?]+[.!?]*/g) || [text];
+  clearTimeout(tRetour); sessionAudio('transient');
+  return new Promise(res => {
+    let i = 0, fini = false;
+    const stop = () => { if (!fini) { fini = true; res(); clearTimeout(tRetour); tRetour = setTimeout(() => { sessionAudio('ambient'); try { sfx.init(); } catch (e) {} }, 1200); } };
+    const dire = (txt, n, essai) => {
+      const moi = ++jetonVoix, u = new SpeechSynthesisUtterance(pourVoix(txt));
+      window._lexU = u; u.lang = 'fr-FR'; if (frVoice && essai === 0) u.voice = frVoice; u.rate = .98; u.pitch = .95;
+      let parti = false;
+      const garde = setTimeout(() => { if (parti || fini || moi !== jetonVoix) return; try { speechSynthesis.cancel(); } catch (e) {}
+        if (essai < 1) setTimeout(() => { if (!fini) dire(txt, n, essai + 1); }, 160); else { voixBloquee = true; stop(); } }, essai === 0 && n === 0 ? 3000 : 2000);
+      u.onstart = () => { if (moi !== jetonVoix) return; parti = true; voixBloquee = false; speaking = .7; if (onPart) onPart(n, parts.length); };
+      u.onboundary = () => { speaking = 1; };
+      u.onend = () => { clearTimeout(garde); if (moi !== jetonVoix || fini) return; speaking = .15; setTimeout(next, 170); };
+      u.onerror = ev => { clearTimeout(garde); if (moi !== jetonVoix) return; if (essai < 1 && ev && ev.error !== 'interrupted' && ev.error !== 'canceled') { setTimeout(() => { if (!fini) dire(txt, n, essai + 1); }, 160); return; } stop(); };
+      speechSynthesis.speak(u);
+    };
+    const next = () => { if (fini) return; if (i >= parts.length) return stop(); const n = i; dire(parts[i++].trim(), n, 0); };
+    next();
+  });
+};
+
+/* ---- 6. LEST DEVANT LES PIEDS (muscle-up, traction) : le lest pendu devant les pieds trompe l'IA sur les jambes → ce réglage, dans l'écran
+   Filmer / Importer, retire les critères des jambes du jugement (genoux, hanche, à-coup de hanche…) ---- */
+{ const st = document.createElement('style');
+  st.textContent = '#filmOv .beta-lp{display:flex;align-items:center;gap:10px;justify-self:stretch;padding:11px 12px;border:1px solid var(--line);background:none;text-align:left;font:500 12.5px/1.35 var(--f-holo);color:var(--dim)}' +
+    '#filmOv .beta-lp i{flex:none;width:18px;height:18px;border:1px solid rgba(233,237,241,.4);display:grid;place-items:center;font-style:normal;font:700 12px var(--f-mono);color:#fff}' +
+    '#filmOv .beta-lp[aria-pressed="true"]{border-color:var(--red);color:var(--data)}#filmOv .beta-lp[aria-pressed="true"] i{background:var(--red);border-color:var(--red)}#filmOv .beta-lp b{color:var(--data);font-weight:600}';
+  document.head.appendChild(st);
+  const lire = () => { try { return localStorage.getItem('lgcy-lab-lest-pieds') === '1'; } catch (e) { return false; } };
+  const poser = () => {
+    const ov = document.getElementById('filmOv'); if (!ov || ov.hidden || !ov.classList.contains('film-ch') || ov.querySelector('.beta-lp')) return;
+    const k = (ov.querySelector('.fc-k') || {}).textContent || ''; if (!/MUSCLE|TRACTION/i.test(k)) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'beta-lp';
+    const maj = () => { const on = lire(); b.setAttribute('aria-pressed', on); b.innerHTML = `<i>${on ? '✓' : ''}</i><span><b>Lest devant les pieds</b> : l'IA ne juge pas les jambes (genoux, hanche).</span>`; };
+    maj(); b.onclick = ev => { ev.stopPropagation(); try { localStorage.setItem('lgcy-lab-lest-pieds', lire() ? '0' : '1'); } catch (e) {} maj(); };
+    const fc = ov.querySelector('.fc'), p = fc && fc.querySelector('p:not(.beta-imp)'); if (p) p.insertAdjacentElement('beforebegin', b); else if (fc) fc.appendChild(b);
+  };
+  new MutationObserver(poser).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+}
+
+/* ---- (26/10) le suivi de l'athlète sait si c'est un tirage (muscle-up, traction : mains au-dessus de la tête = l'athlète à la barre) ---- */
+{ const o = openIA; openIA = function (f, mvt) { window.IA_TIRAGE = mvt === 'mu' || mvt === 'traction'; return o.apply(this, arguments); };
+  document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('#ia-m [data-m]'); if (b) window.IA_TIRAGE = b.dataset.m === 'mu' || b.dataset.m === 'traction'; }, true); }
 
 /* ---- vers le Sheet : les valeurs dans SA liste (RPE, difficulté) ---- */
 const sansAccent = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
