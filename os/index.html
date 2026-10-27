@@ -3706,12 +3706,13 @@ function classer(code,nom,vari){
   let t=norm(nom+' '+vari).replace(/prise (dips|mu)/g,'');code=String(code||'').toUpperCase();
   const r=(type,x)=>Object.assign({type},x||{});
   if(['M','P','D'].includes(code))return r('belt');
+  if(window.betaStatique&&window.betaStatique(nom,vari))return r('clavier');   // (bêta 27/10) statiques, planche press, front raise : pas de lest
   if(has(t,'goblet','gobelet'))return r('db',{dbCount:1});
   if(has(t,'haltere','dumbbell','marteau','elev','elvation'))return r('db',{dbCount:has(t,'unilat','uni lat')?1:2});
   if(has(t,'front squat','barre au front','skull'))return r('bar');
   if(has(t,'pompe','push ?up','traction','pull ?up','chin','dips','muscle ?up','anneau','front','planche','plache','tuck','hollow','hspu','ecaire','ecaaire','equerre','l-?sit'))return r('belt');
   if(has(t,'tose','toes','elastique','releve','step up','emom','au choix','super set','tel$','back ext','lombaire','kettlebell','swing'))return r('clavier');
-  if(has(t,'presse','leg press','hack','jack squat','smith','multipower','t-?bar','belt squat','landmine'))return r('pmach',{sides:has(t,'t-?bar','belt squat','landmine')?1:2});
+  if(has(t,'presse','leg press','hack','jack squat','smith','multipower','t-?bar','belt squat','landmine'))return r('pmach',{sides:2});
   if(has(t,'extens','extess')&&!has(t,'barre','bare'))return r('stack');
   if(has(t,'poulie','cable','vis a vis','tirage','tirge','rieage','pec ?deck','butterfly','leg curl','machine','adduct','abduct','lat pull','pull ?da?own','straight arm','streight','chest press','shoulder press','choulder','press uni','mollet','horizontal'))return r('stack');
   if(code==='S'||has(t,'bench','developpe','dev ','dc ','squat','zercher','zrecherk','rowing','row','raw','rdl','souleve','deadlift','sdt','curl','hip t','militaire','military','ohp','over ?head','good morning','fente','split','lunge','close grip','barre','ez'))return r('bar');
@@ -4034,7 +4035,7 @@ function drawPm(e){ // traverse de chariot en acier (vue 3/4), platines boulonn�
 const drawFor=e=>e.type==='belt'?drawBelt(e):e.type==='bar'?drawBar(e):e.type==='stack'?drawStack(e):e.type==='pmach'?drawPm(e):drawDb(e);
 
 /* ---------- machine / poulie : pile de plaques avec goupille ---------- */
-const SV=14,SH=19,SG=2.5,STOP=62; // la pile affiche 14 plaques à la fois et défile
+const SV=14,SH=19,SG=2.5,STOP=62,STK_ZONE=30;   // (bêta 27/10) STK_ZONE : la demi-largeur de la colonne des trous (là où le doigt place la goupille) // la pile affiche 14 plaques à la fois et défile
 function voirPin(e){const n=e.nplates;e.off=Math.max(0,Math.min(n-SV,e.off||0));if(e.pin>e.off+SV-1)e.off=Math.min(n-SV,e.pin-SV+3);if(e.pin&&e.pin<=e.off)e.off=Math.max(0,e.pin-3)}
 function drawStack(e){ // vue de face : la goupille entre dans le trou central de la plaque choisie
   const n=e.nplates,h=SH,g=SG,top=STOP,x0=96,w=168,cx=180,W=360,off=Math.max(0,Math.min(n-SV,e.off||0)),H=top+SV*(h+g)+26;
@@ -4055,7 +4056,7 @@ function drawStack(e){ // vue de face : la goupille entre dans le trou central d
   const plus=off+SV<n,moins=off>0,bas=top+SV*(h+g);
   const fades=`${moins?`<rect x="${x0-4}" y="${top-2}" width="${w+8}" height="34" fill="url(#fadeT)"/><text x="${cx+52}" y="${top+12}" text-anchor="middle" font-family="Inter" font-weight="800" font-size="10" fill="#8a8b91">▲ ${fmt(off*e.step)} kg au-dessus</text>`:''}
     ${plus?`<rect x="${x0-4}" y="${bas-40}" width="${w+8}" height="42" fill="url(#fadeB)"/><text x="${cx}" y="${bas+14}" text-anchor="middle" font-family="Inter" font-weight="800" font-size="10.5" fill="#8a8b91">▼ glisse vers le bas · jusqu'à ${fmt(n*e.step)} kg</text>`:''}`;
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pile de plaques, ${fmt(load(e))} kg" style="touch-action:none;cursor:ns-resize">
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pile de plaques, ${fmt(load(e))} kg" style="touch-action:pan-y">
     <defs><linearGradient id="fadeB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d0d0f" stop-opacity="0"/><stop offset="1" stop-color="#0d0d0f" stop-opacity=".95"/></linearGradient>
       <linearGradient id="fadeT" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#0d0d0f" stop-opacity="0"/><stop offset="1" stop-color="#0d0d0f" stop-opacity=".95"/></linearGradient>
       <linearGradient id="stackP" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d3e45"/><stop offset=".5" stop-color="#28292e"/><stop offset="1" stop-color="#17171a"/></linearGradient></defs>
@@ -4077,6 +4078,7 @@ function drawStack(e){ // vue de face : la goupille entre dans le trou central d
       </g>
     </g>
     ${down}
+    <rect x="${cx-STK_ZONE}" y="${top-24}" width="${2*STK_ZONE}" height="${SV*(h+g)+26}" rx="9" fill="rgba(233,237,241,.06)" stroke="rgba(233,237,241,.4)" stroke-width="1" stroke-dasharray="3 4" style="cursor:ns-resize"/>
     ${fades}
   </svg>`;
 }
@@ -4090,7 +4092,9 @@ function setupStack(){ // toucher ou glisser sur la pile = placer la goupille ; 
     if(auBord&&!timer)timer=setInterval(()=>{const e=EXOS[cur],r=rel(lastY);if(!down||!((r>=SV&&e.off+SV<e.nplates)||(r<=1&&e.off>0))){clearInterval(timer);timer=null;return}
       e.off+=r>=SV?1:-1;e.pinPrev=e.pin;e.pin=Math.max(1,Math.min(e.nplates,e.off+(r>=SV?SV:1)));update()},110);
   };
-  st.addEventListener('pointerdown',ev=>{if(EXOS[cur].type!=='stack')return;down=true;EXOS[cur].dragging=true;lastY=ev.clientY;try{st.setPointerCapture(ev.pointerId)}catch(_){};place()});
+  const dansZone=ev=>{const sv=st.querySelector('svg');if(!sv)return false;const pt=sv.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;return Math.abs(pt.matrixTransform(sv.getScreenCTM().inverse()).x-180)<=STK_ZONE+4};
+  st.addEventListener('touchstart',ev=>{if(EXOS[cur].type==='stack'&&ev.touches.length===1&&dansZone(ev.touches[0]))ev.preventDefault()},{passive:false});   // dans la colonne : la page ne défile pas
+  st.addEventListener('pointerdown',ev=>{if(EXOS[cur].type!=='stack')return;if(!dansZone(ev))return;down=true;EXOS[cur].dragging=true;lastY=ev.clientY;try{st.setPointerCapture(ev.pointerId)}catch(_){};place()});
   st.addEventListener('pointermove',ev=>{if(!down)return;lastY=ev.clientY;place()});
   const fin=()=>{if(!down)return;down=false;clearInterval(timer);timer=null;const e=EXOS[cur];e.dragging=false;e.pinPrev=e.pin;fx.add=0;update()}; // en lâchant : la pile se soulève un peu
   st.addEventListener('pointerup',fin);st.addEventListener('pointercancel',fin);
@@ -4157,7 +4161,7 @@ function etat(e){
   const pref=prefDe(e),det=classer(e.code,e.nomBrut||e.nom,e.varBrut||e.variante||'');
   const type=pref.type||det.type;
   if(type==='clavier')return null;
-  const st={v:1,type,plates:[],db:null,pin:0,off:0,step:pref.step||5,barW:pref.barW||20,sides:det.sides||2,
+  const st={v:1,type,plates:[],db:null,pin:0,off:0,step:pref.step||5,barW:pref.barW||20,sides:2,
     dbCount:pref.dbCount||det.dbCount||(/unilat|uni lat/.test(norm((e.nomBrut||'')+' '+(e.varBrut||'')))?1:2),
     sheet:num(e.chargeReco),nplates:24};
   taillePile(st,num(e.charge)||0);
@@ -4229,7 +4233,7 @@ function update(){
   const rien=e.type==='db'?!e.db:e.type==='stack'?!e.pin:!e.plates.length;
   const h=$('#delta'),ok=!empty&&e.reco!=null&&Math.abs(L-e.reco)<1e-9;
   if(empty)h.className='cg-hint',h.textContent='Prends une ou deux haltères dans le râtelier';
-  else if(rien&&!ACTIF&&e.noteeCharge==null){h.className='cg-hint';h.textContent=e.type==='stack'?'Place la goupille sur la pile':e.type==='belt'?'Ajoute tes disques sur la ceinture':e.type==='bar'?'Ajoute tes disques sur la barre':'Ajoute tes disques sur la machine'}
+  else if(rien&&!ACTIF&&e.noteeCharge==null){h.className='cg-hint';h.textContent=e.type==='stack'?'Glisse le doigt dans la colonne des trous':e.type==='belt'?'Ajoute tes disques sur la ceinture':e.type==='bar'?'Ajoute tes disques sur la barre':'Ajoute tes disques sur la machine'}
   else if(ok){h.className='cg-hint ok';h.textContent='✓ Charge conseillée'}
   else if(e.reco!=null){const d=L-e.reco;h.className='cg-hint warn';h.textContent=`${d>0?'+':'−'}${fmt(Math.abs(d))} kg par rapport au conseillé`}
   else{h.className='cg-hint';h.textContent=''}
@@ -5092,7 +5096,7 @@ function renderRun() {
     <div id="r-body" style="--exo:${{ M: "#9FC5E8", P: "#76A5AF", D: "#8E7CC3", S: "#45818E", R: "#D9D9D9" }[x.code] || "#D9D9D9"}">
       <div class="exohead"><div class="kicker">${GROUPE[x.code] || "Exercice"}</div><div class="exoname">${e.nom}</div>${varExo(x) ? `<div class="exovar">${varExo(x)}</div>` : ""}</div>
       <div class="presc${enJeu(x, e) ? " pr" : premierAuFormat(x, e) ? " neuf" : ""}">
-        <div><span>Séries</span><b>${x.sets}</b></div><div><span>Reps</span><b>${x.reps || "—"}</b></div><div><span>${e.rpeCible ? "RPE cible" : "RPE max"}</span><b>${e.rpeCible || e.rpeMax || "—"}</b></div>
+        <div><span>Séries</span><b>${x.sets}</b></div><div><span>Reps</span><b>${x.reps || "—"}</b></div>${e.rpeCible ? `<div><span>RPE cible</span><b>${e.rpeCible}</b></div>` : ""}
         <div class="hi" id="f-reco"><span class="prbadge">${enJeu(x, e) ? "🏆 PR" : "1ʳᵉ fois"}</span><span>Charge</span>${charge2 && Chg.reco(e) !== null ? `<div class="cval">${Chg.mini(e)}<b>${Chg.pre(e)}${virg(Chg.reco(e))}</b></div>` : `<b>${kgApp(e.chargeReco)}</b>`}</div>
       </div>
       <button class="tent-btn" type="button" id="r-tent"${PRINCIPAL(x) && enJeu(x, e) ? "" : " hidden"}><i></i>MODE TENTATIVE</button>
@@ -5137,8 +5141,8 @@ function renderRun() {
   }
   const rpeOk = () => { const b = $("#run .r-prog").children[i]; if (b) b.className = "cur"; };
   if (window.Chg) {
-    Chg.jauge($("#f-rpe1"), RPE_L, e.rpe1, v => { e.rpe1 = v; rpeOk(); }, { meme: memeRpe, cible: rpeHaut(e.rpeCible || e.rpeMax) });
-    Chg.jauge($("#f-rpe2"), RPE_L, e.rpeLast, v => { e.rpeLast = v; rpeOk(); }, { meme: memeRpe, cible: rpeHaut(e.rpeCible || e.rpeMax) });
+    Chg.jauge($("#f-rpe1"), RPE_L, e.rpe1, v => { e.rpe1 = v; rpeOk(); }, { meme: memeRpe, cible: rpeHaut(e.rpeCible) });
+    Chg.jauge($("#f-rpe2"), RPE_L, e.rpeLast, v => { e.rpeLast = v; rpeOk(); }, { meme: memeRpe, cible: rpeHaut(e.rpeCible) });
   }
   const lire = () => { e.lu = true; const ch = $("#f-cnchip"), cn = $("#f-consigne");
     if (ch) { ch.classList.add("lu"); ch.querySelector("i")?.remove(); } if (cn) { cn.classList.add("lu"); cn.querySelector(".new")?.remove(); } };
@@ -6350,7 +6354,8 @@ function choisirPersonne(liste, suivi) {
 }
 const OS_COU = [[11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24], [23, 25], [25, 27], [24, 26], [26, 28]];
 const IA_CALIB = {};   // par athlète puis par mouvement : vitesse d'une rep ↔ RPE ressenti
-const calibDe = (mvt) => { const c = (IA_CALIB[DATA[idx].code] = IA_CALIB[DATA[idx].code] || {}); return (c[mvt] = c[mvt] || []); };
+let IA_CODE = null;   // (bêta 27/10) l'athlète de l'analyse en cours
+const calibDe = (mvt) => { const L = labDe(IA_CODE || DATA[idx].code); L.calib = L.calib || {}; return (L.calib[mvt] = L.calib[mvt] || []); };
 // base universelle, utilisée tant que l'athlète n'a pas assez calibré : plus la montée est longue, plus on est proche de l'échec (un « grind »)
 const BASE_MONTEE = { squat: [1.0, 1.4, 2.0, 2.8], dips: [0.8, 1.2, 1.7, 2.4], traction: [0.9, 1.3, 1.8, 2.5], mu: [1.0, 1.4, 2.0, 2.8] };
 function rpeUniversel(mvt, montee) { const b = BASE_MONTEE[mvt]; return montee < b[0] ? 7 : montee < b[1] ? 8 : montee < b[2] ? 9 : montee < b[3] ? 9.5 : 10; }
@@ -6418,7 +6423,7 @@ const recent = d => jourAn(DATE_DEMO[jourDemo]) - jourAn(d) <= 21;
 const v2 = n => n.toFixed(2).replace(".", ",");
 const kgLab = (kg, mvt) => mvt === "squat" ? `${virg(kg)} kg` : kg ? `+${virg(kg)} kg` : "PDC";
 const athCode = () => (S ? S.a.code : DATA[idx].code);
-const athDe = code => DATA.find(a => a.code === code);
+const athDe = code => DATA.find(a => a.code === code) || (window.betaProspect ? window.betaProspect(code) : undefined);
 const ORDRE_MVT = ["squat", "dips", "traction", "mu"];
 
 // les règles de l'arbitre : réglées par le coach (dans l'app : dans ses réglages), valables pour toute la team
@@ -7308,7 +7313,7 @@ function openLab(focus) {
     <h2 class="s-h1">LEGACY LAB</h2>
     <details class="lab-moi plie"><summary><span>TAILLE <b id="lab-mt">${virg(L.taille)} M</b> · POIDS <b id="lab-mp">${virg(L.pc)} KG</b></span><em>MODIFIER</em></summary>
       <div class="lab-ctx lab-rg"><label>TAILLE (M)<input id="lab-t" inputmode="decimal" value="${virg(L.taille)}"></label><label>POIDS DE CORPS (KG)<input id="lab-p" inputmode="decimal" value="${virg(L.pc)}"></label></div>
-      <p class="tv-note">Indispensables : la taille sert à passer en m/s, le poids à calculer la force et les watts. RPE : ${ORDRE_MVT.map(m => `${IA_MVT[m].nom.toLowerCase()} ${((IA_CALIB[code] || {})[m] || []).length >= 2 ? "calibré pour toi" : "référence générale"}`).join(" · ")}.</p></details>
+      <p class="tv-note">Indispensables : la taille sert à passer en m/s, le poids à calculer la force et les watts. RPE : ${ORDRE_MVT.map(m => `${IA_MVT[m].nom.toLowerCase()} ${(((labDe(code) || {}).calib || {})[m] || []).length >= 2 ? "calibré pour toi" : "référence générale"}`).join(" · ")}.</p></details>
     <div class="lab-sw" id="lab-sw"><button type="button" data-l="street" aria-pressed="true">STREETLIFTING</button><button type="button" data-l="cali" aria-pressed="false">CALISTHÉNIE</button></div>
     <div id="lab-street">
     <div class="bays" id="lab-bays">${ORDRE_MVT.map(m => bayHTML(code, m)).join("")}</div>
@@ -7794,6 +7799,7 @@ function openIA(fichier, mvtInit, ctx, opts) {
 let RAPPORT_SNAP = null;
 function rapportIA(o) {
   const { mvt, serie, reps, sy, exoNom, fmtS, kg, code, vue, dfx, fps, vid, coach, qualAna, serieN, nSer, vDeb = 0, vFin = null, refait = false } = o;
+  IA_CODE = code || null;
   // o.trancher : le coach tranche plus tard une analyse d'athlète (écran À TRANCHER) : on défait ce que cette analyse avait écrit
   // (o.defaire), puis on recalcule ; le rendu va dans o.res au lieu du rapport du labo
   const RES = o.res || $("#ia-res"), q = s2 => RES.querySelector(s2);
@@ -7895,7 +7901,7 @@ function rapportIA(o) {
   // le squelette rejoué (« spectre ») retiré aussi le 07/10 au soir : « pas très joli, pas d'utilité » (coach) ; restent les défauts
   if (q("#ia-stu")) q("#ia-stu").onclick = () => { sfx.unfold(); ouvrirStudio({ vid, code, mvt, serie, reps, taille: Lb.taille, fps }); };
   q("#ia-sty").onclick = () => { q("#ia-sty").disabled = true; exporterStory({ vid, mvt, serie, reps, exoNom, kg, code, sortie: q("#ia-sto"), de: vDeb, a: vFin }).finally(() => { q("#ia-sty").disabled = false; }); };
-  q(".calib").onclick = ev => { const b = ev.target.closest("[data-r]"); if (!b) return; calibDe(mvt).push({ v: vDer, rpe: +b.dataset.r });
+  q(".calib").onclick = ev => { const b = ev.target.closest("[data-r]"); if (!b) return; calibDe(mvt).push({ v: vDer, rpe: +b.dataset.r }); labSave();
     b.parentElement.querySelectorAll("button").forEach(z => z.classList.toggle("sel", z === b)); sfx.seg(4); lexInfo(rs ? `Noté : ton ressenti ${b.textContent}, les chiffres disent ${rs.txt}.` : `Noté : ton ressenti ${b.textContent}.`); };
   const surveil = codes.filter(c => !DEF[c].comp);
   let dire = (prV ? `Record de vitesse : plus ${gainV} pour cent à ${virg(kg)} kilos. ` : "") + `Arbitre : ${dfx.valides} rep${dfx.valides > 1 ? "s" : ""} validée${dfx.valides > 1 ? "s" : ""} sur ${reps.length}.`;
@@ -8618,13 +8624,14 @@ function mesureCali(mvt, L, W, taille) {
   // la hanche par rapport à la ligne épaules → chevilles (cm) ; planche et front : + = hanches plus basses que la ligne (vers le sol)
   const ecartLigne = mvt === "planche" || mvt === "front" ? (hp.y - (sh.y + (hp.x - sh.x) * dy / (dx || 1e-6))) * cmU : (hp.x - (sh.x + (hp.y - sh.y) * dx / (dy || 1e-6))) * cmU;
   const sup = mvt === "oahs" ? (L[15].y > L[16].y ? 0 : 1) : null, appui = mvt === "oahs" ? L[sup ? 16 : 15] : wr, cog = cogImage(L);
-  const m = { coude, genou, hanche, incl, vert, cmU, cog, appui, dCog: (cog.x - appui.x) * cmU, ecartLigne, pieds: (wr.y - an.y) * cmU, haut: hp.y < sh.y, mainsBas: wr.y > sh.y };
+  const tdx = hp.x - sh.x, tdy = hp.y - sh.y, inclT = Math.atan2(-tdy, Math.abs(tdx) || 1e-6) * 180 / Math.PI;   // (bêta 27/10) le torse seul
+  const m = { inclT, coude, genou, hanche, incl, vert, cmU, cog, appui, dCog: (cog.x - appui.x) * cmU, ecartLigne, pieds: (wr.y - an.y) * cmU, haut: hp.y < sh.y, mainsBas: wr.y > sh.y };
   if (mvt === "oahs") { const iS = sup ? 12 : 11, iH = sup ? 23 : 24; m.epaule = (L[iS].x - appui.x) * cmU; m.hancheApp = (L[iH].x - L[iS].x) * cmU; m.rotation = W ? rotBassin(W) : null; m.sup = sup; }
   return m;
 }
 // dans la figure ? (sinon : l'entrée, la sortie, le repos)
 const enFigure = (mvt, m) => !m ? false : mvt === "hs" || mvt === "oahs" ? m.haut && m.mainsBas && m.vert < 35
-  : mvt === "planche" ? m.mainsBas && Math.abs(m.incl) < 30 && m.pieds > 20 : !m.mainsBas && Math.abs(m.incl) < 30;
+  : mvt === "planche" ? m.mainsBas && Math.abs(m.inclT ?? m.incl) < 35 && m.pieds > 15 : !m.mainsBas && Math.abs(m.inclT ?? m.incl) < 35;
 // les critères, image par image : [code, nom, vrai si respecté, valeur affichée, seuil affiché]
 function criteresCali(mvt, m) {
   const R = REGLES_CALI[mvt], abs = Math.abs, c = [];
@@ -8801,6 +8808,7 @@ function openIACali(fichier, mvtInit, opts) {
     if (!T) { st.textContent = "PAS DE TENUE TROUVÉE"; $("#ia-res").innerHTML = `<p class="s-p">Je n'ai pas trouvé de moment tenu en ${CALI[mvt].nom.toLowerCase()}. Vérifie que tout le corps est dans l'image, et le bon mouvement en haut.</p>`; $("#ia-go").disabled = false; return; }
     st.textContent = `TENUE ${virg(T.tot.toFixed(1))} S · TERMINÉ`;
     rapportCali({ mvt, serie, T, variante, code, vid, coach });
+    if (opts.seance) try { opts.seance({ mvt, serie, T, vid }); } catch (e) { console.error("bêta : analyse pour la séance", e); }   // (bêta 27/10)
     $("#ia-go").disabled = false; $("#ia-go").textContent = "RELANCER";
     if (coach) setTimeout(() => { if (!ov.hidden) ouvrirStudio({ vid, code, mvt, serie, reps: repsCali(T), taille: Lb.taille }); }, 1400);
   };
@@ -13163,7 +13171,7 @@ function adTrop(serie, v) {
   const rv = adNum(v), ref = adNum(e.rpeCible || e.rpeMax); if (rv == null || !ref || !(rv > 10 || rv >= ref + 1)) return;
   const cle = i + ":" + serie; if (A.vu[cle]) return; A.vu[cle] = true;
   const lest = /^[MPD]$/.test(x.code), cran = lest ? 1.25 : 2.5, crans = rv > 10 || rv >= ref + 2 ? 2 : 1;
-  const c = numOu(e.charge) ?? numOu(e.chargeReco), bo = adBackoffApres(i), titre = `${serie === 1 ? "1re" : "dernière"} série à RPE ${rv > 10 ? "échec" : virg(rv)} (${e.rpeCible ? "visé" : "max"} ${virg(ref)})`;
+  const c = numOu(e.charge) ?? numOu(e.chargeReco), bo = adBackoffApres(i), titre = `${serie === 1 ? "1re" : "dernière"} série à RPE ${rv > 10 ? "échec" : virg(rv)}${e.rpeCible ? ` (visé ${virg(ref)})` : ""}`;
   const O = [], restant = adSets(x) - (A.moins[i] || 0) > 1;
   if (serie === 1 && restant) {
     if (x.code === "M" && !(c > 0)) ["petit", "moyen", "les deux"].forEach(t => O.push(`<button type="button" data-ad="ela" data-v="${t}">ÉLASTIQUE ${t.toUpperCase()}</button>`));
@@ -14126,12 +14134,11 @@ function seanceEnCours() {
     '#filmOv .beta-filmer{justify-self:center;background:none;border:0;padding:6px 8px;font:500 8.5px var(--f-mono);letter-spacing:.2em;color:rgba(233,237,241,.38);text-transform:uppercase}';
   document.head.appendChild(st);
   const ajuster = () => {
+    const ov0 = document.getElementById('filmOv'); if (ov0 && !ov0.hidden) ov0.querySelectorAll('.fc > p').forEach(p => p.remove());   // (27/10, coach) pas de phrase d'aide
     const ov = document.getElementById('filmOv'); if (!ios || !ov || ov.hidden || !ov.classList.contains('film-ch') || ov.querySelector('.beta-imp')) return;
     const fc = ov.querySelector('.fc'), fi = fc && fc.querySelector('[data-a="filmer"]'), im = fc && fc.querySelector('[data-a="importer"]'); if (!fi || !im) return;
     im.className = 'btn'; im.textContent = '▣ IMPORTER UNE VIDÉO';
-    const h = document.createElement('p'); h.className = 'beta-imp';
-    h.innerHTML = 'Pour du <b>60 images/s</b> : filme avec l\'<b>appareil photo</b> de l\'iPhone (Réglages › Appareil photo › Enregistrer une vidéo › <b>1080p à 60 ips</b>), puis importe-la.';
-    im.insertAdjacentElement('afterend', h);
+    const h = document.createElement('i'); h.className = 'beta-imp'; h.hidden = true; im.insertAdjacentElement('afterend', h);   // (marque : écran déjà ajusté)
     fi.className = 'beta-filmer'; fi.textContent = 'filmer ici · 30 i/s';
     const x = fc.querySelector('[data-a="fermer"]'); fc.insertBefore(fi, x || null);
   };
@@ -14245,7 +14252,9 @@ document.head.appendChild(stPrev);
     if (presc && !body.querySelector('.beta-prev')) {
       const d = p && p.d ? p.d.slice(8, 10) + '/' + p.d.slice(5, 7) : '';
       const kg = p ? (p.c ? (Chg && Chg.pre ? Chg.pre(e) : '') + virg(p.c) + ' kg' : el ? 'élastique' : 'poids du corps') : '';
-      presc.insertAdjacentHTML('afterend', p ? `<div class="beta-prev"><small>DERNIÈRE FOIS${d ? ' · ' + d : ''}</small><b>${kg}</b><span>${p.s || ''}${p.r ? ' · RPE ' + virg(p.r) : ''}</span></div>`
+      // (27/10) pas le même format, ou une autre variante (posé, tempo…) : on le dit, avec ce qui avait été fait
+      const vt = p ? [x.nom !== 'renfo' && p.v && p.v !== x.var ? p.v : '', p.tempo && p.tempo !== x.tempo ? 'tempo ' + p.tempo : ''].filter(Boolean).join(' · ') : '';
+      presc.insertAdjacentHTML('afterend', p ? `<div class="beta-prev"><small>DERNIÈRE FOIS${d ? ' · ' + d : ''}${p.autre === 'format' ? ' · AUTRE FORMAT' : p.autre === 'variante' ? ' · AUTRE VARIANTE' : ''}</small><b>${kg}</b><span>${p.s || ''}${vt ? ' · ' + vt : ''}${p.r ? ' · RPE ' + virg(p.r) : ''}</span></div>`
         : `<div class="beta-prev"><small>DERNIÈRE FOIS</small><span>pas encore fait</span></div>`);
     }
     // 3. ÉLASTIQUE : « PDC » seulement au poids du corps sans élastique
@@ -14253,6 +14262,207 @@ document.head.appendChild(stPrev);
       const i = document.getElementById('r-c'); if (i) i.placeholder = 'élastique';
       const cap = document.querySelector('#cap .dec'); if (cap) setTimeout(() => { if (cap.isConnected) cap.textContent = cap.textContent.replace(/poids du corps/g, 'élastique'); }, 900); }
   } catch (er) { console.error('bêta : exercice', er); }
+  return r;
+}; }
+
+/* ---- (27/10, coach) LES STATIQUES : planche, front lever, back lever, handstand, équerre, hollow, drapeau…
+   Le coach écrit le mouvement (« planche ») et un temps (colonne reps : 3 = tenir 3 s) ; l'ATHLÈTE choisit la variante qu'il peut tenir
+   ce temps-là (lean, tuck, advanced tuck, high fly, one leg, straddle, full) ;
+   (27/10) les MOUVEMENTS de skill, en reps, même règle : planche press (tuck planche press…), front raise (tuck front raise…) et note ce qu'il a tenu. Pas de ceinture de lest (build).
+   · l'hologramme 3D de la variante choisie (le même que le hall du LAB), qui tourne ;
+   · par série : le temps tenu, tapé par l'athlète (pas de chrono : il ne peut pas se chronométrer lui-même) ou mesuré sur sa vidéo,
+     et la qualité (✓ propre, ≈ moyen, ✕ à revoir) ; le ressenti ; (27/10, coach) le moins de mots possible ;
+   · la dernière fois et le record DANS CETTE VARIANTE ; l'app retient la dernière variante.
+   Le temps de maintien reste dans l'app (clé lgcy-statiques, rangée en ligne avec le reste) : rien de plus n'est écrit dans le Sheet. */
+// (27/10, coach) back lever : tuck, one leg, straddle, full seulement (« le back lever high fly, ça n'existe pas »)
+const STAT_VARS = { planche: ['lean', 'tuck', 'adv', 'halflay', 'straddle', 'full'], front: ['tuck', 'adv', 'halflay', 'oneleg', 'straddle', 'full'],
+  back: ['tuck', 'oneleg', 'straddle', 'full'], lsit: ['lsit', 'vsit'], hs: ['full'], hollow: ['full'], autre: ['full'] };
+const STAT_NOM = { lean: 'LEAN', tuck: 'TUCK', adv: 'ADV TUCK', halflay: 'HIGH FLY', oneleg: 'ONE LEG', straddle: 'STRADDLE', full: 'FULL', lsit: 'L-SIT', vsit: 'V-SIT' };
+const STAT_FAM = { planche: 'Planche', front: 'Front lever', back: 'Back lever', hs: 'Handstand', lsit: 'Équerre', hollow: 'Hollow body', autre: 'Statique' };
+const normB = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+// la variante écrite dans le nom (rare : c'est l'athlète qui la choisit)
+const varDe = (t, fam) => { const v = fam === 'lsit' ? (/v-?sit/.test(t) ? 'vsit' : 'lsit') : /\blean\b|ligne/.test(t) ? 'lean' : /\badv|avance/.test(t) ? 'adv'
+    : /one ?leg|1 ?jambe|une jambe|single/.test(t) ? 'oneleg' : /half|demi|high ?fly|i-? ?fly/.test(t) ? 'halflay' : /straddle|\bstrad|ecart/.test(t) ? 'straddle'
+    : /\btuck|\btuc\b|\bgroupe/.test(t) ? 'tuck' : /\bfull\b|complet/.test(t) ? 'full' : null;
+  return v && STAT_VARS[fam].includes(v) ? v : null; };
+function statiqueDe(nom, vari) {
+  const t = normB(nom + ' ' + vari);
+  // (27/10, coach) les mouvements de skill, en REPS, même règle (l'athlète choisit sa variante), chacun son historique :
+  // planche PUSH-UP (des pompes en planche) ; planche PRESS (de la planche à l'équilibre, bras tendus) ; front (lever) RAISE
+  if (/\bplan?che\b|\bplache\b/.test(t) && /\bpu\b|push|pompe/.test(t)) return { fam: 'planche', mode: 'reps', id: 'pushup', nom: 'Planche push-up', v: varDe(t, 'planche') };
+  if (/\bplan?che\b|\bplache\b/.test(t) && /\bpress/.test(t)) return { fam: 'planche', mode: 'reps', id: 'press', nom: 'Planche press', v: varDe(t, 'planche') };
+  if (/\bfront\b/.test(t) && /\braises?\b/.test(t) && !/elv|elev|halt|dumb/.test(t)) return { fam: 'front', mode: 'reps', id: 'raise', nom: 'Front lever raise', v: varDe(t, 'front') };
+  // un autre mouvement (pas une tenue) garde son matériel : tuck pu, hollow dynamique, équerre relevé de jambes, élévation frontale…
+  if (/raise|pull|row|press|push|pompe|\bpu\b|dynami|relev|\bleve|squat|traction|dips|curl|tirage|rock|degroup|essuie|negati|elev|elv|lateral|hspu|swing|kick|jump|saut/.test(t)) return null;
+  const fam = /back ?lever/.test(t) ? 'back' : /\bplan?che\b|\bplache\b/.test(t) ? 'planche' : /\bfront\b/.test(t) ? 'front'
+    : /handstand|\bhs\b|poirier|\batr\b/.test(t) ? 'hs' : /l-?sit|v-?sit|equerre|ecaa?ire/.test(t) ? 'lsit' : /hollow/.test(t) ? 'hollow'
+    : /drapeau|\bflag\b|croix|\bcross\b|maltese|maltaise|manna|victorian/.test(t) ? 'autre' : null;
+  return fam ? { fam, mode: 'tenue', v: varDe(t, fam) } : null;
+}
+window.betaStatique = (n, v) => !!statiqueDe(n, v);
+
+// les poses (mètres ; x = devant, y = haut, z = côté) : bras tendus (0,59 m), torse 0,52, cuisse 0,43, jambe 0,42 ;
+// la cuisse part de la hanche avec la flexion φ (vers le ventre), la jambe se plie de κ (talon vers les fesses)
+function poseStat(cle, t) {
+  const [, fam, v] = cle.split(':');
+  if (fam === 'hs') return holoPoseCali('hs', t);
+  // (la barre est basse dans l'hologramme, sans montants : le corps remplit le petit écran)
+  const J = {}, eq = [], C = [['L', 1], ['R', -1]], R = d => d * Math.PI / 180, Y = 1.2, barre = fam === 'front' || fam === 'back';
+  if (fam === 'planche' || barre) {
+    // [épaules devant les mains (m), torse relevé (°), φ, κ] : plus le levier est court, moins les épaules partent devant
+    const T = { planche: { lean: [.22, 0, 0, 0], tuck: [.13, 20, 140, 140], adv: [.2, 0, 95, 125], halflay: [.3, 0, 0, 90], straddle: [.33, 0, 0, 0], full: [.4, 0, 0, 0] },
+      front: { tuck: [.28, 0, 140, 140], adv: [.33, 0, 95, 125], halflay: [.38, 0, 0, 90], oneleg: [.37, 0, 0, 0], straddle: [.4, 0, 0, 0], full: [.42, 0, 0, 0] },
+      back: { tuck: [.38, 0, 140, 140], adv: [.42, 0, 95, 125], halflay: [.47, 0, 0, 90], oneleg: [.46, 0, 0, 0], straddle: [.48, 0, 0, 0], full: [.5, 0, 0, 0] } }[fam];
+    const [sx, tau, phi, kap] = T[v] || T.full, dy = Math.sqrt(.59 * .59 - sx * sx), y0 = barre ? Y : 0, sh = [sx, barre ? Y - dy : dy];
+    let u = [-Math.cos(R(tau)), Math.sin(R(tau))];   // le long du torse, vers les pieds
+    if (v === 'lean') { const a = Math.asin(Math.min(.9, (sh[1] - .03) / 1.47)); u = [-Math.cos(a), -Math.sin(a)]; }   // pieds au sol
+    const f = fam === 'front' ? [u[1], -u[0]] : [-u[1], u[0]], hp = [sh[0] + .52 * u[0], sh[1] + .52 * u[1]];   // f : côté du ventre
+    const jambe = (ph, ka) => { const cp = Math.cos(R(ph)), sp = Math.sin(R(ph)), d = [cp * u[0] + sp * f[0], cp * u[1] + sp * f[1]], p = [-sp * u[0] + cp * f[0], -sp * u[1] + cp * f[1]];
+      const ck = Math.cos(R(ka)), sk = Math.sin(R(ka)), s = [ck * d[0] - sk * p[0], ck * d[1] - sk * p[1]], kn = [hp[0] + .43 * d[0], hp[1] + .43 * d[1]], an = [kn[0] + .42 * s[0], kn[1] + .42 * s[1]];
+      return { kn, an, to: [an[0] + .1 * s[0], an[1] + .1 * s[1]] }; };
+    const G = jambe(phi, kap), G2 = v === 'oneleg' ? jambe(130, 145) : G, ec = v === 'straddle';
+    C.forEach(([s, k]) => { const g = s === 'R' ? G2 : G;
+      J['ha' + s] = [0, y0, (barre ? .25 : .21) * k]; J['sh' + s] = [sh[0], sh[1], .19 * k]; J['el' + s] = [sh[0] / 2, (y0 + sh[1]) / 2, .2 * k]; J['hp' + s] = [hp[0], hp[1], .1 * k];
+      J['kn' + s] = [g.kn[0], g.kn[1], (ec ? .22 : .09) * k]; J['an' + s] = [g.an[0], g.an[1], (ec ? .37 : .07) * k]; J['to' + s] = [g.to[0], g.to[1], (ec ? .4 : .07) * k]; });
+    J.hd = [sh[0] - .23 * u[0], sh[1] - .23 * u[1] + .03, 0];
+    if (barre) eq.push([[0, Y, -.5], [0, Y, .5]]);
+  } else if (fam === 'lsit') {   // mains au sol à côté des hanches, bras tendus, jambes devant (V-sit : relevées)
+    const a = R(v === 'vsit' ? 40 : 2), c = Math.cos(a), sn = Math.sin(a);
+    C.forEach(([s, k]) => { J['ha' + s] = [0, 0, .21 * k]; J['el' + s] = [-.01, .3, .21 * k]; J['sh' + s] = [-.02, .59, .19 * k]; J['hp' + s] = [-.04, .08, .1 * k];
+      J['kn' + s] = [-.04 + .43 * c, .08 + .43 * sn, .08 * k]; J['an' + s] = [-.04 + .85 * c, .08 + .85 * sn, .07 * k]; J['to' + s] = [-.04 + .94 * c, .1 + .94 * sn, .07 * k]; });
+    J.hd = [0, .83, 0];
+  } else {   // hollow (et les autres statiques sans pose dédiée) : sur le dos, épaules et jambes décollées, bras derrière la tête
+    C.forEach(([s, k]) => { J['hp' + s] = [0, .07, .1 * k]; J['sh' + s] = [.46, .2, .19 * k]; J['el' + s] = [.75, .26, .2 * k]; J['ha' + s] = [1.03, .31, .18 * k];
+      J['kn' + s] = [-.42, .15, .09 * k]; J['an' + s] = [-.83, .23, .07 * k]; J['to' + s] = [-.92, .27, .07 * k]; });
+    J.hd = [.68, .28, 0];
+  }
+  // le corps centré sur le socle (il tourne autour de son milieu), puis un léger balancement d'équilibre autour de l'appui (les mains)
+  const xs = Object.values(J).map(q => q[0]), cx = (Math.max(...xs) + Math.min(...xs)) / 2;
+  Object.values(J).forEach(q => { q[0] -= cx; }); eq.forEach(pl => pl.forEach(q => { q[0] -= cx; }));
+  const pv = barre ? [-cx, Y, 0] : [-cx, 0, 0], ba = Math.sin(t * 1.25) * .007, ca = Math.cos(ba), sa = Math.sin(ba);
+  Object.keys(J).forEach(n => { const q = J[n], dx = q[0] - pv[0], dy2 = q[1] - pv[1]; J[n] = [pv[0] + dx * ca - dy2 * sa, pv[1] + dx * sa + dy2 * ca, q[2]]; });
+  J.nk = V3.m(V3.a(J.shL, J.shR), .5);
+  return { J, eq };
+}
+{ const o = holoPose; holoPose = function (mvt, t) { return String(mvt).indexOf('st:') === 0 ? poseStat(mvt, t) : o.apply(this, arguments); }; }
+Object.keys(STAT_VARS).forEach(fam => STAT_VARS[fam].forEach(v => { const k = 'st:' + fam + ':' + v;
+  HOLO_H[k] = { planche: 1.05, front: 1.25, back: 1.25, hs: 2.25, lsit: 1.05, hollow: 1.2, autre: 1.2 }[fam];
+  HOLO_SOL[k] = { planche: .8, lsit: .88, hollow: .8, autre: .8 }[fam] || .93;
+  CADRE_CRIT[k] = { z: 1, yaw: .06, amp: .22, vit: .35 }; }));
+
+// l'historique : par athlète, par famille, par variante ; une entrée par exercice de séance (refaite à chaque saisie)
+const ST_K = 'lgcy-statiques';
+const stLire = () => { try { return JSON.parse(localStorage.getItem(ST_K) || '{}') || {}; } catch (e) { return {}; } };
+const stFam = (code, fam) => ((stLire()[code] || {})[fam]) || { der: null, h: {} };
+function stEcrire(code, fam, v, ent) {
+  try { const all = stLire(), A = all[code] = all[code] || {}, F = A[fam] = A[fam] || { der: v, h: {} }; F.der = v;
+    Object.keys(F.h).forEach(k => { F.h[k] = F.h[k].filter(x => x.id !== ent.id); });   // changé de variante : les temps passent avec elle
+    if (ent.t.some(x => x > 0)) { const L = F.h[v] = F.h[v] || []; L.push(ent); L.sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0); if (L.length > 40) L.splice(0, L.length - 40); }
+    localStorage.setItem(ST_K, JSON.stringify(all)); } catch (e) { console.error('bêta : statiques', e); }
+}
+const stAvant = (code, fam, v, id) => { const L = (stFam(code, fam).h[v] || []).filter(x => x.id !== id);
+  return { der: L[L.length - 1] || null, best: L.reduce((m, x) => Math.max(m, ...x.t.map(y => +y || 0)), 0) }; };
+const ST_Q = { ok: ['✓', 'propre'], moy: ['≈', 'moyen'], ko: ['✕', 'à revoir'] }, ST_R = { facile: 'FACILE', ok: 'CORRECT', dur: 'DUR', max: 'À FOND' };
+const jourIso = () => { const d = new Date(), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; };
+const stSec = n => `${virg(n)} s`;
+
+const stStyle = document.createElement('style');
+stStyle.textContent = `.bst{margin:2px 0 14px}
+.bst-vs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+.bst-vs .chip{padding:7px 10px;font-size:10px}
+.bst-vs .chip small{display:block;margin-top:2px;font:500 9px var(--f-mono);letter-spacing:.08em;color:var(--dim)}
+.bst-cv{display:block;width:100%;height:190px;margin:2px 0 4px}
+.bst-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:0 0 10px;padding:9px 12px;border:1px solid var(--line);border-left:3px solid var(--exo,#888);background:rgba(233,237,241,.03)}
+.bst-h small{font:600 8.5px var(--f-mono);letter-spacing:.22em;color:var(--dim)}
+.bst-h b{font:700 15px/1.2 var(--f-holo);color:var(--data)}
+.bst-h span{font:500 12.5px var(--f-holo);color:var(--dim)}
+.bst-lg{display:flex;justify-content:space-between;font:600 8.5px var(--f-mono);letter-spacing:.2em;color:var(--dim);margin:0 0 4px}
+.bst-s{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line)}
+.bst-n{font:600 10px var(--f-mono);letter-spacing:.14em;color:var(--dim)}
+.bst-ia{display:block;width:100%;margin:0 0 12px;padding:11px 12px;border:1px solid rgba(255,59,59,.5);background:rgba(255,59,59,.06);color:var(--data);font:700 11px var(--f-holo);letter-spacing:.16em;text-align:left;cursor:pointer}
+.bsv{margin:0 0 14px;padding:14px;border:1px solid var(--red);background:rgba(255,59,59,.07)}
+.bsv > small{display:block;font:600 8.5px var(--f-mono);letter-spacing:.22em;color:var(--red)}
+.bsv > b{display:block;margin:6px 0 2px;font:700 30px/1 var(--f-holo);color:var(--data)}
+.bsv .bsv-l{margin:12px 0 5px;font:600 8.5px var(--f-mono);letter-spacing:.2em;color:var(--dim)}
+.bsv .bsv-c{display:flex;flex-wrap:wrap;gap:6px}
+.bsv .bsv-c .chip{padding:7px 10px;font-size:10px}
+.bsv .btn{margin-top:14px;width:100%}
+.ia.beta-seance #ia-m,.ia.beta-seance .lab-ctx,.ia.beta-seance .ia-trim-n,.ia.beta-seance .tv-upd{display:none!important}
+.bst-t{position:relative;display:flex;align-items:baseline;gap:4px;border:1px solid var(--line);padding:5px 9px;min-width:0}
+.bst-t input{width:100%;min-width:0;background:none;border:0;color:var(--data);font:700 21px var(--f-holo);outline:none;padding:0}
+.bst-t em{font:500 12px var(--f-holo);color:var(--dim);font-style:normal}
+.bst-t i{position:absolute;right:6px;top:-7px;padding:0 4px;background:var(--bg,#050607);font:600 8px var(--f-mono);letter-spacing:.16em;color:#ffc740;font-style:normal}
+.bst-q{display:flex;gap:4px}
+.bst-q button{width:34px;height:34px;border:1px solid var(--line);background:none;color:var(--dim);font:700 15px var(--f-holo);cursor:pointer;padding:0}
+.bst-q button[aria-pressed="true"][data-q="ok"]{border-color:#3ddc84;color:#3ddc84;background:rgba(61,220,132,.08)}
+.bst-q button[aria-pressed="true"][data-q="moy"]{border-color:#ffc740;color:#ffc740;background:rgba(255,199,64,.08)}
+.bst-q button[aria-pressed="true"][data-q="ko"]{border-color:var(--red);color:var(--red);background:var(--red-soft)}
+.bst-rs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-top:9px;border-top:1px solid var(--line)}
+.bst-rs > small{font:600 8.5px var(--f-mono);letter-spacing:.2em;color:var(--dim);margin-right:4px}
+.bst-rs .chip{padding:7px 9px;font-size:10px}`;
+document.head.appendChild(stStyle);
+
+let ST_ENR = null;      // l'enregistrement de l'exercice affiché (l'analyse vidéo y range son résultat)
+const CALI_DE = { planche: 'planche', front: 'front', hs: 'hs' };   // les figures que l'IA du LAB sait mesurer
+{ const o = renderRun; renderRun = function () {
+  const r = o.apply(this, arguments);
+  // (27/10, coach) « FILMER » → « ANALYSER » : on filme avec l'appareil photo du téléphone (60 i/s), puis on importe la vidéo
+  try { const bf = document.getElementById('r-film'); if (bf) [...bf.childNodes].forEach(nd => { if (nd.nodeType === 3 && /FILMER/.test(nd.textContent)) nd.textContent = 'ANALYSER'; }); } catch (er) {}
+  try {
+    const x = S.s.exos[S.i], e = S.ex[S.i], sq = statiqueDe(x.nom, x.var), body = document.getElementById('r-body'); if (!sq || !body) return r;
+    const code = (S.a && S.a.code) || DATA[idx].code, fam = sq.fam, n = Math.max(1, x.sets || 1), b = (S.a && S.a.beta) || {};
+    // tenue : des secondes ; reps : planche press, front raise ; l'historique de chacun à part
+    const reps = sq.mode === 'reps', famK = reps ? fam + '+' + (sq.id || 'reps') : fam, u = reps ? (k => `${k} rep${k > 1 ? 's' : ''}`) : stSec;
+    const id = [String(b.block || '').replace(/\D/g, ''), b.semaine, S.s.idx, S.i].join('-'), cible = parseFloat(String(x.reps || '').replace(',', '.')) || null;
+    const F = stFam(code, famK), vars = STAT_VARS[fam];
+    e.stat = e.stat || { v: sq.v || (F.der && vars.includes(F.der) ? F.der : vars.includes('tuck') ? 'tuck' : vars[0]), t: [], q: [], r: '' };
+    const ST = e.stat; while (ST.t.length < n) ST.t.push(null);
+    // la prescription : « Reps » devient la TENUE visée
+    const pr = body.querySelectorAll('.presc > div'); if (pr[1] && !reps) pr[1].innerHTML = `<span>Tenue</span><b>${cible ? stSec(cible) : '—'}</b>`;
+    // et la case « Charge » devient le RECORD DE TENUE dans la variante (le badge PR des charges n'a pas de sens ici ; gardé, caché)
+    const presc = body.querySelector('.presc'), fr = document.getElementById('f-reco'); if (presc) presc.classList.remove('pr', 'neuf');
+    const majRec = () => { if (!fr || !fr.isConnected) return; const a = stAvant(code, famK, (e.stat || {}).v, id);
+      fr.innerHTML = `<span class="prbadge" hidden></span><span>Record</span><b>${a.best ? u(a.best) : '—'}</b>`; };
+    majRec();
+    const bp = body.querySelector('.beta-prev'); if (bp) bp.remove();
+    // le champ charge : seulement pour un statique à l'élastique (ou déjà rempli) ; sinon caché (rien à charger)
+    const rc = document.getElementById('r-c'), blkC = rc && rc.closest('.blk');
+    if (blkC) { if (estElastique(x, e) || String(e.charge ?? '').trim() !== '') { const lb = blkC.querySelector('label'); if (lb) lb.textContent = estElastique(x, e) ? 'Élastique (kg)' : 'Charge utilisée'; } else blkC.hidden = true; }
+    const ancre = (document.getElementById('f-rpe1') || {}).parentNode; if (!ancre) return r;
+    const chips = () => vars.length < 2 ? '' : `<div class="bst-vs" role="group" aria-label="Variante">${vars.map(v => {
+      return `<button type="button" class="chip" data-v="${v}" aria-pressed="${v === ST.v}">${STAT_NOM[v]}</button>`; }).join('')}</div>`;
+    const hist = () => { const a = stAvant(code, famK, ST.v, id), d = a.der, nomV = vars.length > 1 ? ' · ' + STAT_NOM[ST.v] : '';
+      if (!d) return '';
+      const qs = Object.keys(ST_Q).map(k => [k, d.q.filter(y => y === k).length]).filter(([, m]) => m).map(([k, m]) => ST_Q[k][1] + (m > 1 ? ' ×' + m : '')).join(' · ');
+      return `<div class="bst-h"><small>DERNIÈRE FOIS${nomV} · ${d.d.slice(8, 10)}/${d.d.slice(5, 7)}</small><b>${d.t.filter(y => y > 0).map(u).join(' · ')}</b><span>${[qs, d.r ? 'ressenti ' + ST_R[d.r].toLowerCase() : '', a.best ? 'record ' + u(a.best) : ''].filter(Boolean).join(' · ')}</span></div>`; };
+    const ligne = k => { const a = stAvant(code, famK, ST.v, id), tk = ST.t[k], rec = tk > 0 && a.best > 0 && tk > a.best;
+      return `<div class="bst-s" data-k="${k}"><span class="bst-n">S${k + 1}</span><div class="bst-t"><input inputmode="${reps ? 'numeric' : 'decimal'}" placeholder="—" value="${tk > 0 ? virg(tk) : ''}" aria-label="Série ${k + 1} : ${reps ? 'reps faites' : 'secondes tenues'}"><em>${reps ? 'reps' : 's'}</em>${rec ? '<i>RECORD</i>' : ''}</div>`
+        + `<div class="bst-q" role="group" aria-label="Qualité de la série ${k + 1}">${Object.keys(ST_Q).map(q => `<button type="button" data-q="${q}" aria-pressed="${ST.q[k] === q}" aria-label="${ST_Q[q][1]}">${ST_Q[q][0]}</button>`).join('')}</div></div>`; };
+    ancre.insertAdjacentHTML('beforebegin', `<div class="blk bst" id="bst"><label>${sq.nom || STAT_FAM[fam]}</label>
+      <div id="bst-vs">${chips()}</div>${fam !== 'autre' ? '<canvas class="bst-cv" aria-label="La variante en 3D"></canvas>' : ''}<div id="bst-h">${hist()}</div>
+      ${CALI_DE[fam] ? `<button type="button" class="bst-ia" id="bst-ia">◆ ANALYSER UNE VIDÉO</button>` : ''}
+      <div class="bst-lg"><span>${reps ? 'REPS' : 'TEMPS TENU'}</span><span>QUALITÉ</span></div><div id="bst-ss">${Array.from({ length: n }, (_, k) => ligne(k)).join('')}</div>
+      <div class="bst-rs"><small>RESSENTI</small>${Object.keys(ST_R).map(k => `<button type="button" class="chip" data-r="${k}" aria-pressed="${ST.r === k}">${ST_R[k]}</button>`).join('')}</div></div>`);
+    const P = document.getElementById('bst'), cv = P.querySelector('.bst-cv');
+    let h = null; if (cv) { h = holo(cv, 'st:' + fam + ':' + ST.v); cv.onclick = null; }
+    const enr = ST_ENR = () => stEcrire(code, famK, ST.v, { id, d: jourIso(), t: ST.t.map(y => +y || 0), q: ST.q.slice(0, n).map(y => y || ''), r: ST.r || '' });
+    const majTout = () => { document.getElementById('bst-h').innerHTML = hist(); document.getElementById('bst-vs').innerHTML = chips(); majRec();
+      P.querySelectorAll('.bst-s').forEach(el => { const k = +el.dataset.k, a = stAvant(code, famK, ST.v, id), tk = ST.t[k], box = el.querySelector('.bst-t'), i0 = box.querySelector('i');
+        if (tk > 0 && a.best > 0 && tk > a.best) { if (!i0) box.insertAdjacentHTML('beforeend', '<i>RECORD</i>'); } else if (i0) i0.remove(); }); };
+    P.addEventListener('click', ev => {
+      if (ev.target.closest('#bst-ia')) { try { sfx.unfold(); } catch (er) {} return filmerSerie(); }
+      const bv = ev.target.closest('[data-v]'), bq = ev.target.closest('[data-q]'), br = ev.target.closest('[data-r]');
+      if (bv) { ST.v = bv.dataset.v; if (h) { h.mvt = 'st:' + fam + ':' + ST.v; h.t0 = performance.now(); } enr(); majTout(); try { sfx.seg(4); } catch (er) {} }
+      else if (bq) { const k = +bq.closest('.bst-s').dataset.k; ST.q[k] = ST.q[k] === bq.dataset.q ? '' : bq.dataset.q; bq.parentNode.querySelectorAll('button').forEach(z => z.setAttribute('aria-pressed', ST.q[k] === z.dataset.q)); enr(); }
+      else if (br) { ST.r = ST.r === br.dataset.r ? '' : br.dataset.r; P.querySelectorAll('[data-r]').forEach(z => z.setAttribute('aria-pressed', ST.r === z.dataset.r)); enr(); }
+    });
+    P.addEventListener('input', ev => { const el = ev.target.closest('.bst-s'); if (!el || ev.target.tagName !== 'INPUT') return; const k = +el.dataset.k, v = reps ? parseInt(String(ev.target.value).replace(/\D/g, ''), 10) : Math.round(parseFloat(String(ev.target.value).replace(',', '.')) * 10) / 10;
+      ST.t[k] = v > 0 ? v : null; enr(); majTout(); });
+    // LEX : la consigne du coach dite simplement, et ce qui a été tenu la dernière fois dans cette variante
+    const a = stAvant(code, famK, ST.v, id), cap = document.querySelector('#cap .dec'), der = a.der ? a.der.t.filter(y => y > 0).join(', ').replace(/, (\d+)$/, ' et $1') : '';
+    const dit = a.der ? `Dernière fois en ${STAT_NOM[ST.v].toLowerCase()} : ${der} ${reps ? 'reps' : 'secondes'}.` : cible ? (reps ? `${u(cible)}.` : `Tiens ${virg(cible)} secondes.`) : '';
+    if (cap && dit) setTimeout(() => { if (cap.isConnected) decode(cap, dit); }, 760);
+  } catch (er) { console.error('bêta : statique', er); }
   return r;
 }; }
 
@@ -14415,34 +14625,78 @@ let sansTg = false;
   return r;
 }; }
 
-/* ---- les vidéos : celles du LAB et celles filmées en séance → le Drive du coach ---- */
-const choisirVideoIA0 = choisirVideoIA;   // sans envoi (la séance range sa vidéo elle-même, dans « Séances filmées »)
-{ const o = choisirVideoIA; choisirVideoIA = function (mvt, ctx, opts, ouvrir) {
-  const base = ouvrir || (f => openIA(f, mvt, ctx, opts));
-  return o.call(this, mvt, ctx, opts, f => {
-    try { const nm = ((typeof IA_MVT !== 'undefined' && IA_MVT[mvt]) || (typeof CALI !== 'undefined' && CALI[mvt]) || {}).nom || 'analyse';
-      betaEnvoyerFichier(f, { nom: nomFichier('LAB · ' + nm + (ctx && ctx.s ? ' ' + ctx.s : '') + (ctx && ctx.charge ? ' à ' + virg(ctx.charge) + ' kg' : ''), f), dossier: 'videos', description: 'LEGACY LAB' }); } catch (e) {}
-    return base(f);
+/* ---- (27/10, coach) LES VIDÉOS NE PARTENT PLUS DANS LE DRIVE (« ça va prendre grave le stockage » : 405 Mo en 3 vidéos du LAB) ----
+   L'analyse reste dans l'app (vitesse, arbitre, RPE estimé, tenue) ; la vidéo, l'athlète l'envoie au coach sur WhatsApp s'il veut.
+   (Restent envoyés au Drive : les photos, légères, et le bilan de départ, envoyé exprès par « ENVOYER À MON COACH ».) */
+const choisirVideoIA0 = choisirVideoIA;
+// la séance : « ANALYSER » → la vidéo du téléphone (ou filmée ici), puis directement l'analyse IA du mouvement
+filmerSerie = function () {
+  if (!S) return; const x = S.s.exos[S.i], mvt = mvtDe(x), ctx = ctxSeance(); if (!mvt) return;
+  lexFermer();
+  choisirVideoIA0(mvt, ctx, null, f => openIA(f, mvt, ctx));
+};
+// le bouton ANALYSER n'apparaît que si l'exercice a une analyse (muscle-up, traction, dips, squat ; planche, front lever, handstand)
+{ const o = renderRun; renderRun = function () { const r = o.apply(this, arguments);
+  try { const x = S.s.exos[S.i], sq = statiqueDe(x.nom, x.var), bf = document.getElementById('r-film'); if (bf) bf.hidden = !(mvtDe(x) || (sq && CALI_DE[sq.fam])); } catch (er) {}
+  return r; }; }
+/* ---- (27/10, coach) ANALYSER UNE VIDÉO D'UNE STATIQUE (planche, front lever, handstand ; planche press, front raise en reps) ----
+   L'IA du LAB calisthénie lit la vidéo (elle ne part pas dans le Drive) : le temps tenu (de « pieds
+   décollés » à « pieds reposés » pour la planche, corps à l'horizontale pour le front) ou le nombre de reps, et la VARIANTE vue
+   (tuck, advanced tuck, high fly, one leg, straddle, full, d'après les angles des hanches et des genoux et l'écart des pieds).
+   L'athlète vérifie, choisit la série, et c'est rangé dans la séance (il peut tout changer ensuite). */
+const varianteVideo = (fam, frs) => {
+  const n = {}, d3 = (p, q) => Math.hypot(p.x - q.x, p.y - q.y, (p.z || 0) - (q.z || 0));
+  frs.forEach(f => { const L = f.L; if (!L) return;
+    const jambe = (s, h, k, a) => { const hip = angle(L[s], L[h], L[k]), kn = angle(L[h], L[k], L[a]); return hip >= 140 ? (kn >= 145 ? 'ext' : 'hf') : hip >= 75 ? 'adv' : 'tuck'; };
+    const g = jambe(11, 23, 25, 27), dr = jambe(12, 24, 26, 28); let v;
+    if (g === 'ext' && dr === 'ext') v = f.W && d3(f.W[27], f.W[28]) / (d3(f.W[23], f.W[24]) || 1) > 2.4 ? 'straddle' : 'full';
+    else if ((g === 'ext') !== (dr === 'ext')) v = 'oneleg';
+    else v = g === dr ? (g === 'hf' ? 'halflay' : g) : [g, dr].includes('tuck') ? 'tuck' : [g, dr].includes('adv') ? 'adv' : 'halflay';
+    n[v] = (n[v] || 0) + 1; });
+  const vars = STAT_VARS[fam] || []; let best = null;
+  Object.entries(n).forEach(([v, k]) => { const v2 = vars.includes(v) ? v : v === 'oneleg' ? 'adv' : null; if (v2 && (!best || k > best[1])) best = [v2, k]; });
+  return best ? best[0] : null;
+};
+// les reps : les passages dans la figure (au moins 0,2 s, séparés d'au moins 0,3 s hors de la figure)
+const repsVideo = (mvt, serie) => { const seg = []; serie.forEach(f => { if (!enFigure(mvt, f.m)) return; const d = seg[seg.length - 1];
+  if (d && f.t - d.t1 < .3) d.t1 = f.t; else seg.push({ t0: f.t, t1: f.t }); }); return seg.filter(g => g.t1 - g.t0 >= .2); };
+{ const o = filmerSerie; filmerSerie = function () {
+  let sq = null; try { const x = S.s.exos[S.i]; sq = statiqueDe(x.nom, x.var); } catch (e) {}
+  if (!sq) return o.apply(this, arguments);
+  const mc = CALI_DE[sq.fam]; if (!mc) { lexInfo(`Pas d'analyse vidéo pour ce mouvement.`); return; }
+  const i0 = S.i, x = S.s.exos[i0], e = S.ex[i0], reps = sq.mode === 'reps', u = reps ? (k => `${k} rep${k > 1 ? 's' : ''}`) : (k => `${virg(k)} s`); lexFermer();
+  choisirVideoIA0(mc, null, null, f => {
+    openIACali(f, mc, { seance: ({ mvt, serie, T }) => {
+      const res = document.getElementById('ia-res'); if (!res || !S || S.i !== i0) return;
+      const vars = STAT_VARS[sq.fam] || ['full'];
+      const fen = reps ? repsVideo(mvt, serie) : null, frs = reps ? serie.filter(f2 => enFigure(mvt, f2.m)) : serie.filter(f2 => f2.t >= T.t0 && f2.t <= T.t1);
+      const val = reps ? fen.length : Math.round(T.tot * 10) / 10; if (!(val > 0)) return;
+      let v = vars.length > 1 ? (varianteVideo(sq.fam, frs) || (e.stat && e.stat.v) || vars[0]) : vars[0];
+      const n = Math.max(1, x.sets || 1), t0 = (e.stat && e.stat.t) || [];
+      let k = Array.from({ length: n }, (_, j) => j).find(j => !(t0[j] > 0)); if (k === undefined) k = n - 1;   // la 1re série encore vide
+      const carte = () => `<small>◆ ${e.nom.toUpperCase()}</small><b>${u(val)}</b>
+        ${vars.length > 1 ? `<div class="bsv-l">VARIANTE</div><div class="bsv-c" data-g="v">${vars.map(w => `<button type="button" class="chip" data-v="${w}" aria-pressed="${w === v}">${STAT_NOM[w]}</button>`).join('')}</div>` : ''}
+        <div class="bsv-l">SÉRIE</div><div class="bsv-c" data-g="k">${Array.from({ length: n }, (_, j) => `<button type="button" class="chip" data-k="${j}" aria-pressed="${j === k}">S${j + 1}${t0[j] > 0 ? ' · ' + u(t0[j]) : ''}</button>`).join('')}</div>
+        <button type="button" class="btn" id="bsv-ok">✓ METTRE EN S${k + 1}</button>`;
+      res.insertAdjacentHTML('afterbegin', `<div class="bsv" id="bsv">${carte()}</div>`);
+      const box = document.getElementById('bsv'); try { box.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (er) {}
+      lexInfo(reps ? `${u(val)} en ${STAT_NOM[v].toLowerCase()}.` : `${virg(val)} secondes en ${STAT_NOM[v].toLowerCase()}.`);
+      box.onclick = ev => { const bv = ev.target.closest('[data-v]'), bk = ev.target.closest('[data-k]');
+        if (bv) { v = bv.dataset.v; box.innerHTML = carte(); try { sfx.seg(3); } catch (er) {} return; }
+        if (bk) { k = +bk.dataset.k; box.innerHTML = carte(); try { sfx.seg(3); } catch (er) {} return; }
+        if (!ev.target.closest('#bsv-ok')) return;
+        e.stat = e.stat || { v, t: [], q: [], r: '' }; e.stat.v = v; while (e.stat.t.length < n) e.stat.t.push(null); e.stat.t[k] = val;
+        const ov = document.getElementById('iaOv'); if (ov) ov.hidden = true; try { const vd = document.getElementById('ia-v'); if (vd) vd.pause(); } catch (er) {}
+        renderRun(); try { if (ST_ENR) ST_ENR(); } catch (er) {} try { sfx.ok(); } catch (er) {}
+        setTimeout(() => { const el = document.querySelector(`#bst .bst-s[data-k="${k}"]`); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 300); };
+    } });
+    // le LAB range aussi la tenue dans ses records, sous la variante choisie dans la séance ; l'écran, allégé (déjà connus : le mouvement,
+    // la variante, le lest ; inutiles ici : les phrases d'aide)
+    try { const iv = document.getElementById('ia-var'); if (iv && e.stat && e.stat.v) iv.value = STAT_NOM[e.stat.v].toLowerCase();
+      const ia = document.querySelector('#iaOv .ia'); if (ia) ia.classList.add('beta-seance'); } catch (er) {}
   });
 }; }
-// la séance : « Filme ma série » → la vraie caméra (60 images/s) ou une vidéo du téléphone, rangée dans « Séances filmées »,
-// le coach reçoit l'alerte avec le lien ; puis l'analyse IA si le mouvement en a une
-filmerSerie = function () {
-  if (!S) return; const x = S.s.exos[S.i], e = S.ex[S.i], a = S.a, c = numOu(e.charge) ?? numOu(e.chargeReco), mvt = mvtDe(x), ctx = ctxSeance();
-  lexFermer();
-  choisirVideoIA0(mvt, ctx, null, f => {
-    const txt = `${a.prenom} a filmé une série : ${e.nom.toLowerCase()} ${x.sets} × ${x.reps}${c ? ` à ${virg(c)} kg` : ''}.`;
-    sansTg = true; try { alerte('video', txt); } finally { sansTg = false; }
-    betaEnvoyerFichier(f, { nom: nomFichier(`${S.s.jour} · ${e.nom} ${x.sets}×${x.reps}${c ? ' à ' + virg(c) + ' kg' : ''}`, f), dossier: 'seances', description: txt, alerte: 'VIDÉO · ' + txt });
-    const ov = $('#tentOv'); ov.hidden = false;
-    ov.innerHTML = `<div class="tv"><div class="k">● VIDÉO GARDÉE</div><h2>${e.nom}</h2>
-      <p class="s-p">Elle part dans le Drive de ton coach (même sans réseau : elle partira dès que tu le retrouves).</p>
-      ${mvt ? `<button class="btn ghost" type="button" id="f-ia" style="border-color:rgba(255,59,59,.55)">◆ ANALYSER CETTE SÉRIE AVEC L'IA</button>` : ''}
-      <button class="btn" type="button" id="f-ok">RETOUR À LA SÉANCE</button></div>`;
-    sfx.ok(); $('#f-ok').onclick = () => { ov.hidden = true; };
-    if ($('#f-ia')) $('#f-ia').onclick = () => { ov.hidden = true; openIA(f, mvt, ctx); };
-  });
-};
+
 // les photos (carte, mur, progression, bilan) : aussi rangées dans le Drive du coach
 choisirPhotoCarte = function (fini) {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*';
@@ -14573,6 +14827,291 @@ document.head.appendChild(stTg);
 // au lancement : les envois en attente repartent
 try { betaPousserEnvois(); } catch (e) {}
 
+/* ════════════ (27/10) LE PARTAGE COACH ↔ ATHLÈTES (chantier B) ════════════
+   Chacun garde SES données (son téléphone, son fichier en ligne). Dans l'app, le code d'un athlète = son PRÉNOM en majuscules.
+   · COACH : sa team arrive avec ses vraies données — le Sheet de chacun (coachFiche) et ce que chacun fait dans l'app (coachEtats :
+     labo, cartes, bilans, prévention, journal, photos, statiques, à trancher). Ce que le coach fait POUR un athlète (l'analyse de sa
+     vidéo, sa carte, une compétition, un protocole, un verdict, un message) part dans la BOÎTE de l'athlète (coachEnvoyer), en petites
+     opérations : seulement ce qui a changé, rien n'écrase le reste.
+   · ATHLÈTE : à l'ouverture, son app applique ce qui est arrivé dans sa boîte ; elle publie son résumé pour le mur de la team
+     (« lgcy-public ») et lit celui des autres (equipe). */
+const PARTS = { 'lgcy-os-lab-v3': 'dict', 'lgcy-id-cartes': 'dict', 'lgcy-bilans': 'dict', 'lgcy-journal': 'dict', 'lgcy-photos': 'dict', 'lgcy-statiques': 'dict',
+  'lgcy-prevention': 'prv', 'lgcy-mur-photos': 'pref', 'lgcy-mur-ctx': 'pref', 'lgcy-mur-phrases': 'pref', 'lgcy-a-trancher': 'liste', 'lgcy-compets': 'cpt' };
+const BOITE = 'lgcy-boite-coach', BOITE_FAITE = 'lgcy-boite-faite', MSG_CLE = 'lgcy-messages', PUB_CLE = 'lgcy-public';
+const jLire = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
+const jEtat = (E, k, d) => { try { const v = JSON.parse((E[k] || {}).v || 'null'); return v == null ? d : v; } catch (e) { return d; } };
+const copie = x => x === undefined ? undefined : JSON.parse(JSON.stringify(x));
+const estListe = k => PARTS[k] === 'liste' || PARTS[k] === 'cpt';
+const valeurDe = k => k === 'lgcy-os-lab-v3' ? copie(LAB) : jLire(k, estListe(k) ? [] : {});
+const ecrireValeur = (k, v) => { if (k === 'lgcy-os-lab-v3') { LAB = v; labSave(); } else localStorage.setItem(k, JSON.stringify(v)); };
+const nouvelId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+// la part d'un athlète dans une donnée : un morceau de l'objet, aux mêmes chemins ; pour une liste, ses éléments par identifiant
+function partDe(k, v, c) {
+  const f = PARTS[k], o = {};
+  if (f === 'dict') { if (v && v[c] !== undefined) o[c] = v[c]; }
+  else if (f === 'pref') Object.keys(v || {}).forEach(x => { if (x.indexOf(c + '|') === 0) o[x] = v[x]; });
+  else if (f === 'prv') { if (v && v.actifs && v.actifs[c] !== undefined) o.actifs = { [c]: v.actifs[c] };
+    Object.keys((v && v.cas) || {}).forEach(x => { if (x.indexOf(c + '|') === 0) (o.cas = o.cas || {})[x] = v.cas[x]; }); }
+  else if (f === 'liste') (Array.isArray(v) ? v : []).forEach(x => { if (x && x.id && x.code === c) o[x.id] = x; });
+  else if (f === 'cpt') (Array.isArray(v) ? v : []).forEach(x => { if (x && x.id && !x.ex && (x.athletes || []).some(y => y && y.code === c)) o[x.id] = x; });
+  return o;
+}
+// la part de c dans v remplacée par T (ce que l'athlète a chez lui)
+function remplacerPart(k, v, c, T) {
+  const f = PARTS[k];
+  if (f === 'liste' || f === 'cpt') return (Array.isArray(v) ? v : []).filter(x => !(x && Object.prototype.hasOwnProperty.call(partDe(k, [x], c), x.id))).concat(Object.values(T));
+  const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  if (f === 'prv') { if (o.actifs) delete o.actifs[c]; if (o.cas) Object.keys(o.cas).forEach(z => { if (z.indexOf(c + '|') === 0) delete o.cas[z]; });
+    if (T.actifs) o.actifs = Object.assign(o.actifs || {}, T.actifs); if (T.cas) o.cas = Object.assign(o.cas || {}, T.cas); return o; }
+  Object.keys(partDe(k, o, c)).forEach(x => { delete o[x]; }); Object.assign(o, T); return o;
+}
+// ce qui a changé, au plus fin (un tableau se remplace en entier)
+function ecarts(a, b, p, out) {
+  if (JSON.stringify(a) === JSON.stringify(b)) return out;
+  const obj = x => x && typeof x === 'object' && !Array.isArray(x);
+  // un objet nouveau se découpe aussi feuille par feuille : il complète ce que l'athlète a peut-être déjà, sans l'écraser
+  if (obj(b) && (obj(a) || a === undefined)) { const a2 = a || {}; new Set([...Object.keys(a2), ...Object.keys(b)]).forEach(k => ecarts(a2[k], b[k], p.concat(k), out)); }
+  else out.push(b === undefined ? { p, del: 1 } : { p, v: b });
+  return out;
+}
+// les réglages par défaut d'un labo créé chez le coach (taille 1,75 m, 75 kg…) ne remplacent jamais ceux de l'athlète
+const LAB_DEFAUTS = { taille: 1.75, pc: 75, nb: 0 };
+const defautLab = (k, o) => k === 'lgcy-os-lab-v3' && o.p.length === 2 && o.p[1] in LAB_DEFAUTS && o.v === LAB_DEFAUTS[o.p[1]];
+function opsDe(k, avant, apres) {
+  if (estListe(k)) return [...new Set([...Object.keys(avant), ...Object.keys(apres)])].filter(id => JSON.stringify(avant[id]) !== JSON.stringify(apres[id]))
+    .map(id => apres[id] === undefined ? { k, f: 'liste', el: id, del: 1 } : { k, f: 'liste', el: id, v: apres[id] });   // el : l'élément (id : l'envoi)
+  return ecarts(avant, apres, [], []).filter(o => !defautLab(k, o)).map(o => Object.assign({ k, f: 'obj' }, o));
+}
+function appliquerOp(v, op) {
+  if (op.f === 'liste') { const l = Array.isArray(v) ? v : [], i = l.findIndex(x => x && x.id === op.el);
+    if (op.del) { if (i >= 0) l.splice(i, 1); } else if (i >= 0) l[i] = op.v; else l.unshift(op.v); return l; }
+  const o = v && typeof v === 'object' && !Array.isArray(v) ? v : {}; let n = o;
+  for (let i = 0; i < op.p.length - 1; i++) { if (!n[op.p[i]] || typeof n[op.p[i]] !== 'object' || Array.isArray(n[op.p[i]])) n[op.p[i]] = {}; n = n[op.p[i]]; }
+  if (op.del) delete n[op.p[op.p.length - 1]]; else n[op.p[op.p.length - 1]] = op.v;
+  return o;
+}
+
+/* ---- ATHLÈTE : la boîte du coach ---- */
+let PART_MUET = 0;
+function appliquerBoite() {
+  const ops = jLire(BOITE, []); if (!Array.isArray(ops) || !ops.length) return 0;
+  const faits = new Set(jLire(BOITE_FAITE, [])), vals = {}, msgs = []; let n = 0;
+  ops.forEach(op => { if (!op || !op.id || faits.has(op.id)) return;
+    try { if (op.f === 'msg') msgs.push(op.v); else if (PARTS[op.k]) { if (!(op.k in vals)) vals[op.k] = valeurDe(op.k); vals[op.k] = appliquerOp(vals[op.k], op); }
+      faits.add(op.id); n++; } catch (e) { console.error('bêta : boîte du coach', e); } });
+  if (!n) return 0;
+  PART_MUET++; try { Object.keys(vals).forEach(k => ecrireValeur(k, vals[k])); } finally { PART_MUET--; }
+  if (msgs.length) { const l = jLire(MSG_CLE, []); msgs.forEach(m => { if (m && !l.some(x => x.id === m.id)) { l.push(m); MSGS.push(Object.assign({}, m, { recu: 1 })); } });
+    localStorage.setItem(MSG_CLE, JSON.stringify(l.slice(-60))); }
+  localStorage.setItem(BOITE_FAITE, JSON.stringify([...faits].slice(-800)));
+  return n;
+}
+// les messages du coach pas encore lus reviennent après une réouverture ; lus : rangés comme lus
+try { jLire(MSG_CLE, []).forEach(m => { if (m && !m.lu && !MSGS.some(x => x.id === m.id)) MSGS.push(Object.assign({}, m, { recu: 1 })); }); } catch (e) {}
+{ const o = livrerMessage; livrerMessage = function () { const r = o.apply(this, arguments);
+  try { const l = jLire(MSG_CLE, []); let ch = false; MSGS.forEach(m => { const x = m.id && l.find(y => y.id === m.id); if (x && m.lu && !x.lu) { x.lu = true; x.reponse = m.reponse || ''; ch = true; } });
+    if (ch) localStorage.setItem(MSG_CLE, JSON.stringify(l)); } catch (e) {}
+  return r; }; }
+
+/* ---- COACH : la team, ses données, et ce qu'il fait pour chacun ---- */
+let EQUIPE = [], PART_PRET = false, PART_BASE = {}, PART_LU = 0;
+const estCoachBeta = () => !!(DATA[idx] && DATA[idx].beta && DATA[idx].beta.coach);
+function envoyerOps(x, ops) {
+  if (!ops.length) return;
+  const p = { action: 'coachEnvoyer', athlete: x.srv, ops };
+  betaApi(p).catch(e => { if (e.reseau) betaGarder(p); else console.error('bêta : envoi à ' + x.prenom, e); });
+}
+const PART_T = {};
+function planifierPart(k) { clearTimeout(PART_T[k]); PART_T[k] = setTimeout(() => envoyerPart(k), 700); }
+function envoyerPart(k) {
+  const v = valeurDe(k);
+  EQUIPE.forEach(x => { const c = x.code, T = partDe(k, v, c), j = JSON.stringify(T), B = PART_BASE[k] = PART_BASE[k] || {};
+    if (B[c] === undefined) { B[c] = j; return; }
+    if (B[c] === j) return;
+    const ops = opsDe(k, JSON.parse(B[c]), T).map(o => Object.assign({ id: nouvelId(), t: Date.now() }, o)); B[c] = j; envoyerOps(x, ops); });
+}
+{ const S1 = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { S1.call(this, k, v);
+  if (this === localStorage && PARTS[k] && PART_PRET && !PART_MUET && estCoachBeta()) planifierPart(k); }; }
+// ses messages programmés pour un athlète partent dans sa boîte
+{ const p0 = MSGS.push; MSGS.push = function (...xs) { const r = p0.apply(this, xs);
+  try { if (estCoachBeta()) xs.forEach(m => { if (!m || m.recu) return; const x = EQUIPE.find(y => y.code === m.to); if (!x) return;
+    m.id = m.id || nouvelId(); envoyerOps(x, [{ id: nouvelId(), t: Date.now(), f: 'msg', v: copie(m) }]); }); } catch (e) { console.error('bêta : message', e); }
+  return r; }; }
+// ce que chaque athlète a chez lui → chez le coach (sa part), puis ce que le coach lui a envoyé et qu'il n'a pas encore ouvert
+function fusionnerEquipe(liste) {
+  PART_MUET++;
+  try {
+    const vals = {};
+    liste.forEach(A => { const x = EQUIPE.find(y => String(y.srv).toUpperCase() === String(A.code).toUpperCase()); if (!x) return;
+      const c = x.code, E = A.etat || {}, faits = new Set(jEtat(E, BOITE_FAITE, [])), attente = jEtat(E, BOITE, []).filter(o => o && o.id && !faits.has(o.id) && o.f !== 'msg');
+      Object.keys(PARTS).forEach(k => {
+        if (!(k in vals)) vals[k] = valeurDe(k);
+        if (PARTS[k] !== 'cpt') { const av = jEtat(E, k, null); vals[k] = remplacerPart(k, vals[k], c, av ? partDe(k, av, c) : {}); }   // les compétitions : c'est le coach qui les tient
+        attente.filter(o => o.k === k).forEach(o => { vals[k] = appliquerOp(vals[k], o); });
+        (PART_BASE[k] = PART_BASE[k] || {})[c] = JSON.stringify(partDe(k, vals[k], c));
+      });
+    });
+    Object.keys(vals).forEach(k => ecrireValeur(k, vals[k]));
+  } finally { PART_MUET--; }
+}
+// la semaine en cours d'un athlète, d'après les dates de ses blocs (comme le serveur)
+function progDe(fiche) {
+  const bl = fiche.blocs || {}, ns = Object.keys(bl).map(Number).filter(n => !isNaN(n)).sort((a, b) => a - b); if (!ns.length) return { seances: [] };
+  const auj = new Date(); let b = ns[ns.length - 1]; ns.forEach(n => { const d = new Date((bl[n].debut || '') + 'T12:00:00'); if (!isNaN(d) && d <= auj) b = n; });
+  const d0 = new Date((bl[b].debut || '') + 'T12:00:00'), dur = Number(bl[b].duree) || 4;
+  return { block: 'BLOCK ' + b, semaine: isNaN(d0) ? 1 : Math.max(1, Math.min(dur, Math.floor((auj - d0) / 6048e5) + 1)), seances: [] };
+}
+function ajouterAth(a) { const i = DATA.findIndex(b => b.code === a.code); if (i === idx) return; if (i >= 0) DATA[i] = a; else DATA.push(a); }
+async function lireEtatsEquipe() { const e = await betaApi({ action: 'coachEtats' }); fusionnerEquipe(e.athletes || []); PART_PRET = true; PART_LU = Date.now(); }
+async function chargerEquipe() {
+  if (!estCoachBeta()) return;
+  const moi = DATA[idx], j = await betaApi({ action: 'coachAthletes' });
+  EQUIPE = (j.athletes || []).map(x => ({ srv: x.code, code: String(x.prenom || x.code).toUpperCase(), prenom: x.prenom || x.code })).filter(x => x.code !== moi.code);
+  await Promise.all(EQUIPE.map(x => betaApi({ action: 'coachFiche', athlete: x.srv }).then(f => {
+    const a = window.betaConstruire(f.fiche, progDe(f.fiche), x.prenom); a.beta.srv = x.srv; a.beta.coach = false; ajouterAth(a);
+  }).catch(e => console.error('bêta : fiche de ' + x.prenom, e))));
+  await lireEtatsEquipe();
+}
+addEventListener('visibilitychange', () => { if (!document.hidden && PART_PRET && Date.now() - PART_LU > 180e3) lireEtatsEquipe().catch(() => {}); });
+
+/* ---- TOUT LE MONDE : son résumé pour le mur de la team ; ATHLÈTE : celui des autres ---- */
+function publier() {
+  const a = DATA[idx]; if (!a) return;
+  const vrais = {}; ['mu', 'traction', 'dips', 'squat'].forEach(m => { const r = ((a.vrais || {})[m] || []).filter(x => x.reps === 1); if (r.length) vrais[m] = r; });
+  const pub = { code: a.code, prenom: a.prenom, poidsPesee: a.poidsPesee || null, pc: (LAB[a.code] || {}).pc || null, vrais, carte: cartesLues()[a.code] || null,
+    mur: { photos: partDe('lgcy-mur-photos', jLire('lgcy-mur-photos', {}), a.code), ctx: partDe('lgcy-mur-ctx', jLire('lgcy-mur-ctx', {}), a.code), phrases: partDe('lgcy-mur-phrases', jLire('lgcy-mur-phrases', {}), a.code) } };
+  const j = JSON.stringify(pub); if (j !== localStorage.getItem(PUB_CLE)) localStorage.setItem(PUB_CLE, j);
+}
+let EQ_PUB = [];
+async function chargerPublics() {
+  if (estCoachBeta()) return;   // le coach a déjà toute sa team
+  const j = await betaApi({ action: 'equipe' }); EQ_PUB = (j.equipe || []).filter(p => p && !p.moi && p.code && p.code !== DATA[idx].code);
+  PART_MUET++; try { [['lgcy-mur-photos', 'photos'], ['lgcy-mur-ctx', 'ctx'], ['lgcy-mur-phrases', 'phrases']].forEach(([k, f]) => {
+    let v = jLire(k, {}); EQ_PUB.forEach(p => { v = remplacerPart(k, v, p.code, (p.mur || {})[f] || {}); }); localStorage.setItem(k, JSON.stringify(v)); }); } finally { PART_MUET--; }
+}
+// sur le mur d'un athlète : les autres de la team (le temps de dessiner le mur), et leur carte
+{ const o = murTeam; murTeam = function () {
+  const tm = estCoachBeta() ? [] : EQ_PUB.filter(p => !DATA.some(a => a.code === p.code)).map(p => ({ code: p.code, prenom: p.prenom, vrais: p.vrais || {}, poidsPesee: p.poidsPesee || p.pc || null, equipier: true }));
+  const n = DATA.length; DATA.push(...tm);
+  try { return o.apply(this, arguments); } finally { DATA.splice(n, tm.length); }
+}; }
+{ const o = carteDe; carteDe = function (code) { const r = o.apply(this, arguments);
+  try { const p = !estCoachBeta() && EQ_PUB.find(x => x.code === code); if (p && p.carte) return Object.assign(r, p.carte); } catch (e) {}
+  return r; }; }
+
+// au lancement
+setTimeout(() => {
+  try { appliquerBoite(); } catch (e) { console.error('bêta : boîte', e); }
+  try { publier(); } catch (e) { console.error('bêta : résumé public', e); }
+  chargerEquipe().catch(e => console.error('bêta : team', e));
+  chargerPublics().catch(() => {});
+}, 1200);
+{ const o = window.betaSyncEtat; if (o) window.betaSyncEtat = function () { return o.apply(this, arguments).then(n => { try { appliquerBoite(); } catch (e) {} return n; }); }; }
+
+/* ════════════ (27/10) LES PROSPECTS DANS LE LAB DU COACH ════════════
+   Quelqu'un que le coach ne suit pas encore : sa PERF DE RÉFÉRENCE (son 1RM, ou une série dure avec son RPE, ou les deux), puis
+   n'importe quelle vidéo, celle du jour → l'IA donne le RPE et le 1RM du jour, et dit si les reps sont valides. Tout reste chez le coach.
+   Le 1RM de référence devient un point de sa ligne charge-vitesse (le 1RM, à la vitesse d'un max) : une seule vidéo suffit ensuite. */
+const PRO_CLE = 'lgcy-lab-prospects';
+const prospects = () => jLire(PRO_CLE, []);
+const prospectsEcrire = l => localStorage.setItem(PRO_CLE, JSON.stringify(l));
+const echap = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nbOu = v => { const n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isNaN(n) ? null : n; };
+const e1rmSerie = (kg, reps, rpe) => Math.round(kg * (1 + (reps + Math.max(0, 10 - rpe)) / 30) * 2) / 2;   // Epley, reps en réserve comprises
+const refE1 = r => r ? (r.rm != null ? r.rm : r.kg != null && r.reps ? e1rmSerie(r.kg, r.reps, r.rpe ?? 10) : null) : null;
+window.betaProspect = code => { const p = prospects().find(x => x.code === code); if (!p) return undefined;
+  const vrais = {}; Object.entries(p.refs || {}).forEach(([m, r]) => { if (r && r.rm != null) vrais[m] = [{ kg: r.rm, reps: 1, s: '1×1', le: r.le || '' }]; });
+  return { code: p.code, prenom: p.prenom, prospect: true, femme: !!p.femme, vrais, seances: [], semaines: [], prs: [], beta: {} }; };
+function ancrer(p, m) {
+  const L = labDe(p.code), cle = m + '|' + IA_MVT[m].nom.toLowerCase(), ex = L.ex[cle] = L.ex[cle] || { mvt: m, exo: IA_MVT[m].nom, pts: {} };
+  Object.keys(ex.pts).forEach(k => { if (ex.pts[k].ref) delete ex.pts[k]; });
+  const e1 = refE1((p.refs || {})[m]);
+  if (e1 != null && !Object.values(ex.pts).some(q => q.kg === e1 && /^1×1$/.test(q.fmt || ''))) {   // pas déjà filmé à cette charge
+    ex.pts['ref|' + e1] = { fmt: '1×1', kg: e1, v: ((L.mvtPerso || {})[m] || { v: LAB_MVT[m].mvt }).v, date: DATE_DEMO[jourDemo], ref: true }; }
+  if (!Object.keys(ex.pts).length) delete L.ex[cle];
+  labSave();
+}
+const stPro = document.createElement('style');
+stPro.textContent = `.lt-row.pro small{color:var(--gold)}
+.lt-row.pro-add{justify-content:center;font:700 11px var(--f-holo);letter-spacing:.18em;color:var(--data);border-style:dashed}
+.pro-f,.pro-ref{display:grid;gap:10px;margin:12px 0}
+.pro-f label,.pro-ref label{display:grid;gap:5px;font:600 8.5px var(--f-mono);letter-spacing:.2em;color:var(--dim)}
+.pro-f input,.pro-ref input{background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--data);font:600 17px var(--f-holo);padding:10px 12px;outline:none;min-width:0}
+.pro-ref .pr-s{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px}
+.pro-ref .pr-ou{font:600 8.5px var(--f-mono);letter-spacing:.2em;color:var(--dim);text-align:center}
+.pro-cmp{margin:10px 0 0;font:600 10px var(--f-mono);letter-spacing:.16em;color:var(--dim)}.pro-cmp b{color:var(--gold);font-weight:600}
+.pro-del{justify-self:start;background:none;border:0;padding:6px 0;font:500 9px var(--f-mono);letter-spacing:.2em;color:rgba(233,237,241,.4);cursor:pointer}`;
+document.head.appendChild(stPro);
+function prospectsUI() {
+  const rows = document.getElementById('lc-rows'), det = document.getElementById('lc-det'); if (!rows || !det || rows.dataset.pro) return; rows.dataset.pro = '1';
+  const estPro = c => /^PRO-/.test(c || '');
+  const lignes = () => { if (rows.querySelector('#pro-add')) return;
+    prospects().forEach(p => { const ex = exPrincipal(p.code, LABC.mvt), r = ex && profilLV(p.code, ex), e1 = r && r.e1rm != null ? r.e1rm : refE1((p.refs || {})[LABC.mvt]);
+      rows.insertAdjacentHTML('beforeend', `<button type="button" class="lt-row pro" data-a="${p.code}" aria-pressed="${p.code === LABC.code}"><span><b>${echap(p.prenom)}</b><small>PROSPECT</small></span><span class="lt-n">${e1 != null ? virg(e1) + '<u>kg</u>' : '—'}<small>1RM EST.</small></span><span class="lt-n">—<small>PUISSANCE</small></span></button>`); });
+    rows.insertAdjacentHTML('beforeend', '<button type="button" class="lt-row pro-add" id="pro-add">＋ UN PROSPECT</button>'); };
+  const fiche = () => { if (!estPro(LABC.code) || det.querySelector('.pro-ref')) return; const p = prospects().find(x => x.code === LABC.code); if (!p) return;
+    const m = LABC.mvt, r = (p.refs || {})[m] || {}, lest = m !== 'squat', e1 = refE1(r), an = det.querySelector('#lc-an'); if (!an) return;
+    an.insertAdjacentHTML('beforebegin', `<div class="pro-ref"><div class="lbl"><span>Référence · ${IA_MVT[m].nom}</span><b>${e1 != null ? '1RM ≈ ' + virg(e1) + ' KG' : '—'}</b></div>
+      <label>1RM${lest ? ' · LEST' : ''} (KG)<input id="pr-rm" inputmode="decimal" value="${r.rm != null ? virg(r.rm) : ''}"></label>
+      <div class="pr-ou">OU · ET</div>
+      <div class="pr-s"><label>SÉRIE DURE${lest ? ' · LEST' : ''}<input id="pr-kg" inputmode="decimal" placeholder="kg" value="${r.kg != null ? virg(r.kg) : ''}"></label><label>REPS<input id="pr-r" inputmode="numeric" value="${r.reps || ''}"></label><label>RPE<input id="pr-rpe" inputmode="decimal" value="${r.rpe != null ? virg(r.rpe) : ''}"></label></div>
+      <button type="button" class="btn ghost" id="pr-ok">ENREGISTRER</button></div>`);
+    det.insertAdjacentHTML('beforeend', '<button type="button" class="pro-del" id="pro-del">SUPPRIMER CE PROSPECT</button>');
+    an.textContent = '▶ ANALYSER SA VIDÉO'; };
+  // la liste et le détail sont redessinés à chaque choix : on remet les prospects (les deux zones sont neuves à chaque ouverture du labo)
+  new MutationObserver(lignes).observe(rows, { childList: true }); new MutationObserver(fiche).observe(det, { childList: true });
+  lignes(); fiche();
+  const clic = ev => {
+    if (ev.target.closest('#pro-add')) { sfx.seg(3); det.innerHTML = `<div class="lbl"><span>Nouveau prospect</span><b>LAB</b></div>
+        <div class="pro-f"><label>PRÉNOM<input id="pro-p" autocomplete="off"></label><label>POIDS DE CORPS (KG)<input id="pro-pc" inputmode="decimal"></label><label>TAILLE (CM)<input id="pro-t" inputmode="numeric"></label>
+        <div class="chips" id="pro-s"><button type="button" class="chip" data-s="h" aria-pressed="true">HOMME</button><button type="button" class="chip" data-s="f" aria-pressed="false">FEMME</button></div>
+        <button type="button" class="btn" id="pro-ok">CRÉER</button></div>`;
+      det.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    const s = ev.target.closest('#pro-s [data-s]'); if (s) { det.querySelectorAll('#pro-s [data-s]').forEach(z => z.setAttribute('aria-pressed', z === s)); return; }
+    if (ev.target.closest('#pro-ok')) { const nom = (det.querySelector('#pro-p').value || '').trim(); if (!nom) return lexInfo('Son prénom d\'abord.');
+      const code = 'PRO-' + nouvelId().slice(-6).toUpperCase(), pc = nbOu(det.querySelector('#pro-pc').value) || 75, t = nbOu(det.querySelector('#pro-t').value);
+      const l = prospects(); l.push({ code, prenom: nom, pc, taille: t ? t / 100 : 1.75, femme: det.querySelector('#pro-s [data-s="f"]').getAttribute('aria-pressed') === 'true', refs: {}, cree: Date.now() }); prospectsEcrire(l);
+      LAB[code] = { taille: t ? t / 100 : 1.75, pc, ex: {}, spec: {}, nb: 0, mvtPerso: {} }; labSave();
+      LABC.code = code; sfx.ok(); return openLabCoach(); }
+    if (ev.target.closest('#pr-ok')) { const l = prospects(), p = l.find(x => x.code === LABC.code); if (!p) return;
+      const rm = nbOu(det.querySelector('#pr-rm').value), kg = nbOu(det.querySelector('#pr-kg').value), rp = parseInt(det.querySelector('#pr-r').value, 10) || null, rpe = nbOu(det.querySelector('#pr-rpe').value);
+      p.refs = p.refs || {}; p.refs[LABC.mvt] = { rm, kg, reps: rp, rpe: rpe != null ? Math.max(5, Math.min(10, rpe)) : null, le: DATE_DEMO[jourDemo] }; prospectsEcrire(l); ancrer(p, LABC.mvt);
+      const e1 = refE1(p.refs[LABC.mvt]); sfx.ok(); lexInfo(e1 != null ? `Référence : 1RM ≈ ${virg(e1)} kilos.` : 'Référence enregistrée.'); return openLabCoach(); }
+    if (ev.target.closest('#pro-del')) { const p = prospects().find(x => x.code === LABC.code); if (!p || !confirm(`Supprimer ${p.prenom} et ses analyses ?`)) return;
+      prospectsEcrire(prospects().filter(x => x.code !== p.code)); delete LAB[p.code]; labSave(); LABC.code = DATA[idx].code; sfx.seg(2); return openLabCoach(); }
+  };
+  rows.addEventListener('click', clic); det.addEventListener('click', clic);
+}
+// LE JOUR D'UN PROSPECT : sa vitesse d'aujourd'hui, comparée à sa ligne de référence → son 1RM DU JOUR (au-dessus ou en dessous de sa
+// référence) et le RPE de la série. La pente de sa ligne : sa série dure filmée si on l'a, sinon la pente moyenne du mouvement.
+// (avec seulement la référence et la vidéo du jour, le calcul du labo retombait toujours sur le 1RM de référence)
+function jourProspect(op) {
+  const { mvt, kg, reps, code } = op, L = labDe(code), M = LAB_MVT[mvt], corps = M.corps * (L.pc || 75), p = prospects().find(x => x.code === code); if (!p) return;
+  // la vitesse : celle de la 1re rep validée (la plus fraîche), sinon la 1re qui n'est pas un no rep
+  const ref = (p.refs || {})[mvt], e1ref = refE1(ref), r1 = reps.find(x => x.juge && x.juge.v === 'ok') || reps.find(x => !x.juge || x.juge.v !== 'no') || reps[0], vB = (r1 && r1.ms) || 0; if (!(vB > 0)) return;
+  const vMax = ((L.mvtPerso || {})[mvt] || { v: M.mvt }).v;
+  let G = { squat: 1.4, dips: 1.4, traction: 1.5, mu: 1.7 }[mvt] || 1.5;
+  const ex = Object.values(L.ex || {}).find(e => e.mvt === mvt), pr = ref && ref.kg != null && ref.reps && ex ? ex.pts['1×' + ref.reps + '|' + ref.kg] : null;
+  if (pr && e1ref != null) { const pc = (ref.kg + corps) / (e1ref + corps); if (pc < .97 && pr.v > vMax) G = (pr.v - vMax) / (1 - pc); }
+  const pct = Math.max(.3, Math.min(1, 1 - (vB - vMax) / G)), e1j = Math.round(((kg + corps) / pct - corps) * 2) / 2;
+  const rpe = Math.max(5, Math.min(10, Math.round((10 - Math.max(0, 30 * (1 / pct - 1) - reps.length)) * 2) / 2));
+  const RES = op.res || document.getElementById('ia-res'); if (!RES) return;
+  RES.querySelectorAll('.ia-k > div').forEach(d => { const sp = d.querySelector('span'), bb = d.querySelector('b'); if (!sp || !bb) return;
+    if (/^RPE/.test(sp.textContent)) { bb.textContent = virg(rpe); sp.textContent = 'RPE DU JOUR'; }
+    if (/1RM DU JOUR|WATTS/.test(sp.textContent)) { bb.textContent = kgLab(e1j, mvt).replace(/\s*kg$/i, ''); sp.textContent = '1RM DU JOUR'; } });
+  RES.querySelectorAll('p, div').forEach(d => { if (!d.children.length && /^Calcul sur les chiffres/.test(d.textContent.trim())) d.remove(); });
+  const k = RES.querySelector('.ia-k');
+  if (k && e1ref != null) { const ec = Math.round((e1j + corps) / (e1ref + corps) * 100 - 100);
+    k.insertAdjacentHTML('afterend', `<p class="pro-cmp"><b>RÉFÉRENCE ${echap(kgLab(e1ref, mvt).toUpperCase())}</b> · AUJOURD'HUI ${echap(kgLab(e1j, mvt).toUpperCase())} · ${ec > 0 ? '+' : ''}${ec} %</p>`); }
+}
+{ const o = rapportIA; rapportIA = function (op) { const r = o.apply(this, arguments);
+  try { const a = athDe(op && op.code); if (a && a.prospect && op.kg != null && op.reps && op.reps.length) jourProspect(op); } catch (e) { console.error('bêta : prospect du jour', e); }
+  return r; }; }
+{ const o = openLabCoach; openLabCoach = function () {
+  // un prospect : son 1RM de référence suit sa vitesse d'un max (si une vidéo de son max l'a calée)
+  try { const p = prospects().find(x => x.code === LABC.code); if (p) Object.keys(p.refs || {}).forEach(m => ancrer(p, m)); } catch (e) {}
+  const r = o.apply(this, arguments); try { prospectsUI(); } catch (e) { console.error('bêta : prospects', e); } return r; }; }
+
 /* ---- tes données mises à jour en arrière-plan : la semaine se redessine si elle est à l'écran ---- */
 window.betaApresMaj = function () {
   try { const h = document.getElementById('home'); if (h && !h.hidden && typeof openHome === 'function' && !(typeof S !== 'undefined' && S)) openHome(true); } catch (e) {}
@@ -14682,11 +15221,17 @@ window.betaConstruire = function (fiche, prog, prenom) {
     const ex = [];
     se.lignes.forEach(l => {
       if (!l.sets) return;
-      let prev_l = null;
+      // (27/10, coach) LA DERNIÈRE FOIS : d'abord le MÊME FORMAT (séries × reps) et la même variante ; sinon le même format en une autre
+      // variante (posé, tempo…) ; sinon la dernière fois tout court, marquée « autre format » (avant : la même variante, n'importe quel
+      // format → son 3×8 montrait un 4×3 du bloc d'avant, et sautait le « posé » de la semaine d'avant)
+      let prev_l = null; const cand = [];
       [...avant].sort(parDate).forEach(k => ws[k].seances.forEach(se2 => se2.lignes.forEach(l2 => {
-        if (l2.nom === l.nom && l2.var === l.var && l2.charge !== null && l2.charge !== undefined && rpe(l2))
-          prev_l = { c: l2.charge, s: l2.sets ? fmt(l2) : '', r: rpe(l2), d: ws[k].date, tempo: l2.tempo };
+        if (l2.nom === l.nom && (l.nom !== 'renfo' || l2.var === l.var) && l2.charge !== null && l2.charge !== undefined && rpe(l2)) cand.push({ l2, d: ws[k].date });
       })));
+      const memeFmt = q => q.l2.sets && fmt(q.l2) === fmt(l), memeVar = q => q.l2.var === l.var && (q.l2.tempo || '') === (l.tempo || '');
+      const pris = [...cand].reverse().find(q => memeFmt(q) && memeVar(q)) || [...cand].reverse().find(memeFmt) || cand[cand.length - 1] || null;
+      if (pris) { const l2 = pris.l2;
+        prev_l = { c: l2.charge, s: l2.sets ? fmt(l2) : '', r: rpe(l2), d: pris.d, tempo: l2.tempo, v: l2.var, autre: !memeFmt(pris) ? 'format' : !memeVar(pris) ? 'variante' : '' }; }
       const h = histo(cle(l), avant), bests = {}, bestsR = {};
       // (18/10) échec : records aux formats plus courts (moins de séries ; en série unique, moins de reps)
       for (let n = 1; n < Math.trunc(Number(l.sets)); n++) { const hn = histo(cleDe(l.nom, l.var, l.tempo, n, l.repsTxt), avant); if (hn.length) bests[n] = Math.max(...hn.map(x => x.c)); }
@@ -14948,8 +15493,7 @@ function pousserEnvois() {
       const e = tous.sort((x, y) => ((x.essais || 0) - (y.essais || 0)) || (x.cree - y.cree))[0];
       if ((e.essais || 0) > tour) break;
       try {
-        await envoyerUn(e); await idb('readwrite', st => st.delete(e.id));
-        try { window.lexInfo && lexInfo(e.dossier === 'photos' ? 'Photo rangée dans le Drive de ton coach.' : 'Vidéo rangée dans le Drive de ton coach.'); } catch (x) {}
+        await envoyerUn(e); await idb('readwrite', st => st.delete(e.id));   // (27/10, coach) sans le dire : plus de « Vidéo rangée dans le Drive »
       } catch (er) {
         if (er.reseau || !er.serveur) break;
         e.essais = (e.essais || 0) + 1; e.erreur = er.message;
