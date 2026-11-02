@@ -319,7 +319,7 @@ html{overflow-x:hidden}
 .tag.live{animation:pulse 1s steps(2) 2}
 .blk-l{display:flex;justify-content:space-between;font:500 9px var(--f-mono);letter-spacing:.22em;color:var(--dim);text-transform:uppercase;margin-bottom:10px}
 .blk-l b{color:var(--faint);font-weight:500}
-.r-nav{position:fixed;left:0;right:0;bottom:0;z-index:42;padding:14px 16px calc(36px + env(safe-area-inset-bottom,0px));background:linear-gradient(0deg,var(--void) 65%,transparent);display:flex;justify-content:center}
+.r-nav{position:fixed;left:0;right:0;bottom:0;z-index:42;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(0deg,var(--void) 65%,transparent);display:flex;justify-content:center}
 .r-nav div{width:min(428px,100%);display:grid;grid-template-columns:1fr 2fr;gap:8px}
 .r-nav .btn{padding:15px 10px}
 .r-nav[hidden]{display:none}
@@ -648,7 +648,7 @@ html{overflow-x:hidden}
 .wkg:focus-within{border-color:var(--gold)}
 .wkg input{flex:1;min-width:0;width:0;background:none;border:0;outline:none;color:var(--data);font:600 30px var(--f-holo);font-variation-settings:"wdth" 85}
 .wkg span{font:500 11px var(--f-mono);color:var(--dim)}
-.s-foot{position:fixed;left:0;right:0;bottom:0;z-index:42;padding:14px 16px calc(36px + env(safe-area-inset-bottom,0px));background:linear-gradient(0deg,var(--void) 65%,transparent);display:flex;justify-content:center}
+.s-foot{position:fixed;left:0;right:0;bottom:0;z-index:42;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px));background:linear-gradient(0deg,var(--void) 65%,transparent);display:flex;justify-content:center}
 .s-foot[hidden]{display:none}
 .s-foot > div{width:min(428px,100%);display:grid;grid-template-columns:auto 1fr;gap:8px}
 .s-foot .btn{padding:15px 12px}
@@ -1618,7 +1618,7 @@ html[data-th="blanc"] :is(#home,#brief)::before{content:"";position:absolute;rig
 .lid-sceau{width:44px;height:74px;flex:none;background:var(--logo-rouge) center/contain no-repeat;opacity:.92;filter:drop-shadow(0 0 10px rgba(255,59,59,.35));transform:rotate(-8deg)}
 @media (prefers-reduced-motion:reduce){.lid-carte,.lid-carte.suit{transition:none}}
 /* ---------- barre d'onglets du bas (SEMAINE · RECORDS · LAB · CARTE · COACH) ---------- */
-.dock{position:fixed;left:50%;bottom:calc(36px + env(safe-area-inset-bottom,0px));z-index:40;transform:translateX(-50%);width:min(440px,calc(100% - 24px));display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;padding:5px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(9,9,11,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 12px 30px rgba(0,0,0,.55);animation:dockIn .35s cubic-bezier(.2,.8,.2,1)}
+.dock{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;transform:translateX(-50%);width:min(440px,calc(100% - 24px));display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;padding:5px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(9,9,11,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 12px 30px rgba(0,0,0,.55);animation:dockIn .35s cubic-bezier(.2,.8,.2,1)}
 .dock[hidden]{display:none}
 @keyframes dockIn{from{opacity:0;transform:translate(-50%,12px)}}
 .dock button{display:grid;justify-items:center;gap:4px;padding:8px 2px 7px;border-radius:11px;color:rgba(233,237,241,.5);font:600 7.5px var(--f-mono);letter-spacing:.16em;transition:color .2s,background .2s}
@@ -5079,7 +5079,7 @@ const recValide = (x, e) => { if (!e || !enJeu(x, e) || numOu(e.charge) === null
   return f(e.rpe1) && ((parseInt(x.sets, 10) || 1) <= 1 || f(e.rpeLast)); };
 const premierAuFormat = (x, e) => (e && e.echec && typeof echRec === "function") ? echRec(x, e).neuf : x.best === null && ((numOu(e.chargeReco) || 0) > 0 || (numOu(e.charge) || 0) > 0);
 const kgApp = n => { const v = numOu(n); return v === null ? "—" : v === 0 ? "PDC" : virg(v) + " kg"; };
-const fait = e => !!(String(e.rpe1 || "").trim() || String(e.rpeLast || "").trim());
+const fait = e => !!(String(e.rpe1 || "").trim() || String(e.rpeLast || "").trim() || (e.stat && (e.stat.r || (e.stat.t || []).some(x => x > 0))));
 // notes du coach : la copie des données n'en contient pas ; exemples pour la maquette (dans l'app, elles viennent du programme)
 const CONSIGNE_EX = { S: "Descente contrôlée, remonte fort. Gainage avant chaque rep.", M: "Transition rapide, coudes serrés. Stoppe la série si la technique se dégrade." };
 function renderRun() {
@@ -5194,7 +5194,7 @@ function renderHome(anim) {
     <div class="weekbar"><button type="button" id="w-prev" aria-label="Semaine précédente" ${HW.n <= Math.min(...ns) ? "disabled" : ""}>‹</button>
       <div class="wlbl"><b>Semaine ${HW.n} / ${a.duree}</b><small>${cur ? "SEMAINE EN COURS" : HW.n < a.semaine ? "PASSÉE" : "À VENIR"}</small></div>
       <button type="button" id="w-next" aria-label="Semaine suivante" ${HW.n >= Math.max(...ns) ? "disabled" : ""}>›</button></div>
-    <div class="bloc-act">${cur && a.semaine === a.duree ? `<button type="button" class="or" id="h-fin">◆ FIN DE BLOC · TON CERTIFICAT</button>` : ""}${HW.n === 1 ? `<button type="button" id="h-trailer">▶ BANDE-ANNONCE DU BLOC</button>` : ""}</div>
+    <div class="bloc-act">${cur && a.semaine === a.duree && w.seances.length && w.seances.every(s => s.etat === "faite") ? `<button type="button" class="or" id="h-fin">◆ FIN DE BLOC · TON CERTIFICAT</button>` : ""}${HW.n === 1 ? `<button type="button" id="h-trailer">▶ BANDE-ANNONCE DU BLOC</button>` : ""}</div>
     <div class="wsegs">${a.semaines.map(x => `<i class="${x.n < a.semaine ? "past" : x.n === a.semaine ? "now" : ""}${x.n === HW.n ? " see" : ""}"></i>`).join("")}</div>
     ${cur && avant && !bilanFait(a, avant.n) ? `<button class="hbanner" type="button" id="h-bilan"><i></i><div><b>Bilan de la semaine ${avant.n}</b><span>Tu ne l'as pas rempli : 30 secondes pour le sommeil, la nutrition, les pas, l'humeur et le poids.</span></div></button>` : ""}
     <div class="scards${anim ? " reveal" : ""}">${cards || '<p class="demo-note">Aucune séance programmée cette semaine.</p>'}</div>
@@ -13877,12 +13877,12 @@ function finRun() {
     for (let k = 0; k < rows.length; k++) {
       rows[k].className = "on"; rows[k].querySelector("b").textContent = "ENVOI…"; bars[k].className = "on"; sfx.tick();
       // la dernière ligne attend la réponse du serveur
-      if (k === rows.length - 1) { while (!fini) { await new Promise(r => setTimeout(r, 200)); if (!lent && Date.now() - t0 > 4000) { lent = true; lexInfo("Réseau lent. Je garde tout, ça part dès que possible."); } } }
+      if (k === rows.length - 1) { while (!fini) { await new Promise(r => setTimeout(r, 200)); if (!lent && Date.now() - t0 > 1200) { lent = true; if (window.betaAttente) betaAttente(true); } } }
       else await new Promise(r => setTimeout(r, fini ? 90 : Math.min(420, delai / rows.length)));
       rows[k].className = "ok"; rows[k].querySelector("b").textContent = "✓ TRANSMIS"; bars[k].className = "ok"; sfx.seg(k);
       $("#tx-n").textContent = `${k + 1} / ${rows.length}`;
     }
-    await envoi; if (betaApresEnvoi()) return;
+    await envoi; if (window.betaAttente) betaAttente(false); if (betaApresEnvoi()) return;
     alerte("ok", `${S.a.prenom} a terminé sa séance du ${s.jour.toLowerCase()} : ${s.exos.length} exercices, difficulté ${S.diff || "non notée"}.`);
     s.exos.forEach((x, k) => { if (recValide(x, S.ex[k]) && !(S.recDirect && S.recDirect[k])) alerte("rec", `Record pour ${S.a.prenom} : ${S.ex[k].nom.toLowerCase()} ${x.sets} × ${x.reps} à ${virg(Number(S.ex[k].charge))} kg (+${virg(Math.round((Number(S.ex[k].charge) - x.best) * 100) / 100)} kg).`); });
     if (S.douleur) Object.entries(S.douleur.apres || {}).forEach(([z, o]) => alerte("dl", `${S.a.prenom} après la séance : ${zoneDe(z)[1].toLowerCase()}, ${o}.`));
@@ -14475,7 +14475,7 @@ addEventListener('visibilitychange', () => { if (!document.hidden) try { sfx.ini
    les sons de l'app se mélangent à ta musique ; quand LEX parle, ta musique baisse, puis revient */
 const audioS = navigator.audioSession;
 const sessionAudio = t => { try { if (audioS && audioS.type !== t) audioS.type = t; } catch (e) {} };
-sessionAudio('ambient');
+sessionAudio('auto');   // (03/11) « ambient » coupait les petits sons en mode silencieux : le réglage du système, comme avant
 /* ---- 5. LA VOIX DE LEX (briefing muet, texte d'un coup) : Audrey améliorée met parfois plus d'1,5 s à démarrer → 3 s pour la 1re phrase,
    puis un 2e essai avec la voix française de base du téléphone (au lieu d'abandonner) ---- */
 let tRetour = null;
@@ -14484,7 +14484,7 @@ speakAll = function (text, onPart) {
   clearTimeout(tRetour); sessionAudio('transient');
   return new Promise(res => {
     let i = 0, fini = false;
-    const stop = () => { if (!fini) { fini = true; res(); clearTimeout(tRetour); tRetour = setTimeout(() => { sessionAudio('ambient'); try { sfx.init(); } catch (e) {} }, 1200); } };
+    const stop = () => { if (!fini) { fini = true; res(); clearTimeout(tRetour); tRetour = setTimeout(() => { sessionAudio('auto'); try { sfx.init(); } catch (e) {} }, 1200); } };
     const dire = (txt, n, essai) => {
       const moi = ++jetonVoix, u = new SpeechSynthesisUtterance(pourVoix(txt));
       window._lexU = u; u.lang = 'fr-FR'; if (frVoice && essai === 0) u.voice = frVoice; u.rate = .98; u.pitch = .95;
@@ -14542,6 +14542,8 @@ function echecDe(x, e) {
   if (!e || !e.echec || typeof ecGroupes !== 'function') return null;
   try {
     const E = e.echec, c = numOu(e.charge) ?? numOu(e.chargeReco);
+    if (E.nonFait) { const f = Math.max(0, (E.serie || 1) - 1);   // (03/11) série non faite : les séries faites, charge ou pas
+      return { serie: E.serie || 1, unique: false, stop: true, charge: c, nonFait: true, total: ecN(x), groupes: f ? [{ n: f, reps: ecR(x) || x.reps, kg: c }] : [] }; }
     return { serie: E.serie || 1, unique: ecUnique(x), stop: !!E.stop, charge: c,
       groupes: ecGroupes(x, e).map(g => ({ n: g.n, reps: g.reps || ecR(x) || x.reps, kg: g.c })) };
   } catch (er) { return null; }
@@ -15112,6 +15114,97 @@ function jourProspect(op) {
   try { const p = prospects().find(x => x.code === LABC.code); if (p) Object.keys(p.refs || {}).forEach(m => ancrer(p, m)); } catch (e) {}
   const r = o.apply(this, arguments); try { prospectsUI(); } catch (e) { console.error('bêta : prospects', e); } return r; }; }
 
+/* ════════════ (03/11) RETOURS DU COACH ════════════ */
+/* ---- LE CHRONO GARDE L'ÉCRAN ALLUMÉ (EMOM, récup, chrono, séries) : pendant son EMOM, l'écran s'éteignait et le chrono s'arrêtait ---- */
+{ let verrou = null, demande = false;
+  const prendre = async () => { if (verrou || demande || !('wakeLock' in navigator) || document.hidden) return; demande = true;
+    try { verrou = await navigator.wakeLock.request('screen'); verrou.addEventListener('release', () => { verrou = null; }); } catch (e) {} finally { demande = false; } };
+  const lacher = () => { if (verrou) { try { verrou.release(); } catch (e) {} verrou = null; } };
+  setInterval(() => { try { if (T.run) prendre(); else lacher(); } catch (e) {} }, 1000);
+  document.addEventListener('visibilitychange', () => { try { if (!document.hidden && T.run) prendre(); } catch (e) {} });
+  // au toucher de ▶ (l'iPhone accepte mieux juste après un geste)
+  document.addEventListener('click', ev => { if (ev.target.closest && ev.target.closest('#t-go')) setTimeout(() => { try { if (T.run) prendre(); } catch (e) {} }, 0); }, true);
+}
+
+/* ---- L'ENVOI DE LA SÉANCE : ce n'est pas le réseau qui est lent, c'est l'envoi au Sheet qui prend quelques secondes →
+   « ENVOI EN COURS », un cercle qui tourne, et rester sur l'écran jusqu'à « séance enregistrée » ---- */
+const stEnvoi = document.createElement('style');
+stEnvoi.textContent = `.beta-attente{display:flex;align-items:center;gap:12px;margin:14px 0 0;padding:13px 14px;border:1px solid rgba(255,199,64,.45);background:rgba(255,199,64,.07)}
+.beta-attente i{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,199,64,.25);border-top-color:var(--gold,#ffc740);animation:bAtt .8s linear infinite}
+.beta-attente b{display:block;font:700 11px var(--f-holo);letter-spacing:.18em;color:var(--gold,#ffc740)}
+.beta-attente span{display:block;margin-top:3px;font:500 12px var(--f-holo);color:var(--dim)}
+@keyframes bAtt{to{transform:rotate(360deg)}}`;
+document.head.appendChild(stEnvoi);
+window.betaAttente = function (on) {
+  const run = document.getElementById('run'); if (!run) return; const old = run.querySelector('.beta-attente');
+  if (!on) { if (old) old.remove(); return; }
+  if (old) return; const tx = run.querySelector('.tx'); if (!tx) return;
+  tx.insertAdjacentHTML('afterend', '<div class="beta-attente" role="status"><i></i><div><b>ENVOI EN COURS</b><span>Reste sur cet écran jusqu\'à « séance enregistrée ».</span></div></div>');
+  try { lexInfo('Envoi en cours. Reste sur cet écran.'); } catch (e) {}
+};
+
+/* ---- LE MUR ÉPURÉ : une carte touchée = la carte seule (pour la montrer) ; le coach passe en MODIFICATION avec ✎ ---- */
+let MUR_EDIT = false;
+const stMur = document.createElement('style');
+stMur.textContent = `body:not(.mur-edition) #mur-sty,body:not(.mur-edition) #mur-add{display:none!important}
+body:not(.mur-edition) #murZoom .mur-zi,body:not(.mur-edition) #murZoom .mur-zc2,body:not(.mur-edition) #murZoom .mur-zb,body:not(.mur-edition) #murZoom .mur-zp{display:none!important}
+#mur-edit{min-width:38px}#mur-edit.on{color:var(--red);border-color:var(--red)}`;
+document.head.appendChild(stMur);
+{ const o = openMur; openMur = function () { const r = o.apply(this, arguments);
+  try { document.body.classList.toggle('mur-edition', MUR_EDIT);
+    if (DATA[idx].code === ID_COACH.code) { const h = document.querySelector('#mur .mur-hb') || document.querySelector('#mur .mur-h');
+      if (h && !h.querySelector('#mur-edit')) { h.insertAdjacentHTML('beforeend', `<button type="button" class="mur-add${MUR_EDIT ? ' on' : ''}" id="mur-edit" aria-label="Modifier le mur" aria-pressed="${MUR_EDIT}">✎</button>`);
+        h.querySelector('#mur-edit').onclick = () => { MUR_EDIT = !MUR_EDIT; try { sfx.seg(3); } catch (e) {} openMur({ calme: true }); }; } } } catch (e) { console.error('bêta : mur', e); }
+  return r; }; }
+
+/* ---- « ÉCHEC OU SÉRIE NON FAITE » : par manque de temps, une série enlevée (son RDL) se note aussi. Mêmes règles que l'échec (seules
+   les séries faites comptent, dans les records et dans le Sheet), sans parler d'échec. Série unique : l'échec seul, comme avant ---- */
+let NF = null;   // { i, faites } pendant qu'on remplit la carte « série non faite »
+const nfCarte = h => { const body = document.getElementById('r-body'); if (!body) return; body.querySelector('.ec-c')?.remove();
+  const d = document.createElement('div'); d.className = 'ad-c ec-c'; d.innerHTML = h;
+  (body.querySelector('.ec-zone') || body.querySelector('#f-rpe2')?.closest('.blk')).after(d); try { sfx.unfold(); } catch (e) {} };
+const nfTexte = (x, e) => { const E = e.echec, n = ecN(x), f = Math.max(0, (E.serie || 1) - 1), c = numOu(e.charge) ?? numOu(e.chargeReco), nf = n - f;
+  return `${nf} série${nf > 1 ? 's' : ''} non faite${nf > 1 ? 's' : ''} : ${f ? ecF(f, x) + (c != null ? ' à ' + ecKg(x, c) : '') + ' fait' + (f > 1 ? 's' : '') : 'rien de fait'}`; };
+const nfQuestion = (x, e) => { const n = ecN(x);
+  nfCarte(`<small>◆ LEX · SÉRIE NON FAITE</small><p>Combien de séries faites ?</p><div class="ec-n">${Array.from({ length: n }, (_, k) => `<button type="button" data-ec="nf-n" data-v="${k}" aria-pressed="${NF && NF.faites === k}">${k}</button>`).join('')}</div>
+    <div class="ad-o">${NF && NF.faites != null ? '<button type="button" data-ec="nf-ok">VALIDER</button>' : ''}${e.echec && e.echec.nonFait ? '<button type="button" class="ad-n" data-ec="nf-del">RETIRER</button>' : ''}<button type="button" class="ad-n" data-ec="nf-x">ANNULER</button></div>`); };
+{ const o = ecClic; ecClic = function (ev) {
+  const b = ev.target.closest && ev.target.closest('[data-ec]'); if (!b || !S) return o.apply(this, arguments);
+  const d = b.dataset.ec, x = S.s.exos[S.i], e = S.ex[S.i];
+  if (d === 'ouvrir' && ecN(x) > 1 && (!e.echec || e.echec.nonFait)) { ev.stopPropagation();
+    if (e.echec && e.echec.nonFait) { NF = { i: S.i, faites: Math.max(0, e.echec.serie - 1) }; return nfQuestion(x, e); }
+    return nfCarte(`<small>◆ LEX</small><p>Qu'est-ce qui s'est passé ?</p><div class="ad-o"><button type="button" data-ec="nf-echec">ÉCHEC</button><button type="button" data-ec="nf-temps">SÉRIE NON FAITE</button><button type="button" class="ad-n" data-ec="nf-x">ANNULER</button></div>`); }
+  if (!/^nf-/.test(d)) return o.apply(this, arguments);
+  ev.stopPropagation();
+  if (d === 'nf-x') { NF = null; b.closest('.ec-c')?.remove(); return; }
+  if (d === 'nf-echec') { NF = null; b.closest('.ec-c')?.remove(); return ecOuvrir(); }
+  if (d === 'nf-temps') { NF = { i: S.i, faites: null }; return nfQuestion(x, e); }
+  if (d === 'nf-n') { NF = { i: S.i, faites: +b.dataset.v }; try { sfx.seg(2); } catch (er) {} return nfQuestion(x, e); }
+  const nettoyer = () => { e.note = String(e.note || '').replace(/(?: · )?LEX : (?:échec (?:à la série|sur la série unique)|\d+ séries? non faites?)[^·]*/, ''); };
+  if (d === 'nf-del') { delete e.echec; nettoyer(); NF = null; try { sfx.ok(); } catch (er) {} lexInfo('Retiré.'); return renderRun(); }
+  if (d === 'nf-ok' && NF && NF.faites != null) {
+    e.echec = { serie: NF.faites + 1, apres: null, stop: true, nonFait: true }; NF = null; nettoyer();
+    const txt = nfTexte(x, e); adNote(e, txt); try { sfx.ok(); } catch (er) {}
+    alerte('adapt', `${S.a.prenom} · ${e.nom.toLowerCase()} : ${txt}.`); lexInfo(cap1(txt) + '.'); return renderRun(); }
+}; }
+// le rapport de fin : « 1 NON FAITE » au lieu de « ÉCHEC S3 »
+{ const o = finRun; finRun = function () { const r = o.apply(this, arguments);
+  try { const rows = [...document.querySelectorAll('#run .recap > div')];
+    S.s.exos.forEach((x, k) => { const v = S.ex[k]; if (!v.echec || !v.echec.nonFait || !rows[k]) return; const t = rows[k].querySelector('.ec-t'), nf = ecN(x) - Math.max(0, v.echec.serie - 1);
+      if (t) t.textContent = `${nf} NON FAITE${nf > 1 ? 'S' : ''}`; }); } catch (e) {}
+  return r; }; }
+{ const o = ecResume; ecResume = function (x, e) { return e && e.echec && e.echec.nonFait ? nfTexte(x, e) : o.apply(this, arguments); }; }
+{ const o = ecHabiller; ecHabiller = function () { const r = o.apply(this, arguments);
+  try { const body = document.getElementById('r-body'), x = S.s.exos[S.i], e = S.ex[S.i], z = body && body.querySelector('.ec-zone'); if (!z) return r;
+    const bt = z.querySelector('.ec-btn'); if (bt && ecN(x) > 1) bt.textContent = '✕ ÉCHEC OU SÉRIE NON FAITE ?';
+    if (e.echec && e.echec.nonFait) { const n = ecN(x), f = Math.max(0, e.echec.serie - 1), nf = n - f, c = numOu(e.charge) ?? numOu(e.chargeReco), tb = z.querySelector('.ec-b b');
+      if (tb) tb.textContent = `${nf} SÉRIE${nf > 1 ? 'S' : ''} NON FAITE${nf > 1 ? 'S' : ''} · ${f} SUR ${n}`;
+      // ce qui a été fait ne dépend pas de la charge (elle peut être tapée après)
+      z.querySelectorAll('.ec-b span').forEach((sp, j) => { if (j) sp.remove(); else sp.textContent = f ? `Fait : ${ecF(f, x)}${c != null ? ' à ' + ecKg(x, c) : ''}` : 'Rien de fait.'; });
+      const sb = body.querySelector('.presc > div b'); if (sb) sb.innerHTML = `<s>${n}</s> ${f}`; }
+  } catch (er) { console.error('bêta : série non faite', er); }
+  return r; }; }
+
 /* ---- tes données mises à jour en arrière-plan : la semaine se redessine si elle est à l'écran ---- */
 window.betaApresMaj = function () {
   try { const h = document.getElementById('home'); if (h && !h.hidden && typeof openHome === 'function' && !(typeof S !== 'undefined' && S)) openHome(true); } catch (e) {}
@@ -15172,9 +15265,12 @@ window.betaConstruire = function (fiche, prog, prenom) {
   // la semaine passée : séances, vrais records, nouveaux formats
   const S = prev ? ws[prev] : { date: prevd, seances: [] };
   const done = S.seances.filter(faite).length, tot = S.seances.filter(se => se.lignes.length).length;
+  // (03/11, coach) le récap du lundi ne parle que des MOUVEMENTS PRINCIPAUX (muscle-up, traction, dips, squat) : « on s'en fout du
+  // leg extension », sinon personne n'y prête attention
+  const princ = l => /^[MPDS]$/.test(String(l.code || '').trim().toUpperCase());
   const prs = []; let news = 0; const vus = new Set();
   S.seances.forEach(se => se.lignes.forEach(l0 => reussies(l0).forEach(l => {
-    if (!l.sets || l.charge === null || l.charge === undefined || !rpe(l)) return;
+    if (!princ(l) || !l.sets || l.charge === null || l.charge === undefined || !rpe(l)) return;
     const k = cle(l); if (vus.has(k)) return; vus.add(k);
     const h = histo(k, passe);
     if (!h.length) { news++; return; }
@@ -15185,6 +15281,7 @@ window.betaConstruire = function (fiche, prog, prenom) {
   // en hausse (plus gros gain de 1RM estimé) et la plus facile (RPE le plus bas)
   let up = null, easy = null;
   S.seances.forEach(se => se.lignes.forEach(l => {
+    if (!princ(l)) return;
     const r = rpe(l);
     if (r && (!easy || r < easy.rpe || (r === easy.rpe && (l.charge || 0) > (easy.charge || 0)))) easy = { rpe: r, exo: exoN(l), charge: l.charge, jour: se.jour };
     if (!l.e1rm) return;
