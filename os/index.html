@@ -4954,7 +4954,7 @@ async function start(o) {
     bootin.classList.add("up"); await sleep(500); check(id);
     bootin.hidden = true; ring.show(); await sleep(1100); check(id);
     if (bootAccueil) { bootAccueil = false; await say(`Bienvenue chez toi, ${a.prenom}. Voici ta semaine.`, `Bienvenue chez toi, ${a.prenom}. Voici ta semaine.`, id); $("#skip").hidden = true; openHome(true); entrer($("#home")); return; }
-    if (jourDemo !== "Lundi") {   // pas de briefing en semaine : LEX salue et ouvre directement la semaine
+    if (true) {   // (09/11, coach) plus de briefing du lundi : LEX salue et ouvre directement la semaine
       const sj = a.seances.find(x => x.jour === jourDemo);
       await say(`Bonjour ${a.prenom}. ${sj ? `Séance du ${jourDemo.toLowerCase()} aujourd'hui, ${sj.exos.length} exercices.` : "Pas de séance aujourd'hui."}`, `Bonjour ${a.prenom}. ${sj ? `Séance du ${jourDemo.toLowerCase()} · ${sj.exos.length} exercices.` : "Pas de séance aujourd'hui."}`, id);
       $("#skip").hidden = true; openHome(true); entrer($("#home")); return;
@@ -5189,12 +5189,11 @@ function renderHome(anim) {
       <span class="chev" aria-hidden="true"></span></button>`;
   }).join("");
   $("#home").innerHTML = `
-    ${jourDemo === "Lundi" ? '<button class="h-back" type="button" id="h-brief">‹ BRIEFING DU LUNDI</button>' : ""}
     <div class="h-top"><div><h1>${a.prenom}</h1><p>BLOC ${a.bloc} · ${dd(w.date)} → ${dd(plusJ(w.date, 6))}</p></div>${typeof cstMini === "function" ? cstMini(a) : ""}</div>
     <div class="weekbar"><button type="button" id="w-prev" aria-label="Semaine précédente" ${HW.n <= Math.min(...ns) ? "disabled" : ""}>‹</button>
       <div class="wlbl"><b>Semaine ${HW.n} / ${a.duree}</b><small>${cur ? "SEMAINE EN COURS" : HW.n < a.semaine ? "PASSÉE" : "À VENIR"}</small></div>
       <button type="button" id="w-next" aria-label="Semaine suivante" ${HW.n >= Math.max(...ns) ? "disabled" : ""}>›</button></div>
-    <div class="bloc-act">${cur && a.semaine === a.duree && w.seances.length && w.seances.every(s => s.etat === "faite") ? `<button type="button" class="or" id="h-fin">◆ FIN DE BLOC · TON CERTIFICAT</button>` : ""}${HW.n === 1 ? `<button type="button" id="h-trailer">▶ BANDE-ANNONCE DU BLOC</button>` : ""}</div>
+    <div class="bloc-act">${false ? `<button type="button" class="or" id="h-fin">◆ FIN DE BLOC · TON CERTIFICAT</button>` : ""}${HW.n === 1 ? `<button type="button" id="h-trailer">▶ BANDE-ANNONCE DU BLOC</button>` : ""}</div>
     <div class="wsegs">${a.semaines.map(x => `<i class="${x.n < a.semaine ? "past" : x.n === a.semaine ? "now" : ""}${x.n === HW.n ? " see" : ""}"></i>`).join("")}</div>
     ${cur && avant && !bilanFait(a, avant.n) ? `<button class="hbanner" type="button" id="h-bilan"><i></i><div><b>Bilan de la semaine ${avant.n}</b><span>Tu ne l'as pas rempli : 30 secondes pour le sommeil, la nutrition, les pas, l'humeur et le poids.</span></div></button>` : ""}
     <div class="scards${anim ? " reveal" : ""}">${cards || '<p class="demo-note">Aucune séance programmée cette semaine.</p>'}</div>
@@ -6052,13 +6051,13 @@ function openCycleCoach() {
   CYA = CYA || DATA[0].code; const a = DATA.find(x => x.code === CYA), o = OBJ[cleObj(a)] = OBJ[cleObj(a)] || { objectifs: [], comment: "" };
   $("#bilan").innerHTML = `
     <div class="s-top"><button type="button" id="cc-back">‹ VUE COACH</button><span>CYCLE DU BLOC</span></div>
-    <h2 class="s-h1">Bande-annonce et certificat</h2>
+    <h2 class="s-h1">Bande-annonce du bloc</h2>
     <div class="chips" id="cc-a">${DATA.map(x => `<button class="chip" type="button" data-a="${x.code}" aria-pressed="${x.code === CYA}">${x.prenom.toUpperCase()}</button>`).join("")}</div>
     <section class="cc">
       <div class="tset"><label>Objectifs du bloc ${a.cycle.bloc} (un par ligne)</label><textarea id="cc-o">${o.objectifs.join("\n")}</textarea></div>
-      <div class="tset"><label>Ton mot pour la fin du bloc (sur le certificat)</label><textarea id="cc-c" placeholder="Ex. Bloc solide, tu as gagné en régularité. On attaque le suivant.">${o.comment}</textarea></div>
-      <div class="bloc-act"><button type="button" id="cc-t">▶ VOIR SA BANDE-ANNONCE</button><button type="button" class="or" id="cc-f">◆ VOIR SON CERTIFICAT</button></div>
-      <p class="demo-note">La bande-annonce passe toute seule le lundi de la semaine 1 ; le certificat arrive après sa dernière séance du bloc.</p>
+      <div class="tset" style="display:none"><label>Ton mot pour la fin du bloc (sur le certificat)</label><textarea id="cc-c" placeholder="Ex. Bloc solide, tu as gagné en régularité. On attaque le suivant.">${o.comment}</textarea></div>
+      <div class="bloc-act"><button type="button" id="cc-t">▶ VOIR SA BANDE-ANNONCE</button><button type="button" class="or" id="cc-f" style="display:none">◆ VOIR SON CERTIFICAT</button></div>
+      
     </section>`;
   const garder = () => { o.objectifs = $("#cc-o").value.split("\n").map(t => t.trim()).filter(Boolean); o.comment = $("#cc-c").value.trim(); o.ex = false; };
   $("#cc-a").onclick = ev => { const b = ev.target.closest("[data-a]"); if (!b) return; garder(); CYA = b.dataset.a; openCycleCoach(); };
@@ -13731,7 +13730,7 @@ async function filmerLabo(mvt, ouvrir) {
 /* ---------- LEX en séance : commandes (dans l'app, à la voix) ---------- */
 const LX_CMDS = ["Filme ma série", "Analyse une vidéo", "RPE 8", "Ajoute 2,5 kg", "Enlève 5 kg", "Note : genou un peu raide", "Repos 2 min", "Lis la note du coach", "Suivant"];
 const lxCoach = () => ["Semaine prochaine", "Objectif pesée", "Journal de suivi", "Bilans de coaching", "Prévention", ...sansObjectifs().slice(0, 1).map(a => `Objectifs de ${a.prenom} : squat 3×3 à 115 kg, muscle-up lesté propre`), "Santé de la team", "Lab de la team", "Envoyer un message", "Alertes Telegram", "Ma voix", "Cycle du bloc", ...DATA.map(a => `Comment va ${a.prenom} ?`), "Retour à ma semaine"];
-const lxHome = () => ["Ouvre le labo", "Mon profil force-vitesse", "Analyse une vidéo", "Bande-annonce du bloc", "Fin de bloc", `Ouvre la séance du ${jourDemo.toLowerCase()}`, ...(jourDemo === "Lundi" ? ["Rejoue le briefing"] : []), "Semaine précédente"];
+const lxHome = () => ["Ouvre le labo", "Mon profil force-vitesse", "Analyse une vidéo", "Bande-annonce du bloc", `Ouvre la séance du ${jourDemo.toLowerCase()}`, "Semaine précédente"];
 function lexOuvrir() { $("#lx-cmds").innerHTML = (S ? LX_CMDS : coachOuvert() ? lxCoach() : lxHome()).map(c => `<button type="button">${c}</button>`).join(""); $("#lexSheet").hidden = false; sfx.seg(6); }
 function lexFermer() { $("#lexSheet").hidden = true; }
 function lexDire(t) { say(t, t, run).catch(() => {}); }
@@ -13769,8 +13768,8 @@ function lexCommande(txt) {
     if (/labo|lab\b/.test(t)) return ecran(openLab);
     if (/analys/.test(t)) return choisirVideoIA(null);
     if (/bande|trailer/.test(t)) return openTrailer(a);
-    if (/fin de bloc|certificat|capsule/.test(t)) return openFinBloc(a);
-    if (/briefing/.test(t)) { if (jourDemo !== "Lundi") return lexDire("Le briefing, c'est le lundi."); $("#home").hidden = true; $("#lexTap").hidden = true; return start(); }
+    if (/fin de bloc|certificat|capsule/.test(t)) return lexDire("Pas de certificat de fin de bloc pour l'instant.");
+    if (/briefing|récap|recap/.test(t)) return lexDire("Ta semaine est juste ici.");
     if (/précédente|precedente/.test(t) && HW.n > 1) { HW.n--; renderHome(); return lexDire(`Semaine ${HW.n}.`); }
     if (/suivante/.test(t) && HW.n < a.duree) { HW.n++; renderHome(); return lexDire(`Semaine ${HW.n}.`); }
     return lexDire(`Je n'ai pas compris. Essaie : ouvre la séance du ${jourDemo.toLowerCase()}.`);
@@ -13951,9 +13950,9 @@ try {
   ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].forEach((j, i) => { const d = new Date(lundi); d.setDate(lundi.getDate() + i); DATE_DEMO[j] = p2(d.getDate()) + '.' + p2(d.getMonth() + 1); });
 } catch (e) { console.error('bêta : dates', e); }
 
-/* ---- PASSER pendant le démarrage : le briefing seulement le lundi ; les autres jours, ta semaine (comme sans PASSER) ---- */
+/* ---- PASSER pendant le démarrage : ta semaine (comme sans PASSER) ; (09/11, coach) plus de briefing du lundi, même le lundi ---- */
 { const f0 = finish; finish = function () {
-  if (jourDemo !== 'Lundi' && !bootAccueil) {
+  if (!bootAccueil) {
     ++run; try { speechSynthesis.cancel(); } catch (e) {} speaking = 0;
     $('#gate').classList.add('gone'); $('#bootin').hidden = true; document.body.classList.add('on'); ring.show(); $('#skip').hidden = true;
     openHome(true); try { entrer($('#home')); } catch (e) {} return;
@@ -15209,6 +15208,50 @@ const nfQuestion = (x, e) => { const n = ecN(x);
 window.betaApresMaj = function () {
   try { const h = document.getElementById('home'); if (h && !h.hidden && typeof openHome === 'function' && !(typeof S !== 'undefined' && S)) openHome(true); } catch (e) {}
 };
+
+/* ════════════ RETOURS DU COACH 09/11 ════════════ */
+/* ---- LEX et VOIX ON / OFF un peu plus bas (« sur iPhone, c'est encore galère d'appuyer, un tout petit peu trop haut ») : 8 px, et la
+   zone de VOIX un peu plus grande ; les écrans descendent d'autant pour que LEX ne passe pas dessus ---- */
+{ const st = document.createElement('style');
+  st.textContent = `body.beta .margin.top{top:calc(22px + env(safe-area-inset-top,0px))}
+body.beta .margin.top button#voice{padding:14px 12px;margin:-14px -12px}
+body.beta #lex.docked,body.beta #lexTap{top:calc(22px + env(safe-area-inset-top,0px))}
+body.beta #cap.docked{top:calc(30px + env(safe-area-inset-top,0px))}
+body.beta .topbar{height:calc(112px + env(safe-area-inset-top,0px))}
+body.beta #home,body.beta #run,body.beta .scr{padding-top:calc(118px + env(safe-area-inset-top,0px))}
+body.beta #recs{padding-top:calc(108px + env(safe-area-inset-top,0px))}
+body.beta .mur{padding-top:calc(122px + env(safe-area-inset-top,0px))}
+body.beta .cst-back{top:calc(112px + env(safe-area-inset-top,0px))}
+body.beta #gate .codes{display:none}`;
+  document.head.appendChild(st); }
+
+/* ---- SE DÉCONNECTER : en une touche (avant : deux touches, et l'app se rouvrait sur le même compte). Ce qui n'est pas encore parti
+   part d'abord, puis le téléphone oublie ce compte ; le code tapé ensuite (le tien ou celui d'un athlète) ouvre SON app à lui ---- */
+{ const o = renderHome; renderHome = function () { const r = o.apply(this, arguments);
+  try { const b = document.getElementById('h-out'); if (b) b.onclick = () => { b.disabled = true; window.betaDeconnecter(); }; } catch (e) {}
+  return r; }; }
+
+/* ---- ton programme à jour : relu dans le Sheet à chaque ouverture (boot.js) ET quand tu reviens sur l'app après 2 min ailleurs
+   (« j'avais corrigé la date dans le Sheet, ça a mis super longtemps à se mettre à jour ») ; si le bloc ou la semaine a changé,
+   la semaine affichée repart de la nouvelle et LEX le dit ---- */
+{ let majT = Date.now();
+  addEventListener('visibilitychange', () => {
+    if (document.hidden || Date.now() - majT < 120e3) return;
+    majT = Date.now();
+    window.betaRafraichir(true).then(() => { if (window.betaApresMaj) window.betaApresMaj(); }, () => {});
+  });
+  const cle = () => { const a = DATA[idx]; return a ? a.bloc + '-' + a.semaine : ''; };
+  let vu = cle();
+  const o = window.betaApresMaj;
+  window.betaApresMaj = function () {
+    const k = cle(), change = k && k !== vu; vu = k || vu;
+    if (change) { try { HW = null; } catch (e) {} }
+    const r = o && o.apply(this, arguments);
+    try { const h = document.getElementById('home'), a = DATA[idx];
+      if (change && h && !h.hidden && !(typeof S !== 'undefined' && S)) lexInfo(`Programme à jour : bloc ${a.bloc}, semaine ${a.semaine}.`); } catch (e) {}
+    return r;
+  };
+}
 })();
 
 </script>
@@ -15476,14 +15519,14 @@ window.betaRafraichir = forcer => charger(forcer).then(a => {
 // les envois en attente (séance, bilan) : gardés sur le téléphone tant que le réseau manque
 const boite = () => { try { return JSON.parse(lire(CLE_BOITE) || '[]'); } catch (e) { return []; } };
 window.betaBoite = boite;
-window.betaGarder = p => { const b = boite(); b.push(Object.assign({ le: Date.now() }, p)); ecrire(CLE_BOITE, JSON.stringify(b)); };
+window.betaGarder = p => { const b = boite(); b.push(Object.assign({ le: Date.now(), code: lire(CLE_CODE) || '' }, p)); ecrire(CLE_BOITE, JSON.stringify(b)); };
 let vidage = null;
 window.betaVider = function () {
   if (vidage) return vidage;
   vidage = (async () => {
     let b = boite(), partis = 0;
     while (b.length) {
-      const p = Object.assign({}, b[0]); delete p.le;
+      const p = Object.assign({}, b[0]); delete p.le; if (!p.code) delete p.code;   // (09/11) le code de SON compte, sinon celui d'aujourd'hui
       try { await api(Object.assign({ code: lire(CLE_CODE) || '' }, p)); partis++; }
       catch (e) { if (e.reseau) break; partis++; }   // refusé par le serveur : on ne bloque pas les suivants (l'erreur est dans le journal)
       b = boite(); b.shift(); ecrire(CLE_BOITE, JSON.stringify(b));
@@ -15497,7 +15540,7 @@ addEventListener('online', () => { if (boite().length) window.betaVider(); });
 /* ---- ce que tu fais dans l'app (labo, cartes, mur, compétitions, douleurs, objectifs, bilans…) : rangé EN LIGNE ----
    L'app garde tout dans le téléphone (clés « lgcy-… ») : chaque changement est aussi envoyé au serveur (un fichier par athlète dans
    le Drive du coach), et retrouvé sur un autre téléphone ou après une réinstallation. La plus récente gagne, clé par clé. */
-const MIROIR = k => (/^lgcy-/.test(k) && !/^lgcy-(prog-code|os-code|os-chrono|os-voix)$/.test(k)) || /^beta-(fil|douleurs|obj|bilans)$/.test(k);
+const MIROIR = k => (/^lgcy-/.test(k) && !/^lgcy-(prog-(code|ecran|lasterr|outbox|cache|role|run|chrono)|os-code|os-chrono|os-voix)$/.test(k)) || /^beta-(fil|douleurs|obj|bilans)$/.test(k);
 const CLE_ATT = 'beta-etat-attente', CLE_T = 'beta-etat-t';
 const S0 = Storage.prototype.setItem, R0 = Storage.prototype.removeItem;
 const json = (k, d) => { try { return JSON.parse(lire(k) || '') || d; } catch (e) { return d; } };
@@ -15550,13 +15593,13 @@ const CLE_AV = 'beta-envois-avance';
 window.betaEnvoyerFichier = (blob, meta) => {
   if (!blob || !blob.size) return Promise.resolve(null);
   const id = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-  return idb('readwrite', st => st.put({ id, blob, nom: meta.nom || 'fichier', mime: blob.type || meta.mime || 'application/octet-stream', dossier: meta.dossier || 'videos',
+  return idb('readwrite', st => st.put({ id, blob, code: lire(CLE_CODE) || '', nom: meta.nom || 'fichier', mime: blob.type || meta.mime || 'application/octet-stream', dossier: meta.dossier || 'videos',
     description: meta.description || '', alerte: meta.alerte || '', cree: Date.now() })).then(() => { pousserEnvois(); return id; }, e => { console.error('bêta : file d\'envoi', e); return null; });
 };
 const enBase64 = b => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => ko(r.error); r.readAsDataURL(b); });
 const erreur = (m, k) => { const e = new Error(m); e[k] = true; return e; };
 async function envoyerUn(e) {
-  const code = lire(CLE_CODE), tot = e.blob.size, AV = json(CLE_AV, {}), av = AV[e.id] || {};
+  const code = e.code || lire(CLE_CODE), tot = e.blob.size, AV = json(CLE_AV, {}), av = AV[e.id] || {};
   const garder = () => { const t = json(CLE_AV, {}); t[e.id] = av; brut(CLE_AV, JSON.stringify(t)); };
   if (!av.url) { const j = await api({ action: 'envoiDebut', code, nom: e.nom, mime: e.mime, taille: tot, dossier: e.dossier, description: e.description, origine: location.origin }, 60000);
     av.url = j.url; av.debut = 0; garder(); }
@@ -15705,12 +15748,47 @@ function premierChargement() {
   porte(`<p>Liaison avec ton Sheet…</p><div class="bp-l"><i></i></div>`);
   // tes données + ce que tu as fait dans l'app (rangé en ligne) : un autre téléphone, ou une réinstallation, retrouve tout
   const etat = window.betaSyncEtat().catch(() => 0);
-  charger(false).then(a => etat.then(() => { window.BETA_DATA.push(a); lancer(); }), e => {
+  charger(true).then(a => etat.then(() => { window.BETA_DATA.push(a); lancer(); }), e => {
     if (e.serveur) { ecrire(CLE_CODE, null); return demanderCode(e.message); }
     const p = porte(`<p class="bp-err">${e.message} La première ouverture a besoin d'internet.</p><button type="button" id="bp-r">RÉESSAYER</button><button type="button" class="bp-2" id="bp-a">CHANGER DE CODE</button>`);
     p.querySelector('#bp-r').onclick = premierChargement; p.querySelector('#bp-a').onclick = () => { ecrire(CLE_CODE, null); demanderCode(); };
   });
 }
+/* ---- SE DÉCONNECTER (09/11, coach) : une touche. D'abord ce qui n'est pas encore parti (8 s au plus) ; ce qui reste (pas de réseau)
+   est rangé avec SON code et partira tout seul plus tard, pour le bon compte. Ensuite le téléphone oublie tout de ce compte (son
+   programme, son labo, ses cartes…) : le code tapé ensuite ouvre une app propre, avec les données de CE code-là (retrouvées en ligne).
+   Restent : les réglages du téléphone (voix, chrono, installation, accueil déjà vu) et ce que l'app actuelle (/prog) garde sur le site. ---- */
+const CLE_ORPH = 'beta-etat-orphelins';
+function envoyerOrphelins() {
+  const o = json(CLE_ORPH, []); if (!o.length) return Promise.resolve();
+  const x = o[0], suite = () => { const n = json(CLE_ORPH, []); n.shift(); brut(CLE_ORPH, JSON.stringify(n)); return envoyerOrphelins(); };
+  return api({ action: 'etatEcrire', code: x.code, changes: x.changes }, 90000).then(suite, e => (e.reseau ? null : suite()));
+}
+addEventListener('online', () => { envoyerOrphelins(); });
+window.betaDeconnecter = async function () {
+  const code = lire(CLE_CODE);
+  porte(`<p>Déconnexion…</p><div class="bp-l"><i></i></div>`);
+  if (code) {
+    clearTimeout(tEnvoi);
+    try { await Promise.race([Promise.all([window.betaVider(), envoyerEtat()]), new Promise(r => setTimeout(r, 8000))]); } catch (e) {}
+    const att = json(CLE_ATT, {});
+    if (Object.keys(att).length) {
+      const changes = {}; Object.keys(att).forEach(k => { changes[k] = { v: lire(k), t: att[k].t }; });
+      const o = json(CLE_ORPH, []); o.push({ code, changes });
+      try { S0.call(localStorage, CLE_ORPH, JSON.stringify(o)); }
+      catch (e) {   // le téléphone est plein : on ne jette rien, on le dit
+        const p = porte(`<p class="bp-err">Pas de réseau : des changements de ce compte ne sont pas encore partis. Reconnecte-toi au réseau, puis réessaie.</p><button type="button" id="bp-r">RÉESSAYER</button><button type="button" class="bp-2" id="bp-a">ANNULER</button>`);
+        p.querySelector('#bp-r').onclick = () => window.betaDeconnecter(); p.querySelector('#bp-a').onclick = () => location.reload();
+        return;
+      }
+    }
+  }
+  const cles = []; for (let i = 0; i < localStorage.length; i++) cles.push(localStorage.key(i));
+  horsMiroir = true;
+  try { cles.forEach(k => { if (MIROIR(k) || /^lgcy-(prog-code|os-code)$/.test(k) || /^beta-(donnees|etat-attente|etat-t)$/.test(k)) R0.call(localStorage, k); }); }
+  finally { horsMiroir = false; }
+  location.replace(location.pathname);
+};
 // l'app elle-même (ses scripts attendent tes données) : lancée une seule fois
 let lance = false;
 function lancer() {
@@ -15721,12 +15799,13 @@ function lancer() {
   fermerPorte();
 }
 function demarrer() {
+  envoyerOrphelins().catch(() => {});
   if (!lire(CLE_CODE)) return entree();
   let cache = null; try { cache = JSON.parse(lire(CLE_CACHE) || 'null'); } catch (e) {}
   if (cache && cache.a) {
     window.BETA_DATA.push(cache.a); lancer();
     // en arrière-plan : les envois en attente, puis tes données à jour
-    window.betaVider().then(() => window.betaRafraichir(false)).then(() => { if (window.betaApresMaj) window.betaApresMaj(); }, () => {})
+    window.betaVider().then(() => window.betaRafraichir(true)).then(() => { if (window.betaApresMaj) window.betaApresMaj(); }, () => {})
       .then(() => window.betaSyncEtat()).catch(() => {}).then(() => pousserEnvois());
     return;
   }
