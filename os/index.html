@@ -1634,7 +1634,7 @@ html[data-th="contour"] .dock{--red:#f2f4f6;--red-soft:rgba(242,244,246,.25)}
 body.dock-on #home{padding-bottom:calc(130px + env(safe-area-inset-bottom,0px))}
 body.dock-on .scr{padding-bottom:calc(140px + env(safe-area-inset-bottom,0px))}
 body.dock-on #recs{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
-.h-out{justify-self:center;margin-top:4px;padding:10px 14px;font:500 9px var(--f-mono);letter-spacing:.22em;text-transform:uppercase;color:var(--faint)}
+.h-out{justify-self:end;margin-top:18px;padding:10px 0 10px 14px;font:500 7.5px var(--f-mono);letter-spacing:.2em;text-transform:uppercase;color:rgba(233,237,241,.24)}   /* (10/11, coach) plus petit, en bas à droite */
 .h-out[data-sur]{color:var(--red)}
 /* la carte seule en image (?carte=CODE) */
 html.lid-export,html.lid-export body{background:transparent!important;overflow:hidden}
@@ -2117,10 +2117,15 @@ body:not(.mur-edition) #murZoom .mur-zi,body:not(.mur-edition) #murZoom .mur-zc2
 .mur-col h3 small{font:500 9px var(--f-mono);letter-spacing:.2em;color:var(--faint);white-space:nowrap}
 .mur-cg{display:grid;gap:var(--gap)}
 .mur-vide{margin:6px 0 0;font:500 9.5px var(--f-mono);letter-spacing:.2em;color:rgba(233,237,241,.28)}
+.mur-p{touch-action:pan-x pan-y}.mur-p.glisse{cursor:grabbing;user-select:none}
+.mur-zz{position:absolute;right:max(14px,calc((100vw - 1600px) / 2));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:1px;border:1px solid rgba(233,237,241,.16);background:rgba(5,6,9,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.mur-zz button{width:40px;height:36px;font:400 18px/1 var(--f-mono);color:rgba(233,237,241,.7)}
+.mur-zz button+button{border-left:1px solid rgba(233,237,241,.12)}
+.mur-zz button:hover{color:#fff}
 @media (min-width:1100px){
   #mur .mur-h,#mur .pf-nav{width:min(1600px,calc(100% - 80px))}
   #mur .mur-h span{font-size:10.5px}
-  #mur .mur-p{cursor:default}
+  #mur .mur-p{cursor:grab}
 }
 /* une carte en grand */
 .mur-zoom{position:fixed;inset:0;z-index:75;display:grid;place-items:center;padding:20px;background:rgba(2,2,3,.93);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
@@ -5227,7 +5232,7 @@ function renderHome(anim) {
     <div class="wsegs">${a.semaines.map(x => `<i class="${x.n < a.semaine ? "past" : x.n === a.semaine ? "now" : ""}${x.n === HW.n ? " see" : ""}"></i>`).join("")}</div>
     ${cur && avant && !bilanFait(a, avant.n) ? `<button class="hbanner" type="button" id="h-bilan"><i></i><div><b>Bilan de la semaine ${avant.n}</b><span>Tu ne l'as pas rempli : 30 secondes pour le sommeil, la nutrition, les pas, l'humeur et le poids.</span></div></button>` : ""}
     <div class="scards${anim ? " reveal" : ""}">${cards || '<p class="demo-note">Aucune séance programmée cette semaine.</p>'}</div>
-    <button class="hlink" type="button" id="h-bilan2"${bilanOuvert(a, HW.n) ? "" : " disabled"}>${bilanFait(a, HW.n) ? "✓ Bilan de la semaine envoyé · le modifier" : bilanOuvert(a, HW.n) ? "Faire le bilan de la semaine" : `Bilan de la semaine · dimanche ${dd(finSemaine(w))}`}</button>
+    ${bilanOuvert(a, HW.n) || bilanFait(a, HW.n) ? `<button class="hlink" type="button" id="h-bilan2">${bilanFait(a, HW.n) ? "✓ Bilan de la semaine envoyé · le modifier" : "Faire le bilan de la semaine"}</button>` : ""}
     <button class="h-out" type="button" id="h-out">Se déconnecter</button>`;
   if ($("#h-brief")) $("#h-brief").onclick = () => ecran(() => { $("#home").hidden = true; $("#lexTap").hidden = true; finish(); });
   // (12/10, coach) la bande-annonce, c'est le début du bloc : le bouton seulement en semaine 1 (ailleurs, on la demande à LEX)
@@ -5242,7 +5247,7 @@ function renderHome(anim) {
     ecran(() => openRun(+b.dataset.k), b);
   };
   if ($("#h-bilan")) $("#h-bilan").onclick = ev => ecran(() => openBilan(avant.n), ev.currentTarget);
-  $("#h-bilan2").onclick = ev => { if (bilanOuvert(DATA[idx], HW.n)) ecran(() => openBilan(HW.n), ev.currentTarget); };
+  if ($("#h-bilan2")) $("#h-bilan2").onclick = ev => ecran(() => openBilan(HW.n), ev.currentTarget);
   // se déconnecter : deux touches (pas de fenêtre de confirmation dans l'artefact) ; la maquette revient à l'écran du code
   $("#h-out").onclick = ev => { const b = ev.currentTarget; if (b.dataset.sur) return location.reload(); b.dataset.sur = 1; b.textContent = "Touche encore pour te déconnecter"; setTimeout(() => { delete b.dataset.sur; b.textContent = "Se déconnecter"; }, 2600); };
 }
@@ -5255,7 +5260,8 @@ const bilanFait = (a, n) => !!BILANS[a.code + "-" + n];
 // le bilan d'une semaine s'ouvre le DIMANCHE de cette semaine ; les semaines passées restent ouvertes (bilan en retard)
 function aujIso(a) { const w = a.semaines.find(x => x.n === a.semaine) || a.semaines[0]; return plusJ(w.date, OFFS[jourDemo] || 0); }   // la bêta : la vraie date
 const finSemaine = w => plusJ(w.date, 6);
-const bilanOuvert = (a, n) => { const w = a.semaines.find(x => x.n === n); return !!w && (n < a.semaine || aujIso(a) >= finSemaine(w)); };
+// (10/11, coach : « faudrait qu'il s'active à la fin de la dernière séance ou en fin de semaine ») : ou dès que TOUTES ses séances sont faites
+const bilanOuvert = (a, n) => { const w = a.semaines.find(x => x.n === n); return !!w && (n < a.semaine || aujIso(a) >= finSemaine(w) || (w.seances.length > 0 && w.seances.every(s => s.etat === "faite"))); };
 let BV = null;       // bilan en cours de saisie
 function cacherEcrans() { ["#brief", "#home", "#run", "#bilan", "#tool"].forEach(s => $(s).hidden = true); $("#rnav").hidden = true; $("#sfoot").hidden = true; lexFermer(); }
 function openBilan(n) {
@@ -5294,7 +5300,10 @@ window.LegacyCoachHote = { armer() {}, sante() { ecran(openSante); }, lab() { ec
   resume(prenom) { const a = DATA.find(x => x.prenom.toLowerCase() === String(prenom || "").toLowerCase()); lexDire(a ? commentVa(a, false) : `Pas encore assez de données sur ${prenom}.`); }, accueil() { ecran(() => { closeRecs(); openHome(true); }); }, deconnexion() { closeRecs(); } };
 function openRecs() {
   const a = DATA[idx], f = $("#recs").querySelector("iframe");
-  if (!f || f.dataset.a !== a.prenom) $("#recs").innerHTML = `<iframe src="../prog/coach.html?athlete=1&v=${typeof COACH_V !== "undefined" ? COACH_V : ""}#${encodeURIComponent(a.prenom)}" data-a="${a.prenom}" title="Mes records"></iframe>`;
+  if (!f || f.dataset.a !== a.prenom) { $("#recs").innerHTML = `<iframe src="../prog/coach.html?athlete=1&v=${typeof COACH_V !== "undefined" ? COACH_V : ""}#${encodeURIComponent(a.prenom)}" data-a="${a.prenom}" title="Mes records"></iframe>`;
+    // (10/11, coach) la page des records sans la ligne bloc / semaine / date du haut (elle est déjà sur la semaine)
+    const fr = $("#recs iframe"), sansMeta = () => { try { const d = fr.contentDocument; if (d && d.head && !d.getElementById("lgcy-sans-meta")) { const st = d.createElement("style"); st.id = "lgcy-sans-meta"; st.textContent = "#hero #meta{display:none!important}"; d.head.appendChild(st); } } catch (e) {} };
+    fr.addEventListener("load", sansMeta); }
   $("#recs").hidden = false; $("#lexTap").hidden = false;
   lexInfo("Tes records. Les dorés sont ceux battus ces trois dernières semaines.");
 }
@@ -10284,7 +10293,7 @@ function openMur(o = {}) {
   const dispo = innerHeight - 150, k = Math.max(.26, Math.min(.36, (dispo - 3 * 6) / 4 / 466)), cw = Math.round(300 * k), ch = Math.round(466 * k);
   $("#bilan").innerHTML = `<div id="mur" class="mur">
     <div class="mur-h">${coachVue ? `<span class="mur-hb"><button type="button" class="mur-add" id="mur-sty">◇ STYLES</button><button type="button" class="mur-add" id="mur-add">＋ AJOUTER</button><button type="button" class="mur-add${MUR_EDIT ? " on" : ""}" id="mur-edit" aria-label="Modifier le mur" aria-pressed="${MUR_EDIT}">✎</button></span>` : ""}</div>
-    <div class="mur-p" id="mur-p"><div class="mur-g" style="--cw:${cw}px;--ch:${ch}px;grid-template-columns:26px repeat(${T.ath.length},${cw}px)">
+    <div class="mur-p" id="mur-p"><div class="mur-g" style="--cw:${cw}px;--ch:${ch}px;grid-template-columns:26px repeat(${T.ath.length},var(--cw))">
       ${MUR_ORDRE.map(m => `<div class="mur-lab"><span>${MVT_NOM[m]}</span></div>${T.ath.map(a => { const R = T.cell[a.code + "|" + m];
         return R ? `<button type="button" class="mur-c${a.code === moi ? " moi" : ""}${a.invite ? " inv" : ""}" data-code="${a.code}" data-m="${m}" aria-label="${a.prenom}${a.invite ? " (invité)" : ""}, ${MVT_NOM[m].toLowerCase()} ${kgK(m, R.kg)} kg, finition ${finNom(R.fin).toLowerCase()}"><span class="mur-cs" style="--k:${k.toFixed(3)}">${carteHTML(a, R.K, { apercu: true })}</span></button>`
           : `<div class="mur-trou${a.code === moi ? " moi" : ""}" aria-label="${a.prenom} : pas encore de record ici"><span>${a.prenom.toUpperCase()}</span></div>`; }).join("")}`).join("")}
@@ -10295,11 +10304,12 @@ function openMur(o = {}) {
   if ($("#mur-edit")) $("#mur-edit").onclick = () => { MUR_EDIT = !MUR_EDIT; sfx.seg(3); openMur({ calme: true }); };
   if ($("#mur-add")) $("#mur-add").onclick = () => murAjouter();
   if ($("#mur-sty")) $("#mur-sty").onclick = () => planchStyles();
-  $("#mur-p").addEventListener("click", ev => { const b = ev.target.closest(".mur-c"); if (b) murZoom(T, b.dataset.code, b.dataset.m); });
+  $("#mur-p").addEventListener("click", ev => { const b = ev.target.closest(".mur-c"); if (b && Date.now() - murGeste > 450) murZoom(T, b.dataset.code, b.dataset.m); });
   // on arrive sur ses propres cartes (le reste de la team de part et d'autre)
   const p = $("#mur-p"), col = T.ath.findIndex(a => a.code === moi);
   if (col > 0) p.scrollLeft = Math.max(0, 26 + col * (cw + 6) + cw / 2 - p.clientWidth / 2);
   const bureau = o.sansBureau ? false : murBureau();   // (10/11) sur ordi : le mur en grand (la bêta l'appelle elle-même, après son rangement)
+  murZoomPret();
   if (!o.calme) lexInfo(bureau || innerWidth >= MUR_BUREAU ? "Le mur de la team : les records réellement faits par tout le monde. Touche une carte." : "Le mur de la team : les records réellement faits par tout le monde. Fais-le glisser, touche une carte.");
 }
 // (10/11, coach) LE MUR SUR ORDI (≥ 1 100 px de large) : une COLONNE PAR MOUVEMENT côte à côte (muscle-up, traction, dips, squat),
@@ -10331,6 +10341,46 @@ function murBureau() {
   });
   g.replaceWith(bur); p.scrollLeft = 0; p.scrollTop = 0;
   return true;
+}
+// (10/11, coach : « quand le mur va se remplir, pouvoir zoomer et dézoomer, le rendre tout petit ou méga ») LE ZOOM DU MUR :
+// deux doigts sur le téléphone, pincer le pavé tactile ou Ctrl + molette sur l'ordi, et les boutons − / + ; le point visé reste en place.
+// Une carte fait de 33 à 330 px de large. Le zoom est gardé quand le mur se redessine. Sur ordi, on attrape le mur à la souris pour le déplacer.
+let murZ = 1, murGeste = 0;
+const MUR_KMIN = .11, MUR_KMAX = 1.1;
+function murEchelle(z, cx, cy) {
+  const p = $("#mur-p"), c = p && (p.querySelector(".mur-bur") || p.querySelector(".mur-g")); if (!c) return;
+  const k0 = +p.dataset.k0 || .3, nz = Math.max(MUR_KMIN / k0, Math.min(MUR_KMAX / k0, z)), f = nz / murZ, k = k0 * nz;
+  const x = cx ?? p.clientWidth / 2, y = cy ?? p.clientHeight / 2, sx = p.scrollLeft + x, sy = p.scrollTop + y;
+  murZ = nz;
+  c.style.setProperty("--cw", (300 * k).toFixed(1) + "px"); c.style.setProperty("--ch", (466 * k).toFixed(1) + "px");
+  c.querySelectorAll(".mur-cs").forEach(e => e.style.setProperty("--k", k.toFixed(4)));
+  p.scrollLeft = sx * f - x; p.scrollTop = sy * f - y;
+}
+function murZoomPret() {
+  const p = $("#mur-p"); if (!p) return;
+  const c1 = p.querySelector(".mur-cs"); p.dataset.k0 = (c1 && parseFloat(c1.style.getPropertyValue("--k"))) || .3;
+  const z = murZ; murZ = 1; if (z !== 1) murEchelle(z);
+  if (!$("#mur-zz")) { const b = document.createElement("div"); b.className = "mur-zz"; b.id = "mur-zz"; b.setAttribute("role", "group"); b.setAttribute("aria-label", "Zoom du mur");
+    b.innerHTML = `<button type="button" data-zz="-" aria-label="Dézoomer">−</button><button type="button" data-zz="+" aria-label="Zoomer">+</button>`;
+    b.onclick = ev => { const t = ev.target.closest("[data-zz]"); if (!t) return; sfx.seg(2); murEchelle(murZ * (t.dataset.zz === "+" ? 1.4 : 1 / 1.4)); };
+    $("#mur").appendChild(b); }
+  if (p.dataset.zoomArme) return; p.dataset.zoomArme = "1";
+  let pin = null, glis = null;
+  const ecart = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  p.addEventListener("touchstart", e => { if (e.touches.length === 2) { pin = { d: ecart(e.touches), z: murZ }; murGeste = Date.now(); } }, { passive: true });
+  p.addEventListener("touchmove", e => { if (!pin || e.touches.length !== 2) return; e.preventDefault(); const r = p.getBoundingClientRect(), t = e.touches;
+    murEchelle(pin.z * ecart(t) / pin.d, (t[0].clientX + t[1].clientX) / 2 - r.left, (t[0].clientY + t[1].clientY) / 2 - r.top); murGeste = Date.now(); }, { passive: false });
+  p.addEventListener("touchend", e => { if (e.touches.length < 2 && pin) { pin = null; murGeste = Date.now(); } });
+  ["gesturestart", "gesturechange", "gestureend"].forEach(t => p.addEventListener(t, e => e.preventDefault()));   // iOS : sinon toute la page zoome
+  p.addEventListener("wheel", e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); const r = p.getBoundingClientRect();
+    murEchelle(murZ * Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * .012), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  // à la souris : attraper le mur et le déplacer (un simple clic sur une carte l'ouvre toujours)
+  p.addEventListener("pointerdown", e => { if (e.pointerType !== "mouse" || e.button !== 0) return; glis = { x: e.clientX, y: e.clientY, sl: p.scrollLeft, st: p.scrollTop, bouge: false, id: e.pointerId }; });
+  p.addEventListener("pointermove", e => { if (!glis) return; const dx = e.clientX - glis.x, dy = e.clientY - glis.y; if (!glis.bouge && Math.hypot(dx, dy) < 5) return;
+    if (!glis.bouge) { glis.bouge = true; p.classList.add("glisse"); try { p.setPointerCapture(glis.id); } catch (er) {} }
+    p.scrollLeft = glis.sl - dx; p.scrollTop = glis.st - dy; });
+  const lacher = () => { if (glis && glis.bouge) murGeste = Date.now(); glis = null; p.classList.remove("glisse"); };
+  p.addEventListener("pointerup", lacher); p.addEventListener("pointercancel", lacher);
 }
 // la fenêtre change de taille : sur ordi le mur se refait à la nouvelle taille ; sur téléphone, seulement s'il passe en grand (ou l'inverse)
 addEventListener("resize", () => { clearTimeout(murRz); murRz = setTimeout(() => {
@@ -14260,11 +14310,12 @@ function seanceEnCours() {
     // les 4 rangées tiennent dans la hauteur visible (barre d'état et barre du bas comprises)
     const H = p ? p.clientHeight - 10 - 12 - 3 * 6 : 400, k = Math.max(.2, Math.min(.36, H / 4 / 466)), cw = Math.round(300 * k), ch = Math.round(466 * k);
     g.style.setProperty('--cw', cw + 'px'); g.style.setProperty('--ch', ch + 'px');
-    g.style.gridTemplateRows = `repeat(4, ${ch}px)`; g.style.gridTemplateColumns = `26px repeat(${large}, ${cw}px)`;
+    g.style.gridTemplateRows = 'repeat(4, var(--ch))'; g.style.gridTemplateColumns = `26px repeat(${large}, var(--cw))`;   // (10/11) en variables : le zoom du mur les change
     g.querySelectorAll('.mur-cs').forEach(c => c.style.setProperty('--k', k.toFixed(3)));
     if (p) p.scrollLeft = 0;
   } catch (e) { console.error('bêta : mur', e); }
   try { murBureau(); } catch (e) { console.error('bêta : mur sur ordi', e); }   // (10/11) sur ordi : une colonne par mouvement, en grand
+  try { murZoomPret(); } catch (e) { console.error('bêta : zoom du mur', e); }   // (10/11) le zoom, sur la taille finale des cartes
   return r;
 }; }
 
@@ -15455,6 +15506,34 @@ const NOTIF_PT = 'lgcy-notif-plus-tard';
     return notifActiver();
   }
   return o.apply(this, arguments); }; }
+/* ---- (10/11, coach : « le bilan de la semaine… qu'il s'active à la fin de la dernière séance ou en fin de semaine. Et s'il n'a pas été fait,
+   pareil, un rappel en notification ») LE RAPPEL DU BILAN : 5 h après la dernière séance de la semaine (quand elles sont toutes faites),
+   sinon le dimanche à 18 h ; jamais la nuit (entre 22 h et 9 h → 10 h) ; annulé dès que le bilan part. Serveur : pushRappel type « bilan ». ---- */
+const BIL_R = 'lgcy-bilan-rappel';
+const cleBilan = (a, n) => 'bilan-' + ((a.beta && a.beta.block) || a.bloc) + '-' + n;
+const bilLire = () => { try { return JSON.parse(localStorage.getItem(BIL_R)) || {}; } catch (e) { return {}; } };
+const bilEcrire = o => { try { const lim = Date.now() - 14 * 864e5; Object.keys(o).forEach(k => { if (!(o[k].t > lim)) delete o[k]; }); localStorage.setItem(BIL_R, JSON.stringify(o)); } catch (e) {} };
+function notifBilan() {
+  try {
+    if (!notifActives()) return;
+    const a = DATA[idx], w = a.semaines.find(x => x.n === a.semaine); if (!w) return;
+    const cle = cleBilan(a, w.n), o = bilLire();
+    if (bilanFait(a, w.n)) { if (o[cle] && !o[cle].annule) { notifAnnuler(cle); o[cle].annule = true; bilEcrire(o); } return; }
+    const toutes = w.seances.length > 0 && w.seances.every(s => s.etat === 'faite');
+    if (o[cle] && (o[cle].apres || !toutes)) return;   // déjà prévu
+    const h = new Date(toutes ? Date.now() + 5 * 3600e3 : new Date(finSemaine(w) + 'T18:00:00').getTime());
+    if (h.getHours() >= 22) { h.setDate(h.getDate() + 1); h.setHours(10, 0, 0, 0); } else if (h.getHours() < 9) h.setHours(10, 0, 0, 0);
+    const dans = h.getTime() - Date.now(); if (dans < 60e3) return;
+    o[cle] = { t: h.getTime(), apres: toutes }; bilEcrire(o);
+    const p = { action: 'pushRappel', cle, type: 'bilan', semaine: w.n, dans };
+    betaApi(p).catch(e => { if (e.reseau) betaGarder(p); else { const o2 = bilLire(); delete o2[cle]; bilEcrire(o2); } });
+  } catch (e) { console.error('bêta : rappel du bilan', e); }
+}
+window.betaNotifBilan = notifBilan;
+{ const o = renderHome; let t = 0; renderHome = function () { const r = o.apply(this, arguments); clearTimeout(t); t = setTimeout(notifBilan, 1500); return r; }; }
+{ const o = window.betaBilan; window.betaBilan = function (a, n) { const r = o.apply(this, arguments);
+  try { const cle = cleBilan(a, n), ob = bilLire(); notifAnnuler(cle); ob[cle] = Object.assign(ob[cle] || { t: Date.now() }, { annule: true }); bilEcrire(ob); } catch (e) {}
+  return r; }; }
 })();
 
 </script>

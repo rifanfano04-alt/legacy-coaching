@@ -1,5 +1,5 @@
 // LEGACY · bêta : l'app et ses fichiers gardés sur le téléphone (jamais les envois au serveur, qui sont des POST).
-const VERSION = 'legacy-beta-53a8224d2a';
+const VERSION = 'legacy-beta-f9dd9eb4a6';
 const COEUR = ["./", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "logo-blanc.png"];
 // (21/10) l'installation prend les fichiers FRAIS (pas la copie de 10 minutes que GitHub laisse au téléphone)
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(COEUR.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())); });
