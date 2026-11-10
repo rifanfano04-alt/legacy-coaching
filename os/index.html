@@ -624,6 +624,7 @@ html{overflow-x:hidden}
 .scard2 .chev{align-self:center;width:8px;height:8px;border-right:1px solid var(--dim);border-bottom:1px solid var(--dim);transform:rotate(-45deg)}
 .hlink{width:100%;padding:14px;font:500 10px var(--f-mono);letter-spacing:.2em;color:var(--dim);border:1px dashed var(--line);text-transform:uppercase}
 .hlink:hover{color:var(--data)}
+.hlink:disabled{opacity:.45;cursor:default}.hlink:disabled:hover{color:var(--dim)}   /* (10/11) le bilan pas encore ouvert */
 .h-back{justify-self:start;font:500 9.5px var(--f-mono);letter-spacing:.2em;color:var(--dim);padding:4px 0}
 /* ---------- écrans : bilan de la semaine, mes records, chrono ---------- */
 .scr{position:relative;z-index:10;width:min(460px,100%);margin:0 auto;padding:110px 16px 110px;display:grid;gap:14px}
@@ -2065,9 +2066,13 @@ html.acc-on,html.acc-on body{overflow:hidden}
 /* ---------- CONSTELLATION : une étoile par séance, un anneau par bloc (les orbites, choisies par le coach) — épurée, plein écran ---------- */
 .cst{position:fixed;inset:0;z-index:20;background:radial-gradient(130% 85% at 50% 56%,#0b0e16 0%,#050609 55%,#020203 100%)}
 .cst canvas{position:absolute;inset:0;width:100%;height:100%;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.cst-back{position:absolute;left:max(16px,calc((100vw - 460px) / 2));top:calc(104px + env(safe-area-inset-top,0px));z-index:1;padding:10px 4px;font:500 9.5px var(--f-mono);letter-spacing:.22em;color:rgba(233,237,241,.62)}
+.cst-back{position:absolute;left:max(16px,calc((100vw - 460px) / 2));top:calc(92px + env(safe-area-inset-top,0px));z-index:2;padding:22px 28px 18px 4px;margin-left:-4px;font:500 9.5px var(--f-mono);letter-spacing:.22em;color:rgba(233,237,241,.62)}
 .cst-back:hover{color:#fff}
 .cst-lu{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* (10/11, coach : « je reclique sur SEMAINE, ça bouge pas… il faut que je clique sur un bouton en bas » ; « juste la belle constellation »)
+   la zone LEX (toute la largeur en haut) finissait 6 px au-dessus de « ‹ SEMAINE » : sur iPhone, LEX s'ouvrait à sa place.
+   Sur la constellation : ni zone LEX, ni panneau LEX, ni barre d'onglets ; seulement « ‹ SEMAINE » en haut. */
+body:has(#bilan:not([hidden]) > #cst) #lexTap,body:has(#bilan:not([hidden]) > #cst) #lexSheet,body:has(#bilan:not([hidden]) > #cst) #dock{display:none!important}
 /* ---------- « IL Y A … » dans le briefing du lundi : son meilleur d'alors face à son meilleur d'aujourd'hui ---------- */
 .souv-l{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-top:4px}
 .souv-c{display:grid;gap:3px;padding:12px 12px 11px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
@@ -2099,6 +2104,24 @@ html.acc-on,html.acc-on body{overflow:hidden}
 .mur-c.moi .lid-carte{border-radius:14px;box-shadow:0 0 0 2px var(--red),0 0 22px rgba(255,59,59,.35)}
 .mur-trou{box-sizing:border-box;display:grid;place-items:center;width:var(--cw);height:calc(var(--ch) * .966);margin-top:calc(var(--ch) * .017);border:1px dashed rgba(233,237,241,.12);border-radius:8px}
 .mur-trou span{font:500 6.5px var(--f-mono);letter-spacing:.2em;color:rgba(233,237,241,.22)}
+.mur-h{justify-content:flex-end}.mur-h:empty{display:none}
+body:not(.mur-edition) #mur-sty,body:not(.mur-edition) #mur-add{display:none!important}
+body:not(.mur-edition) #murZoom .mur-zi,body:not(.mur-edition) #murZoom .mur-zc2,body:not(.mur-edition) #murZoom .mur-zb,body:not(.mur-edition) #murZoom .mur-zp{display:none!important}
+#mur-edit{min-width:38px}#mur-edit.on{color:var(--red);border-color:var(--red)}
+/* (10/11, coach : « le mur des records est pas encore en plein écran sur l'ordinateur, c'est en version que téléphone ») SUR ORDI :
+   une colonne par mouvement, côte à côte, le nom en haut ; des cartes aussi grandes que l'écran le permet (murBureau) */
+.mur-bur{display:grid;grid-template-columns:repeat(4,auto);justify-content:center;align-items:start;column-gap:var(--sec);width:max-content;min-width:100%;box-sizing:border-box;padding:22px 40px 48px}
+.mur-col{min-width:calc(var(--s) * var(--cw) + (var(--s) - 1) * var(--gap))}
+.mur-col h3{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:0 0 16px;padding-bottom:11px;border-bottom:1px solid rgba(233,237,241,.12);position:relative;font:700 15px var(--f-holo);font-variation-settings:"wdth" 118;letter-spacing:.24em;color:var(--data)}
+.mur-col h3::after{content:"";position:absolute;left:0;bottom:-1px;width:34px;height:1px;background:var(--red)}
+.mur-col h3 small{font:500 9px var(--f-mono);letter-spacing:.2em;color:var(--faint);white-space:nowrap}
+.mur-cg{display:grid;gap:var(--gap)}
+.mur-vide{margin:6px 0 0;font:500 9.5px var(--f-mono);letter-spacing:.2em;color:rgba(233,237,241,.28)}
+@media (min-width:1100px){
+  #mur .mur-h,#mur .pf-nav{width:min(1600px,calc(100% - 80px))}
+  #mur .mur-h span{font-size:10.5px}
+  #mur .mur-p{cursor:default}
+}
 /* une carte en grand */
 .mur-zoom{position:fixed;inset:0;z-index:75;display:grid;place-items:center;padding:20px;background:rgba(2,2,3,.93);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mur-zoom[hidden]{display:none}
@@ -2321,6 +2344,9 @@ html.acc-on,html.acc-on body{overflow:hidden}
 .mk-badge b{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font:900 8.5px/1 var(--f-holo);font-variation-settings:"wdth" 110;letter-spacing:.04em;color:#fff;-webkit-text-stroke:.6px #0b1a44;text-shadow:0 1px 2px rgba(0,0,0,.6)}
 .mk-phrase{position:absolute;right:12px;bottom:150px;max-width:118px;text-align:right;font:900 15px/1 var(--f-holo);font-variation-settings:"wdth" 108;font-style:italic;text-transform:uppercase;color:#fff;transform:skewX(-8deg);text-shadow:0 2px 0 rgba(0,0,0,.6),0 0 12px rgba(0,0,0,.7)}
 .mk-phrase::first-line{color:#fff}
+.mk-phrase{right:17px;padding-right:2px;overflow-wrap:break-word}
+.mk-phrase.t2{font-size:13px;line-height:1.02;max-width:132px}
+.mk-phrase.t3{font-size:11px;line-height:1.04;max-width:146px}
 .lid-carte.mk:is(.rec-3,.rec-4) .mk-phrase{color:#f6e3a1}
 .mur-zp{display:flex;gap:6px;margin-top:8px;width:100%}
 .mur-zp[hidden]{display:none}
@@ -2665,6 +2691,10 @@ button.cpt-k{border-bottom:1px dashed rgba(233,237,241,.14)}
 .h-cst svg circle.s{fill:currentColor;stroke:none;opacity:.75}
 .h-cst svg circle.s.c{fill:var(--red,#ff3b3b);opacity:.95}
 .h-cst svg circle.s.d{filter:drop-shadow(0 0 2.5px var(--red,#ff3b3b))}
+/* (10/11, coach : « quand elle est petite, on pourrait la faire tourner un petit peu ») chaque anneau tourne, le centre plus vite */
+.h-cst svg .orb{transform-box:view-box;transform-origin:30px 30px;animation:cstOrb 150s linear infinite}
+@keyframes cstOrb{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.h-cst svg .orb{animation:none}}
 .h-cst span{display:grid;justify-items:start;line-height:1}
 .h-cst b{font:900 24px/1 var(--f-holo);font-variation-settings:"wdth" 112}
 .h-cst small{margin-top:3px;font:600 7.5px var(--f-mono);letter-spacing:.22em;opacity:.6}
@@ -5189,15 +5219,15 @@ function renderHome(anim) {
       <span class="chev" aria-hidden="true"></span></button>`;
   }).join("");
   $("#home").innerHTML = `
-    <div class="h-top"><div><h1>${a.prenom}</h1><p>BLOC ${a.bloc} · ${dd(w.date)} → ${dd(plusJ(w.date, 6))}</p></div>${typeof cstMini === "function" ? cstMini(a) : ""}</div>
+    <div class="h-top"><div><h1>${a.prenom}</h1><p${window.betaBaDispo && betaBaDispo(a) ? ' class="ba-lien" id="h-ba" role="button" aria-label="Voir la bande-annonce du bloc"' : ""}>${window.betaBaDispo && betaBaDispo(a) ? '<span class="pl2" aria-hidden="true"><i></i></span>' : ""}BLOC ${a.bloc} · ${dd(w.date)} → ${dd(plusJ(w.date, 6))}</p></div>${typeof cstMini === "function" ? cstMini(a) : ""}</div>
     <div class="weekbar"><button type="button" id="w-prev" aria-label="Semaine précédente" ${HW.n <= Math.min(...ns) ? "disabled" : ""}>‹</button>
       <div class="wlbl"><b>Semaine ${HW.n} / ${a.duree}</b><small>${cur ? "SEMAINE EN COURS" : HW.n < a.semaine ? "PASSÉE" : "À VENIR"}</small></div>
       <button type="button" id="w-next" aria-label="Semaine suivante" ${HW.n >= Math.max(...ns) ? "disabled" : ""}>›</button></div>
-    <div class="bloc-act">${false ? `<button type="button" class="or" id="h-fin">◆ FIN DE BLOC · TON CERTIFICAT</button>` : ""}${HW.n === 1 ? `<button type="button" id="h-trailer">▶ BANDE-ANNONCE DU BLOC</button>` : ""}</div>
+    <div class="bloc-act">${false ? `<button type="button" class="or" id="h-fin">◆ FIN DE BLOC · TON CERTIFICAT</button>` : ""}</div>
     <div class="wsegs">${a.semaines.map(x => `<i class="${x.n < a.semaine ? "past" : x.n === a.semaine ? "now" : ""}${x.n === HW.n ? " see" : ""}"></i>`).join("")}</div>
     ${cur && avant && !bilanFait(a, avant.n) ? `<button class="hbanner" type="button" id="h-bilan"><i></i><div><b>Bilan de la semaine ${avant.n}</b><span>Tu ne l'as pas rempli : 30 secondes pour le sommeil, la nutrition, les pas, l'humeur et le poids.</span></div></button>` : ""}
     <div class="scards${anim ? " reveal" : ""}">${cards || '<p class="demo-note">Aucune séance programmée cette semaine.</p>'}</div>
-    <button class="hlink" type="button" id="h-bilan2">${bilanFait(a, HW.n) ? "✓ Bilan de la semaine envoyé · le modifier" : "Faire le bilan de la semaine"}</button>
+    <button class="hlink" type="button" id="h-bilan2"${bilanOuvert(a, HW.n) ? "" : " disabled"}>${bilanFait(a, HW.n) ? "✓ Bilan de la semaine envoyé · le modifier" : bilanOuvert(a, HW.n) ? "Faire le bilan de la semaine" : `Bilan de la semaine · dimanche ${dd(finSemaine(w))}`}</button>
     <button class="h-out" type="button" id="h-out">Se déconnecter</button>`;
   if ($("#h-brief")) $("#h-brief").onclick = () => ecran(() => { $("#home").hidden = true; $("#lexTap").hidden = true; finish(); });
   // (12/10, coach) la bande-annonce, c'est le début du bloc : le bouton seulement en semaine 1 (ailleurs, on la demande à LEX)
@@ -5212,7 +5242,7 @@ function renderHome(anim) {
     ecran(() => openRun(+b.dataset.k), b);
   };
   if ($("#h-bilan")) $("#h-bilan").onclick = ev => ecran(() => openBilan(avant.n), ev.currentTarget);
-  $("#h-bilan2").onclick = ev => ecran(() => openBilan(HW.n), ev.currentTarget);
+  $("#h-bilan2").onclick = ev => { if (bilanOuvert(DATA[idx], HW.n)) ecran(() => openBilan(HW.n), ev.currentTarget); };
   // se déconnecter : deux touches (pas de fenêtre de confirmation dans l'artefact) ; la maquette revient à l'écran du code
   $("#h-out").onclick = ev => { const b = ev.currentTarget; if (b.dataset.sur) return location.reload(); b.dataset.sur = 1; b.textContent = "Touche encore pour te déconnecter"; setTimeout(() => { delete b.dataset.sur; b.textContent = "Se déconnecter"; }, 2600); };
 }
@@ -5221,6 +5251,11 @@ function renderHome(anim) {
 const RECUP = [["sommeil", "Sommeil"], ["nutrition", "Nutrition"], ["steps", "Pas"], ["humeur", "Humeur"]];
 const BILANS = (() => { try { return JSON.parse(localStorage.getItem("beta-bilans") || "{}"); } catch (e) { return {}; } })();   // bilans envoyés dans la maquette, par athlète et semaine
 const bilanFait = (a, n) => !!BILANS[a.code + "-" + n];
+// (10/11, coach : « le bouton faire le bilan de la semaine, il doit pas être accessible avant la fin de la semaine, tout simplement »)
+// le bilan d'une semaine s'ouvre le DIMANCHE de cette semaine ; les semaines passées restent ouvertes (bilan en retard)
+function aujIso(a) { const w = a.semaines.find(x => x.n === a.semaine) || a.semaines[0]; return plusJ(w.date, OFFS[jourDemo] || 0); }   // la bêta : la vraie date
+const finSemaine = w => plusJ(w.date, 6);
+const bilanOuvert = (a, n) => { const w = a.semaines.find(x => x.n === n); return !!w && (n < a.semaine || aujIso(a) >= finSemaine(w)); };
 let BV = null;       // bilan en cours de saisie
 function cacherEcrans() { ["#brief", "#home", "#run", "#bilan", "#tool"].forEach(s => $(s).hidden = true); $("#rnav").hidden = true; $("#sfoot").hidden = true; lexFermer(); }
 function openBilan(n) {
@@ -5974,7 +6009,7 @@ function filmerSerie() {
 /* ---------- projet 4 : cycle du bloc ---------- */
 // objectifs et commentaire du coach par athlète (exemples pour la maquette, modifiables dans la vue coach)
 const OBJ = (() => { try { return JSON.parse(localStorage.getItem("beta-obj") || "{}"); } catch (e) { return {}; } })();
-const CAPSULES = {};   // message de l'athlète à lui-même, rejoué en fin de bloc
+const CAPSULES = (() => { try { return JSON.parse(localStorage.getItem("lgcy-capsules") || "{}"); } catch (e) { return {}; } })();   // (09/11) message de l'athlète à lui-même, UN PAR BLOC (« CODE-bloc »), rejoué au début du bloc suivant
 const cleObj = (a, b) => a.code + "-" + (b || a.cycle.bloc);
 const objDe = a => OBJ[cleObj(a)] || { objectifs: [], comment: "" };
 // bloc concerné quand le coach dicte : la dernière semaine, c'est le prochain bloc
@@ -5986,13 +6021,14 @@ let CY = null;
 function openTrailer(a) {
   a = a || DATA[idx]; const c = a.cycle, o = objDe(a), p0 = a.seances[0];
   const scenes = [
+    window.betaFinBloc && window.betaFinBloc(a),
     { dit: `Bloc ${c.bloc}. ${c.duree} semaines, ${c.spw} séances par semaine.`, html: () => `<div class="k">NOUVEAU BLOC · ${a.prenom.toUpperCase()}</div><div class="gros">BLOC ${c.bloc}</div><div class="sub">${c.duree} SEMAINES · ${c.spw} SÉANCES / SEMAINE · ${ddF(c.debut)} → ${ddF(c.fin)}</div>`, impact: true },
     o.objectifs.length && { dit: `Tes objectifs. ${o.objectifs.join(". ")}.`, html: () => `<div class="k or">TES OBJECTIFS${o.ex ? " · EXEMPLE" : ""}</div><h2>Ce qu'on va chercher</h2><div class="liste">${o.objectifs.map((t, i) => `<div style="--i:${i}"><i>0${i + 1}</i><b>${t}</b></div>`).join("")}</div>` },
     { dit: `Les mouvements clés : ${c.principaux.slice(0, 4).map(p => nomPropre(p.nom)).join(", ")}.`, html: () => `<div class="k">MOUVEMENTS CLÉS</div><h2>Le cœur du bloc</h2><div class="liste">${c.principaux.slice(0, 5).map((p, i) => `<div style="--i:${i}"><i>◆</i><span><b>${cap1(nomPropre(p.nom))}</b><small>${p.formats.join(" · ")}</small></span></div>`).join("")}</div>` },
     (c.nouveaux.length || c.retires.length) && { dit: `Ce qui change : ${c.nouveaux.length} nouveaux exercices${c.retires.length ? `, ${c.retires.length} qui sortent` : ""}.`, html: () => `<div class="k">CE QUI CHANGE</div><h2>Par rapport au bloc ${c.bloc - 1}</h2><div class="liste">${c.nouveaux.slice(0, 4).map((n, i) => `<div style="--i:${i}"><i class="plus">+</i><b>${cap1(nomPropre(n))}</b></div>`).join("")}${c.retires.slice(0, 3).map((n, i) => `<div style="--i:${i + 4}"><i class="moins">−</i><b style="color:var(--dim)">${cap1(nomPropre(n))}</b></div>`).join("")}</div>` },
-    { dit: `Avant de commencer, laisse un message à toi-même. Je te le rejouerai à la fin du bloc, le ${ddF(c.fin).replace(".", " ")}.`, html: () => `<div class="k or">CAPSULE TEMPORELLE</div><h2>Un message pour toi, dans ${c.duree} semaines</h2>
-      <p class="s-p">Ce que tu vises, ce que tu ressens aujourd'hui. LEX te le rejouera le ${ddF(c.fin)}, avant ton certificat.</p>
-      <textarea id="cap-t" placeholder="Ex. Je veux enfin passer le muscle-up lesté. Ne lâche rien.">${(CAPSULES[a.code] && CAPSULES[a.code].texte) || ""}</textarea>
+    { dit: `Avant de commencer, laisse un message à toi-même. Je te le rejouerai au début du prochain bloc.`, html: () => `<div class="k or">CAPSULE TEMPORELLE</div><h2>Un message pour toi, dans ${c.duree} semaines</h2>
+      <p class="s-p">Ce que tu vises, ce que tu ressens aujourd'hui. LEX te le rejouera au début du prochain bloc.</p>
+      <textarea id="cap-t" placeholder="Ex. Je veux enfin passer le muscle-up lesté. Ne lâche rien.">${(CAPSULES[a.code + "-" + a.cycle.bloc] && CAPSULES[a.code + "-" + a.cycle.bloc].texte) || ""}</textarea>
       <label class="hlink" style="cursor:pointer">OU IMPORTER UN MESSAGE VOCAL<input type="file" accept="audio/*" id="cap-f" hidden></label>`, capsule: true }
   ].filter(Boolean);
   CY = { a, scenes, i: 0 };
@@ -6004,8 +6040,8 @@ function sceneTrailer() {
     <div class="nav"><button type="button" id="cy-x">PASSER</button><button class="btn" type="button" id="cy-n">${fin ? "C'EST PARTI" : "SUIVANT ›"}</button></div></div>`;
   if (sc.impact) { sfx.impact(); } else sfx.unfold();
   say(sc.dit, sc.dit, id).catch(() => {});
-  if (sc.capsule) $("#cap-f").onchange = ev => { const f = ev.target.files && ev.target.files[0]; if (f) { CAPSULES[a.code] = Object.assign(CAPSULES[a.code] || {}, { audio: URL.createObjectURL(f), nom: f.name }); lexInfo("Message vocal gardé. Rendez-vous à la fin du bloc."); } };
-  const garderCapsule = () => { const t = $("#cap-t"); if (t && t.value.trim()) CAPSULES[a.code] = Object.assign(CAPSULES[a.code] || {}, { texte: t.value.trim(), date: DATE_DEMO[jourDemo] }); };
+  if (sc.capsule) $("#cap-f").onchange = ev => { const f = ev.target.files && ev.target.files[0]; if (f) { CAPSULES[a.code + "-" + a.cycle.bloc] = Object.assign(CAPSULES[a.code + "-" + a.cycle.bloc] || {}, { audio: URL.createObjectURL(f), nom: f.name }); lexInfo("Message vocal gardé. Rendez-vous à la fin du bloc."); } };
+  const garderCapsule = () => { const t = $("#cap-t"); if (t && t.value.trim()) CAPSULES[a.code + "-" + a.cycle.bloc] = Object.assign(CAPSULES[a.code + "-" + a.cycle.bloc] || {}, { texte: t.value.trim(), date: DATE_DEMO[jourDemo] }); };
   $("#cy-x").onclick = () => { garderCapsule(); $("#cycOv").hidden = true; ++run; };
   $("#cy-n").onclick = () => { garderCapsule(); if (fin) { $("#cycOv").hidden = true; ++run; lexDire("C'est parti. Bon bloc."); return; } CY.i++; sceneTrailer(); };
 }
@@ -6055,7 +6091,7 @@ function openCycleCoach() {
     <div class="chips" id="cc-a">${DATA.map(x => `<button class="chip" type="button" data-a="${x.code}" aria-pressed="${x.code === CYA}">${x.prenom.toUpperCase()}</button>`).join("")}</div>
     <section class="cc">
       <div class="tset"><label>Objectifs du bloc ${a.cycle.bloc} (un par ligne)</label><textarea id="cc-o">${o.objectifs.join("\n")}</textarea></div>
-      <div class="tset" style="display:none"><label>Ton mot pour la fin du bloc (sur le certificat)</label><textarea id="cc-c" placeholder="Ex. Bloc solide, tu as gagné en régularité. On attaque le suivant.">${o.comment}</textarea></div>
+      <div class="tset"><label>Ton mot de fin du bloc ${a.cycle.bloc} (au début de sa prochaine bande-annonce)</label><textarea id="cc-c" placeholder="Ex. Bloc solide, tu as gagné en régularité. On attaque le suivant.">${o.comment}</textarea></div>
       <div class="bloc-act"><button type="button" id="cc-t">▶ VOIR SA BANDE-ANNONCE</button><button type="button" class="or" id="cc-f" style="display:none">◆ VOIR SON CERTIFICAT</button></div>
       
     </section>`;
@@ -9013,7 +9049,7 @@ function murRecto(a, K, ph, sil, holo) {
         <i class="lid-logo mk-logo" aria-hidden="true"></i>${K.age ? `<div class="mk-age"><i>ÂGE</i><b>${K.age}</b></div>` : ""}
         <span class="mk-sign" aria-hidden="true">${a.prenom}</span>
         <i class="mk-deco" aria-hidden="true"><i class="b1"></i><i class="b2"></i></i>
-        ${K.phrase ? `<span class="mk-phrase">${escK(K.phrase)}</span>` : ""}
+        ${K.phrase ? `<span class="mk-phrase t${phrTaille(K.phrase)}">${escK(K.phrase)}</span>` : ""}
         <div class="mk-pied"><div class="mk-nom${nom.length > 8 ? " long" : ""}">${nom}</div>${K.cat ? `<span class="mk-sous"><i class="g ${K.ctx === "europe" || K.ctx === "monde" ? "or" : "fr"}"></i>${K.cat}<i class="d"></i></span>` : ""}
           ${r ? `<span class="mk-bas"><em aria-label="${r} étoile${r > 1 ? "s" : ""}">${"★".repeat(r)}</em></span>` : ""}</div>
         ${r >= 3 ? `<i class="mk-or" aria-hidden="true"></i>` : ""}
@@ -9955,6 +9991,7 @@ function openConstellation(code) {
   CST = { a, blocs, etoiles, N, sel: -1, tSel: -9, cv, ctx: cv.getContext("2d"), raf: 0, t0: performance.now(), fini: false, nAff: -1,
     mono: getComputedStyle(document.documentElement).getPropertyValue("--f-mono").trim() || "monospace" };
   $("#cst-back").onclick = () => ecran(() => openHome(true));
+  $("#lexTap").hidden = true; if (!$("#lexSheet").hidden) lexFermer();   // (10/11) rien de LEX à toucher par-dessus (CSS :has en plus)
   // toucher un anneau (pas besoin de viser une étoile) ; le centre ou le vide : on revient au total
   cv.addEventListener("pointerdown", ev => {
     const C = CST, r = cv.getBoundingClientRect(), d = Math.hypot(ev.clientX - r.left - C.cx, ev.clientY - r.top - C.cy), demi = C.ecart / 2 + 2;
@@ -9996,6 +10033,13 @@ function cstBoucle() {
   if (!document.hidden) cstDessiner((performance.now() - C.t0) / 1000);
   C.raf = requestAnimationFrame(cstBoucle);
 }
+// (10/11, coach) LA CONSTELLATION TOURNE : chaque anneau (un bloc) sur lui-même, ceux du centre plus vite (comme des orbites) ;
+// l'angle à l'instant t : 0 pendant l'apparition, puis démarrage en douceur ; un tour en 200 s dehors, ~1 min au centre ; rien si « réduire les animations »
+function cstRot(b, t) {
+  const C = CST; if (!C || reduce || !C.fini || !C.M) return 0;
+  const B = C.blocs[b], ref = C.M * .46, w = (2 * Math.PI / 200) * Math.pow(ref / Math.max(B.r || ref, ref * .3), 1.5), u = Math.max(0, t - C.tFin), k = 2.5;
+  return w * (u - k * (1 - Math.exp(-u / k)));
+}
 function cstDessiner(t) {
   const C = CST, x = C.ctx, { W, H, dpr, N, cx, cy } = C, reduit = reduce, A0 = -Math.PI / 2, TOUR = 2 * Math.PI;
   if (!W) return;
@@ -10022,28 +10066,28 @@ function cstDessiner(t) {
   }
   // les anneaux : tracés depuis le haut (début du bloc) au rythme des étoiles ; une petite marque par semaine
   C.blocs.forEach((B, b) => {
-    const st = C.etoiles.filter(e => e.b === b), vues = st.filter(e => e.i < p), c = col(b), dm = dim(b), der = vues[vues.length - 1];
+    const st = C.etoiles.filter(e => e.b === b), vues = st.filter(e => e.i < p), c = col(b), dm = dim(b), der = vues[vues.length - 1], ro = cstRot(b, t);
     let fin = A0;
     if (B.courant) { const jusqua = der ? der.th : A0; fin = C.fini && C.auj != null ? jusqua + (Math.max(jusqua, C.auj) - jusqua) * apres : jusqua; }
     else fin = st.length && vues.length === st.length ? A0 + TOUR : der ? der.th + .12 : A0;
     if (B.courant && apres) { x.beginPath(); x.arc(cx, cy, B.r, A0, A0 + TOUR); x.strokeStyle = cstHexa(c, .1 * apres * dm); x.lineWidth = 1; x.stroke(); }
-    if (fin > A0) { x.beginPath(); x.arc(cx, cy, B.r, A0, Math.min(A0 + TOUR, fin)); x.strokeStyle = cstHexa(c, (B.courant ? .5 : .16) * dm * (C.sel === b ? 1.6 : 1)); x.lineWidth = B.courant ? 1.3 : .9; x.stroke(); }
+    if (fin > A0) { x.beginPath(); x.arc(cx, cy, B.r, A0 + ro, Math.min(A0 + TOUR, fin) + ro); x.strokeStyle = cstHexa(c, (B.courant ? .5 : .16) * dm * (C.sel === b ? 1.6 : 1)); x.lineWidth = B.courant ? 1.3 : .9; x.stroke(); }
     for (let j = 0; j < B.sem; j++) { const an = A0 + j / B.sem * TOUR; if (an > fin && !(B.courant && apres)) continue;
-      x.beginPath(); x.moveTo(cx + (B.r - 2.5) * Math.cos(an), cy + (B.r - 2.5) * Math.sin(an)); x.lineTo(cx + (B.r + 2.5) * Math.cos(an), cy + (B.r + 2.5) * Math.sin(an));
+      x.beginPath(); x.moveTo(cx + (B.r - 2.5) * Math.cos(an + ro), cy + (B.r - 2.5) * Math.sin(an + ro)); x.lineTo(cx + (B.r + 2.5) * Math.cos(an + ro), cy + (B.r + 2.5) * Math.sin(an + ro));
       x.strokeStyle = cstHexa(c, (B.courant ? .35 : .16) * dm); x.lineWidth = .7; x.stroke(); }
   });
   // le bloc en cours : ses semaines autour (S1, S2…), les séances qui restent en pointillés, aujourd'hui
   const BC = C.blocs[nb - 1];
   if (apres > 0) {
     x.font = `500 7px ${C.mono}`; x.textBaseline = "middle"; x.textAlign = "center";
-    x.lineWidth = .9; C.avenir.forEach(an => { x.beginPath(); x.arc(cx + BC.r * Math.cos(an), cy + BC.r * Math.sin(an), 2.3, 0, TOUR); x.strokeStyle = cstHexa(CST_ROUGE, .5 * apres * dim(nb - 1)); x.stroke(); });
-    if (C.auj != null) { const an = C.auj, c1 = Math.cos(an), s1 = Math.sin(an);
+    x.lineWidth = .9; const roC = cstRot(nb - 1, t); C.avenir.forEach(an => { x.beginPath(); x.arc(cx + BC.r * Math.cos(an + roC), cy + BC.r * Math.sin(an + roC), 2.3, 0, TOUR); x.strokeStyle = cstHexa(CST_ROUGE, .5 * apres * dim(nb - 1)); x.stroke(); });
+    if (C.auj != null) { const an = C.auj + roC, c1 = Math.cos(an), s1 = Math.sin(an);
       x.beginPath(); x.moveTo(cx + (BC.r - 7) * c1, cy + (BC.r - 7) * s1); x.lineTo(cx + (BC.r + 7) * c1, cy + (BC.r + 7) * s1); x.strokeStyle = `rgba(255,255,255,${.7 * apres})`; x.lineWidth = 1.1; x.stroke();
       x.fillStyle = `rgba(255,255,255,${.6 * apres})`; x.fillText("AUJ.", cx + (BC.r - 17) * c1, cy + (BC.r - 17) * s1); }
   }
   // les étoiles
   C.etoiles.forEach(e => {
-    if (e.i >= p) return; const X = cx + e.r * Math.cos(e.th), Y = cy + e.r * Math.sin(e.th); e.X = X; e.Y = Y;
+    if (e.i >= p) return; const th = e.th + cstRot(e.b, t), X = cx + e.r * Math.cos(th), Y = cy + e.r * Math.sin(th); e.X = X; e.Y = Y;
     const neuve = Math.max(0, 1 - (p - e.i) / 2.5), der = e.i === N - 1, scin = reduit ? 1 : .8 + .2 * Math.sin(t * e.om + e.ph), al = Math.min(1, (p - e.i) * 1.4) * scin * dim(e.b);
     const taille = (der ? 24 : e.pr ? 17 : 12.5) * e.s * (1 + neuve * .9) * (der && !reduit ? 1 + .12 * Math.sin(t * 2.2) : 1);
     x.globalAlpha = al; x.drawImage(cstSprite(col(e.b)), X - taille / 2, Y - taille / 2, taille, taille);
@@ -10068,8 +10112,9 @@ function cstMini(a) {
   const total = blocs.reduce((s, b) => s + b.seances.length, 0), vus = blocs.slice(-4), n = vus.length, R = k => 9 + (n > 1 ? k * 17 / (n - 1) : 17);
   const pt = (b, d, r) => { const f = Math.max(0, Math.min(1, (cstJour(d) - cstJour(b.debut)) / (28 * 864e5))), t = f * Math.PI * 2 - Math.PI / 2; return [30 + r * Math.cos(t), 30 + r * Math.sin(t)]; };
   const svg = vus.map((b, k) => { const r = R(k), cour = b.courant;
-    return `<circle cx="30" cy="30" r="${r.toFixed(1)}" class="${cour ? "c" : ""}"/>` + b.seances.map((s, i) => { const [x, y] = pt(b, s.d, r), der = cour && i === b.seances.length - 1;
-      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${der ? 1.9 : 1.05}" class="s${cour ? " c" : ""}${der ? " d" : ""}"/>`; }).join(""); }).join("");
+    const per = Math.round(150 * Math.pow(r / 26, 1.5)), ph = ((Date.now() / 1000) % per).toFixed(1);   // (10/11) un tour en 150 s dehors, ~30 s dedans
+    return `<g class="orb" style="animation-duration:${per}s;animation-delay:-${ph}s"><circle cx="30" cy="30" r="${r.toFixed(1)}" class="${cour ? "c" : ""}"/>` + b.seances.map((s, i) => { const [x, y] = pt(b, s.d, r), der = cour && i === b.seances.length - 1;
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${der ? 1.9 : 1.05}" class="s${cour ? " c" : ""}${der ? " d" : ""}"/>`; }).join("") + `</g>`; }).join("");
   return `<button type="button" class="h-cst" id="h-cst" aria-label="Ta constellation : ${total} séances"><svg viewBox="0 0 60 60" aria-hidden="true">${svg}</svg><span><b>${total}</b><small>SÉANCES</small></span></button>`;
 }
 /* ---------- « IL Y A … » dans le BRIEFING DU LUNDI (validé par le coach le 07/10) ----------
@@ -10206,10 +10251,12 @@ const invitesEcrire = l => { try { localStorage.setItem(MUR_INV_CLE, JSON.string
 const MUR_PH_CLE = "lgcy-mur-photos";
 const murPhotos = () => { try { return JSON.parse(localStorage.getItem(MUR_PH_CLE)) || {}; } catch (e) { return {}; } };
 const murPhotoMettre = (cle, photo) => { const t = murPhotos(); if (photo) t[cle] = { photo, cy: 20 }; else delete t[cle]; try { localStorage.setItem(MUR_PH_CLE, JSON.stringify(t)); return true; } catch (e) { lexInfo("Photo trop lourde pour ton téléphone : essaie une image plus petite."); return false; } };
+// (10/11) la taille de la phrase : 1 = courte, 2 = moyenne ou un mot long, 3 = longue (jusqu'à 80 signes) ; elle tient toujours sur la carte
+function phrTaille(t) { const n = String(t || "").length, mot = Math.max(0, ...String(t || "").split(/\s+/).map(w => w.length)); return n > 46 || mot > 13 ? 3 : n > 26 || mot > 10 ? 2 : 1; }
 // (11/10, coach) la PHRASE de la carte, comme sur ses cartes de powerlifting (« I NEED THE SOLDIER! ») : facultative, mise par le coach
 const MUR_PHR_CLE = "lgcy-mur-phrases";
 const murPhrases = () => { try { return JSON.parse(localStorage.getItem(MUR_PHR_CLE)) || {}; } catch (e) { return {}; } };
-const murPhraseMettre = (cle, t) => { const o = murPhrases(); if (t) o[cle] = t.slice(0, 40); else delete o[cle]; try { localStorage.setItem(MUR_PHR_CLE, JSON.stringify(o)); } catch (e) {} };
+const murPhraseMettre = (cle, t) => { const o = murPhrases(); if (t) o[cle] = t.slice(0, 80); else delete o[cle]; try { localStorage.setItem(MUR_PHR_CLE, JSON.stringify(o)); } catch (e) {} };
 // (12/10) le détourage : gardé avec la photo du PR ({ det, ratio, detOn }) ; detOn = la carte l'utilise (sinon photo entière)
 function murDetMettre(cle, champs, base) { const t = murPhotos(); t[cle] = Object.assign({}, t[cle] || base || {}, champs); try { localStorage.setItem(MUR_PH_CLE, JSON.stringify(t)); return true; } catch (e) { lexInfo("Image trop lourde pour ton téléphone."); return false; } }
 const murInvites = () => invitesLus().map(g => ({ code: "INV-" + g.id, prenom: g.prenom, invite: true, femme: !!g.femme, pc: g.pc, perfs: g.perfs || {}, photo: g.photo || null, cy: g.cy ?? 20, id: g.id }));
@@ -10226,13 +10273,17 @@ function murTeam() {
   }));
   return { ath, cell };
 }
+// (03/11 dans la bêta, 10/11 dans la maquette, coach : « quand je clique sur les cartes, je peux les modifier, alors qu'on avait dit qu'il
+// fallait que je clique sur quelque chose pour pouvoir modifier ») LE MUR ÉPURÉ : une carte touchée = la carte seule, pour la montrer ;
+// le coach passe en MODIFICATION avec ✎ (où le record a été fait, photo, détourage, phrase, styles, ajout), ✎ à nouveau pour revenir
+let MUR_EDIT = false;
 function openMur(o = {}) {
   cacherEcrans(); closeRecs(); $("#bilan").hidden = false; window.scrollTo(0, 0);
   const T = murTeam(), moi = DATA[idx].code, coachVue = moi === ID_COACH.code;
   // la taille des cartes : les quatre rangées tiennent dans la hauteur si possible (sinon le poster défile aussi en hauteur)
   const dispo = innerHeight - 150, k = Math.max(.26, Math.min(.36, (dispo - 3 * 6) / 4 / 466)), cw = Math.round(300 * k), ch = Math.round(466 * k);
   $("#bilan").innerHTML = `<div id="mur" class="mur">
-    <div class="mur-h"><button type="button" class="mur-back" id="mur-back">‹ CARTES</button><span>MUR DES RECORDS</span>${coachVue ? `<span class="mur-hb"><button type="button" class="mur-add" id="mur-sty">◇ STYLES</button><button type="button" class="mur-add" id="mur-add">＋ AJOUTER</button></span>` : ""}</div>
+    <div class="mur-h">${coachVue ? `<span class="mur-hb"><button type="button" class="mur-add" id="mur-sty">◇ STYLES</button><button type="button" class="mur-add" id="mur-add">＋ AJOUTER</button><button type="button" class="mur-add${MUR_EDIT ? " on" : ""}" id="mur-edit" aria-label="Modifier le mur" aria-pressed="${MUR_EDIT}">✎</button></span>` : ""}</div>
     <div class="mur-p" id="mur-p"><div class="mur-g" style="--cw:${cw}px;--ch:${ch}px;grid-template-columns:26px repeat(${T.ath.length},${cw}px)">
       ${MUR_ORDRE.map(m => `<div class="mur-lab"><span>${MVT_NOM[m]}</span></div>${T.ath.map(a => { const R = T.cell[a.code + "|" + m];
         return R ? `<button type="button" class="mur-c${a.code === moi ? " moi" : ""}${a.invite ? " inv" : ""}" data-code="${a.code}" data-m="${m}" aria-label="${a.prenom}${a.invite ? " (invité)" : ""}, ${MVT_NOM[m].toLowerCase()} ${kgK(m, R.kg)} kg, finition ${finNom(R.fin).toLowerCase()}"><span class="mur-cs" style="--k:${k.toFixed(3)}">${carteHTML(a, R.K, { apercu: true })}</span></button>`
@@ -10240,15 +10291,52 @@ function openMur(o = {}) {
     </div></div>
   </div>`;
   $("#mur").querySelectorAll(".mk-nom").forEach(ajusterNom);
-  $("#mur-back").onclick = () => ecran(() => openID());
+  document.body.classList.toggle("mur-edition", coachVue && MUR_EDIT);
+  if ($("#mur-edit")) $("#mur-edit").onclick = () => { MUR_EDIT = !MUR_EDIT; sfx.seg(3); openMur({ calme: true }); };
   if ($("#mur-add")) $("#mur-add").onclick = () => murAjouter();
   if ($("#mur-sty")) $("#mur-sty").onclick = () => planchStyles();
   $("#mur-p").addEventListener("click", ev => { const b = ev.target.closest(".mur-c"); if (b) murZoom(T, b.dataset.code, b.dataset.m); });
   // on arrive sur ses propres cartes (le reste de la team de part et d'autre)
   const p = $("#mur-p"), col = T.ath.findIndex(a => a.code === moi);
   if (col > 0) p.scrollLeft = Math.max(0, 26 + col * (cw + 6) + cw / 2 - p.clientWidth / 2);
-  if (!o.calme) lexInfo("Le mur de la team : les records réellement faits par tout le monde. Fais-le glisser, touche une carte.");
+  const bureau = o.sansBureau ? false : murBureau();   // (10/11) sur ordi : le mur en grand (la bêta l'appelle elle-même, après son rangement)
+  if (!o.calme) lexInfo(bureau || innerWidth >= MUR_BUREAU ? "Le mur de la team : les records réellement faits par tout le monde. Touche une carte." : "Le mur de la team : les records réellement faits par tout le monde. Fais-le glisser, touche une carte.");
 }
+// (10/11, coach) LE MUR SUR ORDI (≥ 1 100 px de large) : une COLONNE PAR MOUVEMENT côte à côte (muscle-up, traction, dips, squat),
+// dans chacune ses cartes dans l'ordre du mur, sans les places vides ; la plus grande taille de carte qui fait tenir tout le mur
+// dans l'écran (1 à 4 cartes de front par mouvement), sinon le mur défile en hauteur. Le téléphone ne change pas.
+const MUR_BUREAU = 1100;
+let murLarge = null, murRz = 0;
+function murBureau() {
+  const p = $("#mur-p"), g = p && p.querySelector(".mur-g"); murLarge = innerWidth >= MUR_BUREAU;
+  if (!g || !murLarge) return false;
+  const cartes = MUR_ORDRE.map(m => [...g.querySelectorAll(`.mur-c[data-m="${m}"]`)]);
+  const GAP = 14, SEC = 40, W = p.clientWidth - 80, H = p.clientHeight - 22 - 48 - 44;
+  let best = null;
+  for (let s = 1; s <= 4; s++) {
+    const r = Math.max(1, ...cartes.map(l => Math.ceil(l.length / s)));
+    const k = Math.min((W - 3 * SEC - 4 * (s - 1) * GAP) / (4 * s) / 300, (H - (r - 1) * GAP) / r / 466, .72);
+    if (!best || k > best.k + .01) best = { s, k };
+  }
+  const s = best.s, cw = Math.floor(300 * Math.max(.34, best.k)), k = cw / 300;
+  const bur = document.createElement("div"); bur.className = "mur-bur";
+  [["--cw", cw + "px"], ["--gap", GAP + "px"], ["--sec", SEC + "px"], ["--s", String(s)]].forEach(([n, v]) => bur.style.setProperty(n, v));
+  MUR_ORDRE.forEach((m, i) => {
+    const l = cartes[i], sec = document.createElement("section"); sec.className = "mur-col";
+    sec.innerHTML = `<h3>${MVT_NOM[m]}</h3><div class="mur-cg" style="grid-template-columns:repeat(${s},var(--cw))"></div>`;
+    const cg = sec.querySelector(".mur-cg");
+    l.forEach(b => { const c = b.querySelector(".mur-cs"); if (c) c.style.setProperty("--k", k.toFixed(3)); b.style.gridRow = b.style.gridColumn = ""; cg.appendChild(b); });
+    if (!l.length) cg.outerHTML = `<p class="mur-vide">Pas encore de record.</p>`;
+    bur.appendChild(sec);
+  });
+  g.replaceWith(bur); p.scrollLeft = 0; p.scrollTop = 0;
+  return true;
+}
+// la fenêtre change de taille : sur ordi le mur se refait à la nouvelle taille ; sur téléphone, seulement s'il passe en grand (ou l'inverse)
+addEventListener("resize", () => { clearTimeout(murRz); murRz = setTimeout(() => {
+  if (!document.getElementById("mur") || $("#bilan").hidden) return;
+  if (innerWidth >= MUR_BUREAU || murLarge !== (innerWidth >= MUR_BUREAU)) openMur({ calme: true });
+}, 200); });
 // (11/10) le coach ajoute un record : un invité (nouveau ou déjà sur le mur), sa photo, le mouvement, la charge, la date
 function murAjouter(g0) {
   let ov = $("#murAjout"); if (!ov) { ov = document.createElement("div"); ov.id = "murAjout"; document.body.appendChild(ov); }
@@ -10292,7 +10380,7 @@ function murZoom(T, code, m) {
     <p class="mur-zi"><b>${MVT_NOM[m]}</b><span>${R.a.prenom}${R.a.invite ? " (invité)" : ""} · ${kgK(m, R.kg)} kg (1RM)${R.ctx !== "salle" ? " · " + ctxDe(R.ctx)[1].toLowerCase() : ""}</span></p>
     ${DATA[idx].code === ID_COACH.code ? `<div class="mur-zc2" role="group" aria-label="Où ce record a été fait">${MUR_CTX.map(c => `<button type="button" class="chip" data-ctx="${c[0]}" aria-pressed="${c[0] === R.ctx}">${c[1]}</button>`).join("")}</div>` : ""}
     ${DATA[idx].code === ID_COACH.code ? `<div class="mur-zb"><button type="button" class="chip" data-z="photo">${R.K.photo ? "CHANGER LA PHOTO DU PR" : "AJOUTER LA PHOTO DU PR"}</button>${R.K.photo ? `<button type="button" class="chip" data-z="sans">SANS PHOTO</button>` : ""}${R.K.photo ? (R.K.detDispo ? `<button type="button" class="chip" data-z="det">${R.K.det ? "PHOTO ENTIÈRE" : "DÉTOURÉ"}</button>` : `<button type="button" class="chip" data-z="detour">DÉTOURER L'ATHLÈTE</button>`) : ""}<button type="button" class="chip" data-z="phrase">${R.K.phrase ? "CHANGER LA PHRASE" : "AJOUTER UNE PHRASE"}</button>${R.a.invite ? `<button type="button" class="chip" data-z="suppr">RETIRER CE RECORD</button>` : ""}</div>
-    <div class="mur-zp" hidden><input id="mz-ph" maxlength="40" value="${escK(R.K.phrase || "")}" placeholder="Ex. : ÇA C'EST DU LOURD !" aria-label="Phrase de la carte"><button type="button" class="chip" data-z="phok">OK</button></div>` : ""}</div>`;
+    <div class="mur-zp" hidden><input id="mz-ph" maxlength="80" value="${escK(R.K.phrase || "")}" placeholder="Ex. : ÇA C'EST DU LOURD !" aria-label="Phrase de la carte"><button type="button" class="chip" data-z="phok">OK</button></div>` : ""}</div>`;
   ov.querySelectorAll(".mk-nom").forEach(ajusterNom); sfx.seg(4); murVivante(ov);
   const zi = ov.querySelector("#mz-ph"); if (zi) zi.onkeydown = e => { if (e.key === "Enter") ov.querySelector('[data-z="phok"]').click(); };
   ov.onclick = ev => { if (ev.target.closest(".lid-carte")) return; const cx = ev.target.closest("[data-ctx]");
@@ -13745,7 +13833,7 @@ function lexCommande(txt) {
     if (ao) {
       const b = blocVise(ao), items = mo[2].split(/\s*(?:,|;|\bet\b)\s*/i).map(x => x.trim()).filter(Boolean).map(x => x.charAt(0).toUpperCase() + x.slice(1));
       const o = OBJ[cleObj(ao, b)] = OBJ[cleObj(ao, b)] || { objectifs: [], comment: "" }; o.objectifs = items; o.ex = false; sfx.ok();
-      return lexDire(`Noté pour ${ao.prenom}, bloc ${b}. ${items.join(". ")}. Je les mets dans sa bande-annonce${b > ao.cycle.bloc ? " de lundi" : ""} et sur son certificat.`);
+      return lexDire(`Noté pour ${ao.prenom}, bloc ${b}. ${items.join(". ")}. Je les mets dans sa bande-annonce${b > ao.cycle.bloc ? " de lundi" : ""}.`);
     }
     if (/cycle|objectif|bande|certificat/.test(t)) return ecran(openCycleCoach);
     if (/message/.test(t)) {
@@ -13949,6 +14037,8 @@ try {
   const lundi = new Date(auj); lundi.setDate(auj.getDate() - ((auj.getDay() + 6) % 7));
   ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].forEach((j, i) => { const d = new Date(lundi); d.setDate(lundi.getDate() + i); DATE_DEMO[j] = p2(d.getDate()) + '.' + p2(d.getMonth() + 1); });
 } catch (e) { console.error('bêta : dates', e); }
+// (10/11) le bilan de la semaine s'ouvre le dimanche : avec la VRAIE date (même si le Sheet n'a pas encore de bloc suivant)
+try { aujIso = () => auj.getFullYear() + '-' + p2(auj.getMonth() + 1) + '-' + p2(auj.getDate()); } catch (e) { console.error('bêta : aujIso', e); }
 
 /* ---- PASSER pendant le démarrage : ta semaine (comme sans PASSER) ; (09/11, coach) plus de briefing du lundi, même le lundi ---- */
 { const f0 = finish; finish = function () {
@@ -14072,10 +14162,13 @@ const PAS_GARDER = { consigne: 1, rpeCible: 1, rpeMax: 1, code: 1, chargeReco: 1
 function garderSeance(envoyee) {
   if (!S || !S.s || !S.a || !S.a.beta) return;
   try {
-    const avant = lireSea(S.a, S.s) || {};
+    const avant = lireSea(S.a, S.s) || {}, cle = cleSea(S.a, S.s);
     const ex = S.ex.map(e => { const o = {}; Object.keys(e || {}).forEach(k => { const v = e[k]; if (!PAS_GARDER[k] && typeof v !== 'function' && !(v instanceof Node)) o[k] = v; }); return o; });
     localStorage.setItem(cleSea(S.a, S.s), JSON.stringify({ ex, i: S.i || 0, diff: S.diff || null, checkin: S.checkin || null, mobFait: S.mobFait || null,
       envoyee: !!(envoyee || avant.envoyee), le: Date.now(), jour: S.s.jour }));
+    // (09/11, coach) « 5 heures après le début de la séance, si elle n'est pas envoyée : une notif »
+    if (S.checkin && !avant.checkin && !envoyee && !avant.envoyee) notifPlanifier(cle, S.s.jour);
+    if (envoyee && !avant.envoyee && avant.checkin) notifAnnuler(cle);
   } catch (e) { console.error('bêta : séance gardée', e); }
 }
 window.betaGarderSeance = garderSeance;
@@ -14148,8 +14241,8 @@ function seanceEnCours() {
    rangée les perfs de TOUT LE MONDE en vrac (plus une colonne par athlète), classées par RARETÉ : la plus rare à gauche, puis de plus
    en plus banales vers la droite (sinon le haut du mur ne serait que des squats). Rareté = la finition (LEGACY et ses étoiles de
    record > obsidienne > titane > platine > or > argent > bronze), puis les points. ---- */
-{ const o = openMur; openMur = function () {
-  const r = o.apply(this, arguments);
+{ const o = openMur; openMur = function (opts) {
+  const r = o.call(this, Object.assign({}, opts || {}, { sansBureau: true }));   // (10/11) la mise en page ordi APRÈS le rangement (plus bas)
   try {
     const g = document.querySelector('#mur .mur-g'), p = document.getElementById('mur-p'); if (!g) return r;
     // (21/10, coach : « Simon 200 kg à 73 kg reste devant mon record du monde à 182 à 80 kg ») : la PERF rapportée au poids de corps seule ;
@@ -14171,6 +14264,7 @@ function seanceEnCours() {
     g.querySelectorAll('.mur-cs').forEach(c => c.style.setProperty('--k', k.toFixed(3)));
     if (p) p.scrollLeft = 0;
   } catch (e) { console.error('bêta : mur', e); }
+  try { murBureau(); } catch (e) { console.error('bêta : mur sur ordi', e); }   // (10/11) sur ordi : une colonne par mouvement, en grand
   return r;
 }; }
 
@@ -14606,7 +14700,7 @@ window.betaBilan = function (a, n, BV) {
 };
 
 /* ---- ce que tu fais dans l'app (alertes, douleurs, objectifs, bilans) : gardé sur ton téléphone ---- */
-{ const T = { 'beta-fil': () => FIL, 'beta-douleurs': () => DOULEURS, 'beta-obj': () => OBJ, 'beta-bilans': () => BILANS }, der = {};
+{ const T = { 'beta-fil': () => FIL, 'beta-douleurs': () => DOULEURS, 'beta-obj': () => OBJ, 'beta-bilans': () => BILANS, 'lgcy-capsules': () => CAPSULES }, der = {};
   const garder = () => Object.entries(T).forEach(([k, f]) => { try { const j = JSON.stringify(f()); if (j !== der[k]) { localStorage.setItem(k, j); der[k] = j; } } catch (e) {} });
   setInterval(garder, 5000); addEventListener('visibilitychange', () => { if (document.hidden) garder(); }); addEventListener('pagehide', garder); window.betaGarderTout = garder; }
 
@@ -14837,20 +14931,25 @@ try { betaPousserEnvois(); } catch (e) {}
    · ATHLÈTE : à l'ouverture, son app applique ce qui est arrivé dans sa boîte ; elle publie son résumé pour le mur de la team
      (« lgcy-public ») et lit celui des autres (equipe). */
 const PARTS = { 'lgcy-os-lab-v3': 'dict', 'lgcy-id-cartes': 'dict', 'lgcy-bilans': 'dict', 'lgcy-journal': 'dict', 'lgcy-photos': 'dict', 'lgcy-statiques': 'dict',
-  'lgcy-prevention': 'prv', 'lgcy-mur-photos': 'pref', 'lgcy-mur-ctx': 'pref', 'lgcy-mur-phrases': 'pref', 'lgcy-a-trancher': 'liste', 'lgcy-compets': 'cpt' };
+  'lgcy-prevention': 'prv', 'lgcy-mur-photos': 'pref', 'lgcy-mur-ctx': 'pref', 'lgcy-mur-phrases': 'pref', 'lgcy-a-trancher': 'liste', 'lgcy-compets': 'cpt',
+  // (09/11) les objectifs du bloc et le mot de fin du coach (clés « CODE-bloc ») : tenus par le coach, envoyés à chacun
+  'beta-obj': 'coach' };
 const BOITE = 'lgcy-boite-coach', BOITE_FAITE = 'lgcy-boite-faite', MSG_CLE = 'lgcy-messages', PUB_CLE = 'lgcy-public';
 const jLire = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const jEtat = (E, k, d) => { try { const v = JSON.parse((E[k] || {}).v || 'null'); return v == null ? d : v; } catch (e) { return d; } };
 const copie = x => x === undefined ? undefined : JSON.parse(JSON.stringify(x));
 const estListe = k => PARTS[k] === 'liste' || PARTS[k] === 'cpt';
-const valeurDe = k => k === 'lgcy-os-lab-v3' ? copie(LAB) : jLire(k, estListe(k) ? [] : {});
-const ecrireValeur = (k, v) => { if (k === 'lgcy-os-lab-v3') { LAB = v; labSave(); } else localStorage.setItem(k, JSON.stringify(v)); };
+const valeurDe = k => k === 'lgcy-os-lab-v3' ? copie(LAB) : k === 'beta-obj' ? copie(OBJ) : jLire(k, estListe(k) ? [] : {});
+const ecrireValeur = (k, v) => { if (k === 'lgcy-os-lab-v3') { LAB = v; labSave(); return; }
+  if (k === 'beta-obj') { Object.keys(OBJ).forEach(x => { delete OBJ[x]; }); Object.assign(OBJ, v || {}); }   // l'objet en mémoire aussi (sinon il réécrirait l'ancien)
+  localStorage.setItem(k, JSON.stringify(v)); };
 const nouvelId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 // la part d'un athlète dans une donnée : un morceau de l'objet, aux mêmes chemins ; pour une liste, ses éléments par identifiant
 function partDe(k, v, c) {
   const f = PARTS[k], o = {};
   if (f === 'dict') { if (v && v[c] !== undefined) o[c] = v[c]; }
   else if (f === 'pref') Object.keys(v || {}).forEach(x => { if (x.indexOf(c + '|') === 0) o[x] = v[x]; });
+  else if (f === 'coach') Object.keys(v || {}).forEach(x => { if (x.indexOf(c + '-') === 0) o[x] = v[x]; });
   else if (f === 'prv') { if (v && v.actifs && v.actifs[c] !== undefined) o.actifs = { [c]: v.actifs[c] };
     Object.keys((v && v.cas) || {}).forEach(x => { if (x.indexOf(c + '|') === 0) (o.cas = o.cas || {})[x] = v.cas[x]; }); }
   else if (f === 'liste') (Array.isArray(v) ? v : []).forEach(x => { if (x && x.id && x.code === c) o[x.id] = x; });
@@ -14947,6 +15046,10 @@ function fusionnerEquipe(liste) {
       const c = x.code, E = A.etat || {}, faits = new Set(jEtat(E, BOITE_FAITE, [])), attente = jEtat(E, BOITE, []).filter(o => o && o.id && !faits.has(o.id) && o.f !== 'msg');
       Object.keys(PARTS).forEach(k => {
         if (!(k in vals)) vals[k] = valeurDe(k);
+        // tenu par le coach (objectifs, mot de fin) : sa valeur ne bouge pas ; la base = ce que l'athlète a déjà (+ sa boîte pas encore
+        // ouverte), pour ne lui envoyer que ce qui lui manque
+        if (PARTS[k] === 'coach') { let T = jEtat(E, k, null); T = T ? partDe(k, T, c) : {}; attente.filter(o => o.k === k).forEach(o => { T = appliquerOp(T, o); });
+          (PART_BASE[k] = PART_BASE[k] || {})[c] = JSON.stringify(partDe(k, T, c)); return; }
         if (PARTS[k] !== 'cpt') { const av = jEtat(E, k, null); vals[k] = remplacerPart(k, vals[k], c, av ? partDe(k, av, c) : {}); }   // les compétitions : c'est le coach qui les tient
         attente.filter(o => o.k === k).forEach(o => { vals[k] = appliquerOp(vals[k], o); });
         (PART_BASE[k] = PART_BASE[k] || {})[c] = JSON.stringify(partDe(k, vals[k], c));
@@ -14963,7 +15066,8 @@ function progDe(fiche) {
   return { block: 'BLOCK ' + b, semaine: isNaN(d0) ? 1 : Math.max(1, Math.min(dur, Math.floor((auj - d0) / 6048e5) + 1)), seances: [] };
 }
 function ajouterAth(a) { const i = DATA.findIndex(b => b.code === a.code); if (i === idx) return; if (i >= 0) DATA[i] = a; else DATA.push(a); }
-async function lireEtatsEquipe() { const e = await betaApi({ action: 'coachEtats' }); fusionnerEquipe(e.athletes || []); PART_PRET = true; PART_LU = Date.now(); }
+async function lireEtatsEquipe() { const e = await betaApi({ action: 'coachEtats' }); fusionnerEquipe(e.athletes || []); PART_PRET = true; PART_LU = Date.now();
+  Object.keys(PARTS).filter(k => PARTS[k] === 'coach').forEach(k => { try { envoyerPart(k); } catch (er) { console.error('bêta : envoi ' + k, er); } }); }
 async function chargerEquipe() {
   if (!estCoachBeta()) return;
   const moi = DATA[idx], j = await betaApi({ action: 'coachAthletes' });
@@ -15142,19 +15246,7 @@ window.betaAttente = function (on) {
   try { lexInfo('Envoi en cours. Reste sur cet écran.'); } catch (e) {}
 };
 
-/* ---- LE MUR ÉPURÉ : une carte touchée = la carte seule (pour la montrer) ; le coach passe en MODIFICATION avec ✎ ---- */
-let MUR_EDIT = false;
-const stMur = document.createElement('style');
-stMur.textContent = `body:not(.mur-edition) #mur-sty,body:not(.mur-edition) #mur-add{display:none!important}
-body:not(.mur-edition) #murZoom .mur-zi,body:not(.mur-edition) #murZoom .mur-zc2,body:not(.mur-edition) #murZoom .mur-zb,body:not(.mur-edition) #murZoom .mur-zp{display:none!important}
-#mur-edit{min-width:38px}#mur-edit.on{color:var(--red);border-color:var(--red)}`;
-document.head.appendChild(stMur);
-{ const o = openMur; openMur = function () { const r = o.apply(this, arguments);
-  try { document.body.classList.toggle('mur-edition', MUR_EDIT);
-    if (DATA[idx].code === ID_COACH.code) { const h = document.querySelector('#mur .mur-hb') || document.querySelector('#mur .mur-h');
-      if (h && !h.querySelector('#mur-edit')) { h.insertAdjacentHTML('beforeend', `<button type="button" class="mur-add${MUR_EDIT ? ' on' : ''}" id="mur-edit" aria-label="Modifier le mur" aria-pressed="${MUR_EDIT}">✎</button>`);
-        h.querySelector('#mur-edit').onclick = () => { MUR_EDIT = !MUR_EDIT; try { sfx.seg(3); } catch (e) {} openMur({ calme: true }); }; } } } catch (e) { console.error('bêta : mur', e); }
-  return r; }; }
+/* ---- LE MUR ÉPURÉ (✎ pour modifier) : depuis le 10/11 dans la maquette (src.v181), plus rien ici ---- */
 
 /* ---- « ÉCHEC OU SÉRIE NON FAITE » : par manque de temps, une série enlevée (son RDL) se note aussi. Mêmes règles que l'échec (seules
    les séries faites comptent, dans les records et dans le Sheet), sans parler d'échec. Série unique : l'échec seul, comme avant ---- */
@@ -15221,7 +15313,7 @@ body.beta .topbar{height:calc(112px + env(safe-area-inset-top,0px))}
 body.beta #home,body.beta #run,body.beta .scr{padding-top:calc(118px + env(safe-area-inset-top,0px))}
 body.beta #recs{padding-top:calc(108px + env(safe-area-inset-top,0px))}
 body.beta .mur{padding-top:calc(122px + env(safe-area-inset-top,0px))}
-body.beta .cst-back{top:calc(112px + env(safe-area-inset-top,0px))}
+body.beta .cst-back{top:calc(100px + env(safe-area-inset-top,0px))}
 body.beta #gate .codes{display:none}`;
   document.head.appendChild(st); }
 
@@ -15252,6 +15344,117 @@ body.beta #gate .codes{display:none}`;
     return r;
   };
 }
+
+/* ════════════ RETOURS DU COACH 09/11 (2) ════════════ */
+/* ---- LA BANDE-ANNONCE DU BLOC : plus de bouton (« il rend pas très joli »). Un petit ▶ rouge devant « BLOC n · dates », sous le prénom,
+   jusqu'au jour de la PREMIÈRE séance du bloc compris (« faudrait qu'elle disparaisse après le premier jour ») ; et elle se lance toute
+   seule une fois, à la première ouverture du nouveau bloc. LEX la rejoue toujours sur demande. ---- */
+{ const st = document.createElement('style');
+  st.textContent = `.h-top p.ba-lien{display:inline-flex;align-items:center;gap:8px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ba-lien .pl2{flex:none;width:18px;height:18px;border-radius:50%;border:1px solid #ff3b3b;display:grid;place-items:center;box-shadow:0 0 10px rgba(255,59,59,.35)}
+.ba-lien .pl2 i{width:0;height:0;border-left:6px solid #ff3b3b;border-top:4px solid transparent;border-bottom:4px solid transparent;margin-left:2px}
+.cy .capsule small{font:500 9px var(--f-mono);letter-spacing:.2em;color:var(--gold)}
+#cycOv label.hlink:has(#cap-f){display:none}
+.h-notif{position:relative}
+.h-notif .hn-x{position:absolute;right:10px;top:8px;padding:6px;font:500 8.5px var(--f-mono);letter-spacing:.18em;color:var(--dim)}`;
+  document.head.appendChild(st); }
+const isoLocal = d => d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+window.betaBaDispo = function (a) {
+  try {
+    const w1 = (a.semaines || []).find(w => w.n === 1); if (!w1 || !w1.date) return false;
+    const js = (w1.seances || []).map(s => OFFS[s.jour] || 0);
+    return isoLocal(auj) <= plusJ(w1.date, js.length ? Math.min(...js) : 0);
+  } catch (e) { return false; }
+};
+const BA_VUES = 'lgcy-ba-vues';
+{ const o = openTrailer; openTrailer = function (a) { const r = o.apply(this, arguments);
+  try { const x = a || DATA[idx]; if (x === DATA[idx]) { const l = jLire(BA_VUES, []), k = x.code + '-' + x.cycle.bloc; if (!l.includes(k)) { l.push(k); localStorage.setItem(BA_VUES, JSON.stringify(l.slice(-30))); } } } catch (e) {}
+  return r; }; }
+{ let auto = true;
+  const o = openHome; openHome = function () { const r = o.apply(this, arguments);
+    if (auto) { auto = false; setTimeout(() => { try {
+      const a = DATA[idx], h = document.getElementById('home');
+      if ((typeof S !== 'undefined' && S) || !h || h.hidden || !document.getElementById('cycOv').hidden) return;
+      if (window.betaBaDispo(a) && !jLire(BA_VUES, []).includes(a.code + '-' + a.cycle.bloc)) openTrailer(a);
+    } catch (e) { console.error('bêta : bande-annonce', e); } }, 1800); }
+    return r; }; }
+{ const o = renderHome; renderHome = function () { const r = o.apply(this, arguments);
+  try { const b = document.getElementById('h-ba'); if (b) b.onclick = () => openTrailer(DATA[idx]); } catch (e) {}
+  return r; }; }
+
+/* ---- FIN DU BLOC, au début de la bande-annonce suivante (« on fait ça dans la prochaine bande-annonce ») : le mot de fin du coach
+   (écrit dans « Cycle du bloc ») et la capsule que l'athlète s'était laissée au début du bloc. Rien si ni l'un ni l'autre. ---- */
+window.betaFinBloc = function (a) {
+  try {
+    const c = a.cycle, p = c.bloc - 1; if (p < 1) return null;
+    const mot = String((OBJ[cleObj(a, p)] || {}).comment || '').trim(), cap = CAPSULES[a.code + '-' + p], txt = cap ? String(cap.texte || '').trim() : '';
+    if (!mot && !txt) return null;
+    return { dit: `Fin du bloc ${p}.${mot ? ` Le mot de ton coach : ${mot}` : ''}${txt ? ` Et ton message d'il y a quelques semaines : ${txt}` : ''}`,
+      html: () => `<div class="k or">FIN DU BLOC ${p}</div><h2>Avant d'attaquer le bloc ${c.bloc}</h2>`
+        + (mot ? `<div class="capsule"><small>LE MOT DE TON COACH</small><p>« ${echap(mot)} »</p></div>` : '')
+        + (txt ? `<div class="capsule"><small>TON MESSAGE${cap.date ? ' DU ' + echap(cap.date) : ''}</small><p>« ${echap(txt)} »</p></div>` : '') };
+  } catch (e) { console.error('bêta : fin du bloc', e); return null; }
+};
+
+/* ---- LES NOTIFICATIONS (« fait maison », choix du coach) : le RAPPEL D'ENVOI. Une séance commencée (check-in fait) et pas envoyée
+   5 h après → « Ta séance de … n'est pas encore envoyée ». L'athlète les active une fois (bandeau sur sa semaine, ou LEX « notifications ») ;
+   sur iPhone, seulement dans l'app installée sur l'écran d'accueil (iOS 16.4 et plus). ---- */
+function notifPossible() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+function notifActives() { return notifPossible() && Notification.permission === 'granted'; }
+const b64uOctets = t => { const b = atob((t + '='.repeat((4 - t.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, ch => ch.charCodeAt(0)); };
+async function notifAbonner() {
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) { const j = await betaApi({ action: 'pushCle' }); sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uOctets(j.cle) }); }
+  await betaApi({ action: 'pushAbonner', abonnement: { endpoint: sub.endpoint } });
+  try { await (await caches.open('legacy-push')).put('push-serveur', new Response(window.BETA.SYNC)); } catch (e) {}   // pour le service worker
+  return sub;
+}
+async function notifActiver() {
+  let p = 'default'; try { p = await Notification.requestPermission(); } catch (e) {}
+  if (p !== 'granted') { lexInfo(p === 'denied' ? "Notifications refusées. Pour les remettre : Réglages › Notifications › LEGACY." : 'Pas activées. Tu pourras le faire plus tard.'); renderHomeSiVisible(); return false; }
+  try { await notifAbonner(); const t = await betaApi({ action: 'pushTest' }); lexInfo(t.envoyes ? "C'est activé : une notification de test arrive." : "C'est activé."); }
+  catch (e) { lexInfo("Les notifications n'ont pas pu s'activer : " + (e.message || e)); }
+  renderHomeSiVisible(); return true;
+}
+function renderHomeSiVisible() { try { const h = document.getElementById('home'); if (h && !h.hidden && !(typeof S !== 'undefined' && S)) renderHome(); } catch (e) {} }
+function notifPlanifier(cle, jour) {
+  if (!notifActives()) return;
+  const p = { action: 'pushRappel', cle, jour: String(jour || ''), dans: 5 * 3600e3 };
+  betaApi(p).catch(e => { if (e.reseau) betaGarder(p); });
+}
+function notifAnnuler(cle) {
+  if (!notifActives()) return;
+  const p = { action: 'pushAnnuler', cle };
+  betaApi(p).catch(e => { if (e.reseau) betaGarder(p); });
+}
+// déjà autorisées sur ce téléphone : l'abonnement est (ré)attaché au compte connecté, sans rien demander
+setTimeout(() => { if (notifActives()) notifAbonner().catch(e => console.error('bêta : notifications', e)); }, 2500);
+// le bandeau sur la semaine, tant qu'elles ne sont ni activées ni refusées (« plus tard » : il revient dans 7 jours)
+const NOTIF_PT = 'lgcy-notif-plus-tard';
+{ const o = renderHome; renderHome = function () { const r = o.apply(this, arguments);
+  try {
+    const pt = Number(localStorage.getItem(NOTIF_PT) || 0), sc = document.querySelector('#home .scards');
+    if (sc && notifPossible() && Notification.permission === 'default' && Date.now() - pt > 7 * 864e5) {
+      const b = document.createElement('div'); b.className = 'h-notif';
+      b.innerHTML = `<button class="hbanner" type="button" id="h-notif"><i></i><div><b>Active les rappels</b><span>Si tu oublies d'envoyer ta séance, LEGACY te le rappelle 5 h après.</span></div></button><button type="button" class="hn-x" id="h-notif-x">PLUS TARD</button>`;
+      sc.before(b);
+      b.querySelector('#h-notif').onclick = () => notifActiver();
+      b.querySelector('#h-notif-x').onclick = () => { localStorage.setItem(NOTIF_PT, String(Date.now())); b.remove(); };
+    }
+  } catch (e) { console.error('bêta : bandeau notifications', e); }
+  return r; }; }
+// LEX : « notifications », « rappels », « teste les notifications »
+{ const o = lexCommande; lexCommande = function (txt) {
+  const t = String(txt || '').toLowerCase();
+  if (/notif|rappel/.test(t)) {
+    try { lexFermer(); } catch (e) {}
+    if (!notifPossible()) return lexDire("Sur iPhone, les notifications marchent dans l'app installée sur l'écran d'accueil, avec iOS 16.4 ou plus.");
+    if (Notification.permission === 'granted') { lexDire("Je t'envoie une notification de test."); notifAbonner().then(() => betaApi({ action: 'pushTest' })).catch(e => lexInfo('Envoi impossible : ' + (e.message || e))); return; }
+    if (Notification.permission === 'denied') return lexDire("Elles sont refusées sur ce téléphone. Pour les remettre : Réglages, Notifications, LEGACY.");
+    return notifActiver();
+  }
+  return o.apply(this, arguments); }; }
 })();
 
 </script>
@@ -15770,6 +15973,11 @@ window.betaDeconnecter = async function () {
   porte(`<p>Déconnexion…</p><div class="bp-l"><i></i></div>`);
   if (code) {
     clearTimeout(tEnvoi);
+    // (09/11) les notifications de ce compte ne viennent plus sur ce téléphone
+    try {
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(), sub = reg && reg.pushManager && await reg.pushManager.getSubscription();
+      if (sub) { await Promise.race([api({ action: 'pushDesabonner', code, endpoint: sub.endpoint }, 8000).catch(() => {}), new Promise(r => setTimeout(r, 5000))]); await sub.unsubscribe().catch(() => {}); }
+    } catch (e) {}
     try { await Promise.race([Promise.all([window.betaVider(), envoyerEtat()]), new Promise(r => setTimeout(r, 8000))]); } catch (e) {}
     const att = json(CLE_ATT, {});
     if (Object.keys(att).length) {
