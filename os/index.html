@@ -74,7 +74,8 @@ button:focus-visible{outline:1px solid var(--red);outline-offset:3px}
 
 /* ---------- écran d'attente ---------- */
 #gate{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:0 16px;transition:opacity .4s}
-#gate.gone{opacity:0;pointer-events:none}
+#gate.gone{opacity:0;pointer-events:none;visibility:hidden;transition:opacity .4s,visibility 0s .4s}
+#gate.gone *{animation-play-state:paused!important}
 .gate-in{display:grid;justify-items:center;gap:28px;text-align:center}
 .gate-mark{font:700 13px var(--f-holo);font-variation-settings:"wdth" 125;letter-spacing:.6em;padding-left:.6em;color:var(--data)}
 .gate-mark b{color:var(--red);font-weight:700}
@@ -588,7 +589,7 @@ html{overflow-x:hidden}
 .h-ico svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .weekbar{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:8px}
 .weekbar button{height:40px;font:400 20px var(--f-holo);color:var(--data);border:1px solid var(--line);clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
-.weekbar button:disabled{opacity:.25}
+.weekbar button:disabled,.weekbar button.off{opacity:.25}
 .weekbar .wlbl{text-align:center;min-width:0}
 .weekbar .wlbl b{display:block;font:600 14px var(--f-holo);font-variation-settings:"wdth" 120;letter-spacing:.2em;text-transform:uppercase}
 .weekbar .wlbl small{display:block;margin-top:4px;font:500 9px var(--f-mono);letter-spacing:.16em;color:var(--faint)}
@@ -2116,8 +2117,31 @@ body:not(.mur-edition) #murZoom .mur-zi,body:not(.mur-edition) #murZoom .mur-zc2
 .mur-col h3::after{content:"";position:absolute;left:0;bottom:-1px;width:34px;height:1px;background:var(--red)}
 .mur-col h3 small{font:500 9px var(--f-mono);letter-spacing:.2em;color:var(--faint);white-space:nowrap}
 .mur-cg{display:grid;gap:var(--gap)}
+.lab-mes{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:16px;background:rgba(2,2,3,.93);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.lab-mes[hidden]{display:none}
+.lab-mesc{width:min(400px,calc(100vw - 32px));box-sizing:border-box;display:grid;gap:14px;padding:22px 18px 16px;background:#0d0f12;border:1px solid rgba(233,237,241,.14)}
+.lab-mesk{font:600 9.5px var(--f-mono);letter-spacing:.22em;color:var(--red)}
+.lab-mesc h2{margin:0;font:700 22px/1.1 var(--f-holo);font-variation-settings:"wdth" 110;letter-spacing:.04em;color:var(--data)}
+.lab-mesc p{margin:0;font:400 14px/1.45 var(--f-holo);color:var(--dim)}
+.lab-mes2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+.lab-mes2 label{display:grid;gap:7px;font:500 9px var(--f-mono);letter-spacing:.2em;color:var(--dim)}
+.lab-mes2 span{display:flex;align-items:center;border:1px solid rgba(233,237,241,.18);background:rgba(233,237,241,.04)}
+.lab-mes2 input{flex:1 1 0;width:0;min-width:0;min-height:50px;padding:0 10px;font:600 22px var(--f-holo);color:var(--data);background:none;border:0;outline:none}
+.lab-mes2 span:focus-within{border-color:var(--red)}
+.lab-mes2 em{padding-right:10px;font:500 10px var(--f-mono);font-style:normal;color:var(--faint)}
+.lab-mesc .btn{padding:15px;text-align:center}.lab-mesc .btn:disabled{opacity:.4}
+.lab-mesx{justify-self:center;padding:10px 14px;font:500 9.5px var(--f-mono);letter-spacing:.22em;color:var(--faint)}
 .mur-vide{margin:6px 0 0;font:500 9.5px var(--f-mono);letter-spacing:.2em;color:rgba(233,237,241,.28)}
 .mur-p{touch-action:pan-x pan-y}.mur-p.glisse{cursor:grabbing;user-select:none}
+#mur-p .lid-face::before{animation:none!important}
+#mur-p .mur-c{contain:layout paint style}
+/* (10/11, coach : « le mur, ça fait cracher l'appli des fois ») : chaque carte était une vraie carte 3D (recto + verso, reflets), que
+   l'iPhone garde en mémoire graphique, énorme une fois zoomée ; sur le mur, les cartes sont À PLAT (la carte touchée, en grand, reste en 3D) */
+#mur-p .lid-zoom-in{perspective:none}
+#mur-p .lid-tour,#mur-p .lid-carte{transform-style:flat}
+#mur-p .lid-carte{transform:none!important;transition:none!important}
+#mur-p .lid-verso,#mur-p .lid-holo{display:none!important}
+#mur-p .lid-face{-webkit-backface-visibility:visible;backface-visibility:visible}
 
 @media (min-width:1100px){
   #mur .mur-h,#mur .pf-nav{width:min(1600px,calc(100% - 80px))}
@@ -4690,8 +4714,13 @@ const ring = (() => {
     return { a, r: R + (Math.random() - .5) * 22, s: .4 + Math.random() * 1.6, ph: Math.random() * 6.28, x: Math.random() * W, y: Math.random() * W, w: Math.random() < .08 };
   });
   let form = 0, energy = 0, t = 0, on = false, last = performance.now();
+  // (10/11, coach : « ça fait chauffer mon téléphone ») : moins d'images quand LEX est rangé et muet, aucune pendant un geste sur le mur
   function frame(now) {
-    const dt = Math.min(.1, ((now || performance.now()) - last) / 1000); last = now || performance.now();
+    now = now || performance.now();
+    if (document.hidden || performance.now() < (window.lexCalme || 0) || !$("#lex").classList.contains("on") && form === 0) { requestAnimationFrame(frame); return; }
+    const range = $("#lex").classList.contains("docked") && speaking < .05 && energy < .05 && form >= 1;
+    if (range && now - last < 83) { requestAnimationFrame(frame); return; }
+    const dt = Math.min(.1, (now - last) / 1000); last = now;
     t += dt; form = Math.min(1, form + (on ? dt * .9 : 0)); energy += (speaking - energy) * Math.min(1, dt * 11);
     const k = 1 - Math.pow(1 - (.04 + form * .2), dt * 60);
     x.clearRect(0, 0, W, W);
@@ -5141,7 +5170,7 @@ function renderRun() {
       <div class="blk"><label>RPE 1ʳᵉ série</label><div id="f-rpe1"></div></div>
       <div class="blk"><label>RPE dernière série</label><div id="f-rpe2"></div></div>
       <div class="blk notes2"><label>Notes</label>
-        ${e.consigne ? `<div class="coachnote${e.lu ? " lu" : ""}" id="f-consigne"><span class="cav">C</span><div class="cn"><div class="cnh"><b>Note du coach</b><span>exemple de maquette</span>${e.lu ? "" : '<i class="new">nouveau</i>'}</div><p>${e.consigne}</p></div></div>` : ""}
+        ${e.consigne ? `<div class="coachnote${e.lu ? " lu" : ""}" id="f-consigne"><span class="cav">C</span><div class="cn"><div class="cnh"><b>Note du coach</b>${e.lu ? "" : '<i class="new">nouveau</i>'}</div><p>${e.consigne}</p></div></div>` : ""}
         <div class="mynote"><div class="mnh"><b>Ta note</b></div><textarea id="f-note" placeholder="Ressenti, technique, reps réelles… (facultatif)">${e.note || ""}</textarea></div>
       </div>
     </div>`;
@@ -5222,9 +5251,9 @@ function renderHome(anim) {
   }).join("");
   $("#home").innerHTML = `
     <div class="h-top"><div><h1>${a.prenom}</h1><p${window.betaBaDispo && betaBaDispo(a) ? ' class="ba-lien" id="h-ba" role="button" aria-label="Voir la bande-annonce du bloc"' : ""}>${window.betaBaDispo && betaBaDispo(a) ? '<span class="pl2" aria-hidden="true"><i></i></span>' : ""}BLOC ${a.bloc} · ${dd(w.date)} → ${dd(plusJ(w.date, 6))}</p></div>${typeof cstMini === "function" ? cstMini(a) : ""}</div>
-    <div class="weekbar"><button type="button" id="w-prev" aria-label="Semaine précédente" ${HW.n <= Math.min(...ns) ? "disabled" : ""}>‹</button>
+    <div class="weekbar"><button type="button" id="w-prev" aria-label="Semaine précédente"${HW.n <= Math.min(...ns) ? ' class="off" aria-disabled="true"' : ""}>‹</button>
       <div class="wlbl"><b>Semaine ${HW.n} / ${a.duree}</b><small>${cur ? "SEMAINE EN COURS" : HW.n < a.semaine ? "PASSÉE" : "À VENIR"}</small></div>
-      <button type="button" id="w-next" aria-label="Semaine suivante" ${HW.n >= Math.max(...ns) ? "disabled" : ""}>›</button></div>
+      <button type="button" id="w-next" aria-label="Semaine suivante"${HW.n >= Math.max(...ns) ? ' class="off" aria-disabled="true"' : ""}>›</button></div>
     <div class="bloc-act">${false ? `<button type="button" class="or" id="h-fin">◆ FIN DE BLOC · TON CERTIFICAT</button>` : ""}</div>
     <div class="wsegs">${a.semaines.map(x => `<i class="${x.n < a.semaine ? "past" : x.n === a.semaine ? "now" : ""}${x.n === HW.n ? " see" : ""}"></i>`).join("")}</div>
     ${cur && avant && !bilanFait(a, avant.n) ? `<button class="hbanner" type="button" id="h-bilan"><i></i><div><b>Bilan de la semaine ${avant.n}</b><span>Tu ne l'as pas rempli : 30 secondes pour le sommeil, la nutrition, les pas, l'humeur et le poids.</span></div></button>` : ""}
@@ -5236,8 +5265,10 @@ function renderHome(anim) {
   if ($("#h-trailer")) $("#h-trailer").onclick = () => openTrailer(a);
   if ($("#h-cst")) $("#h-cst").onclick = ev => ecran(() => openConstellation(a.code), ev.currentTarget);
   if ($("#h-fin")) $("#h-fin").onclick = () => openFinBloc(a);
-  $("#w-prev").onclick = () => { HW.n--; sfx.seg(2); renderHome(); };
-  $("#w-next").onclick = () => { HW.n++; sfx.seg(3); renderHome(); };
+  // (10/11, coach : « des flèches pour voir les semaines suivantes ou passées, je clique dessus, ça me fait rien ») : une flèche sans
+  // semaine de ce côté reste pâle et LEX dit pourquoi (avant : bouton désactivé, sans rien dire)
+  $("#w-prev").onclick = ev => { if (ev.currentTarget.classList.contains("off")) { sfx.seg(1); return lexInfo(`C'est la première semaine de ton bloc ${a.bloc}. Les semaines des blocs d'avant ne sont pas dans l'app.`); } HW.n--; sfx.seg(2); renderHome(); };
+  $("#w-next").onclick = ev => { if (ev.currentTarget.classList.contains("off")) { sfx.seg(1); return lexInfo(HW.n < a.duree ? `La semaine ${HW.n + 1} n'est pas encore programmée${a.code === ID_COACH.code ? " dans ton Sheet" : " : ton coach la prépare"}.` : `C'est la dernière semaine de ton bloc ${a.bloc}.`); } HW.n++; sfx.seg(3); renderHome(); };
   $("#home .scards").onclick = ev => {
     const b = ev.target.closest("[data-k]"); if (!b) return;
     if (HW.n !== a.semaine) return lexInfo("Pour l'instant, seule la semaine en cours s'ouvre ici.");
@@ -6577,6 +6608,28 @@ try { localStorage.setItem("lgcy-os-lab-v3", JSON.stringify(LAB)); } catch (e) {
 (() => { const R = LAB && LAB.RICHARD; if (!R || R.histVrai) return; delete R.hist; R.histVrai = true; try { localStorage.setItem("lgcy-os-lab-v3", JSON.stringify(LAB)); } catch (e) {} })();
 const labSave = () => { try { localStorage.setItem("lgcy-os-lab-v3", JSON.stringify(LAB)); } catch (e) {} };
 const labDe = code => LAB[code] || (LAB[code] = { taille: 1.75, pc: 75, ex: {}, spec: {}, nb: 0, mvtPerso: {} });
+// (10/11, coach : « le lab doit demander la taille et le poids, et il faut que ce soit obligatoire ») : à la 1re ouverture de SON labo,
+// une carte à remplir avant tout (le poids pré-rempli avec ta dernière pesée quand il y en a une) ; ensuite, modifiable comme avant (MODIFIER)
+function labMesures(a) {
+  const L = labDe(a.code); if (L.mesOk) return false;
+  let ov = $("#labMes"); if (!ov) { ov = document.createElement("div"); ov.id = "labMes"; document.body.appendChild(ov); }
+  ov.className = "lab-mes"; ov.hidden = false;
+  const pc0 = a.poidsPesee || (L.pc !== 75 ? L.pc : ""), t0 = L.taille !== 1.75 ? L.taille : "";
+  ov.innerHTML = `<div class="lab-mesc" role="dialog" aria-label="Ta taille et ton poids"><span class="lab-mesk">◆ LEGACY LAB</span><h2>Ta taille et ton poids</h2>
+    <p>Le labo en a besoin pour calculer tes vitesses, ta force et ta puissance. Tu pourras les changer ensuite.</p>
+    <div class="lab-mes2"><label>TAILLE<span><input id="lm-t" inputmode="decimal" placeholder="1,78" value="${t0 ? virg(t0) : ""}"><em>M</em></span></label>
+      <label>POIDS DE CORPS<span><input id="lm-p" inputmode="decimal" placeholder="76" value="${pc0 ? virg(pc0) : ""}"><em>KG</em></span></label></div>
+    <button type="button" class="btn" id="lm-ok" disabled>VALIDER</button><button type="button" class="lab-mesx" id="lm-x">‹ SEMAINE</button></div>`;
+  const lire = () => { let t = numOu($("#lm-t").value.replace(",", ".")), p = numOu($("#lm-p").value.replace(",", "."));
+    if (t && t > 120 && t < 230) t = t / 100;   // 178 → 1,78
+    return { t: t && t > 1.2 && t < 2.3 ? t : null, p: p && p > 35 && p < 200 ? p : null }; };
+  const maj = () => { const v = lire(); $("#lm-ok").disabled = !(v.t && v.p); };
+  ov.querySelectorAll("input").forEach(i => { i.oninput = maj; i.onkeydown = e => { if (e.key === "Enter" && !$("#lm-ok").disabled) $("#lm-ok").click(); }; }); maj();
+  $("#lm-ok").onclick = () => { const v = lire(); if (!(v.t && v.p)) return; L.taille = Math.round(v.t * 100) / 100; L.pc = v.p; L.mesOk = true; labSave(); ov.hidden = true; ov.innerHTML = ""; sfx.ok(); openLab(); lexInfo(`C'est noté : ${virg(L.taille)} m, ${virg(L.pc)} kg.`); };
+  $("#lm-x").onclick = () => { ov.hidden = true; ov.innerHTML = ""; ecran(() => openHome(true)); };
+  setTimeout(() => { const i = $(t0 ? "#lm-p" : "#lm-t"); if (i && !i.value) i.focus(); }, 300);
+  return true;
+}
 // l'exercice qui sert au profil : celui du mouvement qui a le plus de charges analysées
 function exPrincipal(code, mvt) { return Object.values(labDe(code).ex).filter(e => e.mvt === mvt && Object.keys(e.pts).length).sort((a, b) => Object.keys(b.pts).length - Object.keys(a.pts).length)[0] || null; }
 // profil charge-vitesse : la meilleure vitesse à chaque charge, tous formats confondus (la 1re rep d'une série ne dépend que de la charge),
@@ -7346,6 +7399,7 @@ let LAB_SEL = null;
 function openLab(focus) {
   cacherEcrans(); closeRecs(); $("#bilan").hidden = false; window.scrollTo(0, 0);
   const code = athCode(), a = athDe(code), L = labDe(code);
+  if (code === DATA[idx].code) setTimeout(() => labMesures(a), 450);   // (10/11) sa taille et son poids d'abord (obligatoire)
   LAB_SEL = LAB_SEL && LAB_SEL.code === code ? LAB_SEL : { code, mvt: ORDRE_MVT.find(m => exPrincipal(code, m)) || "squat" };
   const nbPR = Object.values(L.ex).reduce((s, e) => s + Object.values(e.pts).filter(p => p.pr && recent(p.date)).length, 0);
   $("#bilan").innerHTML = `
@@ -10345,7 +10399,7 @@ function murBureau() {
 // est seulement grossi comme une image (transform, fluide) ; la vraie taille des cartes n'est refaite qu'UNE fois, quand on lâche, et la carte
 // sous les doigts reste exactement où elle était. Le zoom est gardé quand le mur se redessine. Sur ordi, on attrape le mur à la souris.
 let murZ = 1, murGeste = 0;
-const MUR_KMIN = .11, MUR_KMAX = 1.1;
+const MUR_KMIN = .11, MUR_KMAX = .8;   // (10/11) 240 px au plus : au-delà, on touche la carte pour la voir en grand
 function murEchelle(z) {   // la vraie taille des cartes (une seule mise en page)
   const p = $("#mur-p"), c = p && (p.querySelector(".mur-bur") || p.querySelector(".mur-g")); if (!c) return;
   const k0 = +p.dataset.k0 || .3; murZ = Math.max(MUR_KMIN / k0, Math.min(MUR_KMAX / k0, z)); const k = k0 * murZ;
@@ -10358,12 +10412,16 @@ function murZoomPret() {
   if (murZ !== 1) murEchelle(murZ);
   if (p.dataset.zoomArme) return; p.dataset.zoomArme = "1";
   let G = null, roue = 0, glis = null;
+  const calme = () => { window.lexCalme = performance.now() + 700; };   // LEX en pause pendant qu'on touche le mur (et un peu après)
+  ["touchstart", "touchmove", "scroll", "wheel", "pointerdown"].forEach(t => p.addEventListener(t, calme, { passive: true }));
   const cont = () => p.querySelector(".mur-bur") || p.querySelector(".mur-g");
   const debut = (x, y) => {   // x, y dans la fenêtre ; la carte la plus proche sert de repère pour que rien ne saute à la fin
     const c = cont(); if (!c) return null;
     const r = c.getBoundingClientRect(); let ref = null, dmin = 1e9;
     c.querySelectorAll(".mur-c").forEach(b => { const q = b.getBoundingClientRect(), d = Math.hypot(q.left + q.width / 2 - x, q.top + q.height / 2 - y); if (d < dmin) { dmin = d; ref = b; } });
-    c.style.transformOrigin = `${x - r.left}px ${y - r.top}px`; c.style.willChange = "transform";
+    c.style.transformOrigin = `${x - r.left}px ${y - r.top}px`;
+    // une seule image du mur pour le geste, seulement si elle reste raisonnable en mémoire (sinon le téléphone la redessine, sans planter)
+    if (c.scrollWidth * c.scrollHeight * Math.pow(devicePixelRatio || 1, 2) < 16e6) c.style.willChange = "transform";
     return { c, x0: x, y0: y, z0: murZ, s: 1, ref };
   };
   const bouger = (s, x, y) => { const k0 = +p.dataset.k0 || .3;
@@ -11043,7 +11101,7 @@ function openBilanCoaching(a, apercu = false) {
     X.labo.length && { dit: `Au labo, ta puissance a bougé aussi.`,
       html: () => `<div class="k">LE LABO</div><h2>Mesuré à la vitesse</h2><div class="bl-r">${X.labo.map((l, i) => `<div style="--i:${i}"><span>${BIL_NOM[l.m] || l.m.toUpperCase()}</span><em><s>${virg(l.de)}</s> → <b>${virg(l.a)}</b> KG</em><i>${l.p1 && l.p0 ? (l.p1 >= l.p0 ? "+" : "") + Math.round((l.p1 / l.p0 - 1) * 100) + " % W" : ""}</i></div>`).join("")}</div>` },
     { dit: X.douleurs ? `${X.douleurs} douleur${X.douleurs > 1 ? "s" : ""} signalée${X.douleurs > 1 ? "s" : ""}, suivie${X.douleurs > 1 ? "s" : ""} ensemble.` : "Aucune douleur signalée. Un corps qui encaisse.",
-      html: () => `<div class="k">LE CORPS</div><h2>${X.douleurs ? "Suivi ensemble" : "Zéro alerte"}</h2><div class="bl-g"><b>${X.douleurs}</b><span>DOULEUR${X.douleurs > 1 ? "S" : ""} SIGNALÉE${X.douleurs > 1 ? "S" : ""}</span></div><p class="bl-n">Dans l'app : ton poids du début à la fin et tes photos de progression, quand l'app diet est reliée.</p>` },
+      html: () => `<div class="k">LE CORPS</div><h2>${X.douleurs ? "Suivi ensemble" : "Zéro alerte"}</h2><div class="bl-g"><b>${X.douleurs}</b><span>DOULEUR${X.douleurs > 1 ? "S" : ""} SIGNALÉE${X.douleurs > 1 ? "S" : ""}</span></div>` },
     X.comps.length && { dit: `${X.comps.length} compétition${X.comps.length > 1 ? "s" : ""}.`, html: () => `<div class="k or">COMPÉTITIONS</div><h2>Sur le plateau</h2><div class="bl-r">${X.comps.map((c, i) => `<div style="--i:${i}"><span>${c.nom.toUpperCase()}</span><em>${bilFr(c.date)}</em><i></i></div>`).join("")}</div>` },
     { dit: B.mot ? `Le mot de ton coach. ${B.mot}` : "Le mot de ton coach arrive.",
       html: () => `<div class="k or">LE MOT DE TON COACH</div><p class="bl-mot">« ${B.mot ? escK(B.mot) : apercu ? "Écris ton mot ci-dessous : il apparaîtra ici." : "…"} »</p><div class="bl-sig">RICHARD · COACH LEGACY</div>` },
@@ -12071,7 +12129,9 @@ function openProfil(code) {
 </div>`;
   $("#pf").onclick = ev => { const b = ev.target.closest("[data-lab]"); if (!b) return; sfx.unfold(); pfLabo(a, b.dataset.lab); };
   const faibles = Q.filter(q => q.note != null).sort((x, y) => x.note - y.note), aTester = Q.filter(q => q.lab && q.note == null).length;
-  lexInfo(faibles.length ? `Ton point fort : ${faibles[faibles.length - 1].nom.toLowerCase()}. À travailler : ${faibles[0].nom.toLowerCase()}.${aTester ? ` ${aTester} test${aTester > 1 ? "s" : ""} à faire.` : ""}` : "Ton profil se remplit avec tes tests.");
+  // (10/11, coach) « point fort : puissance, à travailler : puissance » avec une seule mesure : il faut au moins deux qualités notées, différentes
+  const comparable = faibles.length >= 2 && faibles[0].note !== faibles[faibles.length - 1].note, reste = aTester ? ` ${aTester} test${aTester > 1 ? "s" : ""} à faire.` : "";
+  lexInfo(comparable ? `Ton point fort : ${faibles[faibles.length - 1].nom.toLowerCase()}. À travailler : ${faibles[0].nom.toLowerCase()}.${reste}` : `Ton profil se remplit avec tes tests.${reste}`);
 }
 /* ---- les mini-labos ---- */
 function pfFeuille(html) { let ov = $("#pfOv"); if (!ov) { ov = document.createElement("div"); ov.id = "pfOv"; document.body.appendChild(ov); } ov.className = "pf-ov"; ov.hidden = false; ov.innerHTML = `<div class="pf-oc">${html}</div>`; return ov; }
@@ -12818,7 +12878,7 @@ function pzAthlete(a) {
     ${pzCourbe(o, choix)}
     <div class="pz-no"><label>TON POIDS CE MATIN<input id="pz-in" inputmode="decimal" placeholder="kg"></label><button type="button" class="btn" id="pz-ok">NOTER</button></div>
     ${choix === "cutting" && prot.valide ? `<div class="pz-ph">${PZ_PH.map(([k, t, s]) => prot[k] ? `<div class="${k === ph ? "on" : ""}"><small>${t} · ${s.toUpperCase()}${k === ph ? " · MAINTENANT" : ""}</small><p>${escK(prot[k]).replace(/\n/g, "<br>")}</p></div>` : "").join("")}</div>` : ""}
-    <p class="spn-note">Dans l'app : tes pesées viennent de ton suivi diet.</p><button type="button" class="pf-x" id="pz-x">FERMER</button></div>`;
+    <button type="button" class="pf-x" id="pz-x">FERMER</button></div>`;
   pzLire(ov, o); sfx.unfold();
   ov.querySelector("#pz-x").onclick = () => { ov.hidden = true; };
   ov.querySelector("#pz-ok").onclick = () => { const v = parseFloat(ov.querySelector("#pz-in").value.replace(",", ".")); if (!(v > 30 && v < 250)) return lexInfo("Ton poids en kilos.");
@@ -15387,12 +15447,43 @@ body.beta #gate .codes{display:none}`;
 /* ---- ton programme à jour : relu dans le Sheet à chaque ouverture (boot.js) ET quand tu reviens sur l'app après 2 min ailleurs
    (« j'avais corrigé la date dans le Sheet, ça a mis super longtemps à se mettre à jour ») ; si le bloc ou la semaine a changé,
    la semaine affichée repart de la nouvelle et LEX le dit ---- */
-{ let majT = Date.now();
+{ let majT = Date.now(), parti = 0, enCours = null;
+  /* (10/11, coach : « l'appli met du temps à lire les changements du Sheet ») : relu quand tu reviens sur l'app après 15 s ailleurs (avant :
+     2 min), toutes les 90 s tant que ta semaine est à l'écran, et TOUT DE SUITE quand tu tires la semaine vers le bas ; la semaine n'est
+     redessinée que si quelque chose a changé (le serveur met de 1 à 7 s à relire le Sheet) */
+  const empreinte = () => { try { const a = DATA[idx]; return JSON.stringify([a.bloc, a.semaine, a.duree, a.semaines]); } catch (e) { return ''; } };
+  let bandeauT = 0;
+  const bandeau = (txt, fin) => { let b = document.getElementById('maj-b'); if (!b) { b = document.createElement('div'); b.id = 'maj-b'; b.setAttribute('role', 'status'); document.body.appendChild(b); }
+    clearTimeout(bandeauT); b.textContent = txt; b.hidden = !txt; b.classList.toggle('fin', !!fin); if (fin) bandeauT = setTimeout(() => { b.hidden = true; }, 1800); };
+  window.betaMaj = function (pourquoi) {
+    if (enCours) return enCours;
+    const avant = empreinte(), voir = pourquoi === 'tirer', k0 = (() => { try { return DATA[idx].bloc + '-' + DATA[idx].semaine; } catch (e) { return ''; } })();
+    majT = Date.now(); if (voir) bandeau('↻ MISE À JOUR DU PROGRAMME…');
+    enCours = window.betaRafraichir(true).then(() => {
+      const change = empreinte() !== avant;
+      if (change && window.betaApresMaj) window.betaApresMaj();
+      if (voir) bandeau(change ? '✓ PROGRAMME À JOUR' : '✓ RIEN DE NOUVEAU DANS LE SHEET', true);
+      if (change) try { if (DATA[idx].bloc + '-' + DATA[idx].semaine === k0) lexInfo('Programme mis à jour depuis le Sheet.'); } catch (e) {}
+    }, e => { if (voir) bandeau(e && e.reseau ? 'PAS DE RÉSEAU' : 'MISE À JOUR IMPOSSIBLE', true); }).then(() => { enCours = null; });
+    return enCours;
+  };
   addEventListener('visibilitychange', () => {
-    if (document.hidden || Date.now() - majT < 120e3) return;
-    majT = Date.now();
-    window.betaRafraichir(true).then(() => { if (window.betaApresMaj) window.betaApresMaj(); }, () => {});
+    if (document.hidden) { parti = Date.now(); return; }
+    if (Date.now() - parti >= 15e3 && Date.now() - majT > 15e3) window.betaMaj('retour');
   });
+  const surSemaine = () => { const h = document.getElementById('home'); return !!h && !h.hidden && !(typeof S !== 'undefined' && S) && !document.hidden; };
+  setInterval(() => { if (surSemaine() && Date.now() - majT > 88e3) window.betaMaj('auto'); }, 30e3);
+  // tirer la semaine vers le bas (tout en haut de l'écran) : la mise à jour tout de suite
+  let y0 = null, tire = 0;
+  addEventListener('touchstart', e => { y0 = surSemaine() && scrollY <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null; tire = 0; }, { passive: true });
+  addEventListener('touchmove', e => { if (y0 === null) return; tire = e.touches[0].clientY - y0; if (scrollY > 0) { y0 = null; return; }
+    if (tire > 24 && !enCours) bandeau(tire > 90 ? '↻ LÂCHE POUR METTRE À JOUR' : '↓ TIRE POUR METTRE À JOUR'); }, { passive: true });
+  addEventListener('touchend', () => { if (y0 === null) return; const t = tire; y0 = null; tire = 0;
+    if (t > 90) { try { sfx.seg(3); } catch (e) {} window.betaMaj('tirer'); } else if (!enCours) bandeau(''); }, { passive: true });
+  const stB = document.createElement('style');
+  stB.textContent = `#maj-b{position:fixed;left:50%;top:calc(104px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:31;padding:8px 13px;white-space:nowrap;font:600 9px var(--f-mono);letter-spacing:.2em;color:#fff;background:rgba(10,12,16,.92);border:1px solid rgba(233,237,241,.18);pointer-events:none}
+#maj-b[hidden]{display:none}#maj-b.fin{color:var(--data)}`;
+  document.head.appendChild(stB);
   const cle = () => { const a = DATA[idx]; return a ? a.bloc + '-' + a.semaine : ''; };
   let vu = cle();
   const o = window.betaApresMaj;
