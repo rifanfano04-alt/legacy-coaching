@@ -2118,10 +2118,7 @@ body:not(.mur-edition) #murZoom .mur-zi,body:not(.mur-edition) #murZoom .mur-zc2
 .mur-cg{display:grid;gap:var(--gap)}
 .mur-vide{margin:6px 0 0;font:500 9.5px var(--f-mono);letter-spacing:.2em;color:rgba(233,237,241,.28)}
 .mur-p{touch-action:pan-x pan-y}.mur-p.glisse{cursor:grabbing;user-select:none}
-.mur-zz{position:absolute;right:max(14px,calc((100vw - 1600px) / 2));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:1px;border:1px solid rgba(233,237,241,.16);background:rgba(5,6,9,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.mur-zz button{width:40px;height:36px;font:400 18px/1 var(--f-mono);color:rgba(233,237,241,.7)}
-.mur-zz button+button{border-left:1px solid rgba(233,237,241,.12)}
-.mur-zz button:hover{color:#fff}
+
 @media (min-width:1100px){
   #mur .mur-h,#mur .pf-nav{width:min(1600px,calc(100% - 80px))}
   #mur .mur-h span{font-size:10.5px}
@@ -10343,37 +10340,50 @@ function murBureau() {
   return true;
 }
 // (10/11, coach : « quand le mur va se remplir, pouvoir zoomer et dézoomer, le rendre tout petit ou méga ») LE ZOOM DU MUR :
-// deux doigts sur le téléphone, pincer le pavé tactile ou Ctrl + molette sur l'ordi, et les boutons − / + ; le point visé reste en place.
-// Une carte fait de 33 à 330 px de large. Le zoom est gardé quand le mur se redessine. Sur ordi, on attrape le mur à la souris pour le déplacer.
+// deux doigts sur le téléphone, pincer le pavé tactile ou Ctrl + molette sur l'ordi ; le point visé suit les doigts. Une carte fait de 33 à 330 px.
+// (10/11, coach : « que ça zoome de façon naturelle, comme quand on glisse, sans saccader » ; plus de boutons − / +) : PENDANT le geste, le mur
+// est seulement grossi comme une image (transform, fluide) ; la vraie taille des cartes n'est refaite qu'UNE fois, quand on lâche, et la carte
+// sous les doigts reste exactement où elle était. Le zoom est gardé quand le mur se redessine. Sur ordi, on attrape le mur à la souris.
 let murZ = 1, murGeste = 0;
 const MUR_KMIN = .11, MUR_KMAX = 1.1;
-function murEchelle(z, cx, cy) {
+function murEchelle(z) {   // la vraie taille des cartes (une seule mise en page)
   const p = $("#mur-p"), c = p && (p.querySelector(".mur-bur") || p.querySelector(".mur-g")); if (!c) return;
-  const k0 = +p.dataset.k0 || .3, nz = Math.max(MUR_KMIN / k0, Math.min(MUR_KMAX / k0, z)), f = nz / murZ, k = k0 * nz;
-  const x = cx ?? p.clientWidth / 2, y = cy ?? p.clientHeight / 2, sx = p.scrollLeft + x, sy = p.scrollTop + y;
-  murZ = nz;
+  const k0 = +p.dataset.k0 || .3; murZ = Math.max(MUR_KMIN / k0, Math.min(MUR_KMAX / k0, z)); const k = k0 * murZ;
   c.style.setProperty("--cw", (300 * k).toFixed(1) + "px"); c.style.setProperty("--ch", (466 * k).toFixed(1) + "px");
   c.querySelectorAll(".mur-cs").forEach(e => e.style.setProperty("--k", k.toFixed(4)));
-  p.scrollLeft = sx * f - x; p.scrollTop = sy * f - y;
 }
 function murZoomPret() {
   const p = $("#mur-p"); if (!p) return;
   const c1 = p.querySelector(".mur-cs"); p.dataset.k0 = (c1 && parseFloat(c1.style.getPropertyValue("--k"))) || .3;
-  const z = murZ; murZ = 1; if (z !== 1) murEchelle(z);
-  if (!$("#mur-zz")) { const b = document.createElement("div"); b.className = "mur-zz"; b.id = "mur-zz"; b.setAttribute("role", "group"); b.setAttribute("aria-label", "Zoom du mur");
-    b.innerHTML = `<button type="button" data-zz="-" aria-label="Dézoomer">−</button><button type="button" data-zz="+" aria-label="Zoomer">+</button>`;
-    b.onclick = ev => { const t = ev.target.closest("[data-zz]"); if (!t) return; sfx.seg(2); murEchelle(murZ * (t.dataset.zz === "+" ? 1.4 : 1 / 1.4)); };
-    $("#mur").appendChild(b); }
+  if (murZ !== 1) murEchelle(murZ);
   if (p.dataset.zoomArme) return; p.dataset.zoomArme = "1";
-  let pin = null, glis = null;
-  const ecart = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-  p.addEventListener("touchstart", e => { if (e.touches.length === 2) { pin = { d: ecart(e.touches), z: murZ }; murGeste = Date.now(); } }, { passive: true });
-  p.addEventListener("touchmove", e => { if (!pin || e.touches.length !== 2) return; e.preventDefault(); const r = p.getBoundingClientRect(), t = e.touches;
-    murEchelle(pin.z * ecart(t) / pin.d, (t[0].clientX + t[1].clientX) / 2 - r.left, (t[0].clientY + t[1].clientY) / 2 - r.top); murGeste = Date.now(); }, { passive: false });
-  p.addEventListener("touchend", e => { if (e.touches.length < 2 && pin) { pin = null; murGeste = Date.now(); } });
+  let G = null, roue = 0, glis = null;
+  const cont = () => p.querySelector(".mur-bur") || p.querySelector(".mur-g");
+  const debut = (x, y) => {   // x, y dans la fenêtre ; la carte la plus proche sert de repère pour que rien ne saute à la fin
+    const c = cont(); if (!c) return null;
+    const r = c.getBoundingClientRect(); let ref = null, dmin = 1e9;
+    c.querySelectorAll(".mur-c").forEach(b => { const q = b.getBoundingClientRect(), d = Math.hypot(q.left + q.width / 2 - x, q.top + q.height / 2 - y); if (d < dmin) { dmin = d; ref = b; } });
+    c.style.transformOrigin = `${x - r.left}px ${y - r.top}px`; c.style.willChange = "transform";
+    return { c, x0: x, y0: y, z0: murZ, s: 1, ref };
+  };
+  const bouger = (s, x, y) => { const k0 = +p.dataset.k0 || .3;
+    G.s = Math.max(MUR_KMIN / k0 / G.z0, Math.min(MUR_KMAX / k0 / G.z0, s));
+    G.c.style.transform = `translate(${(x - G.x0).toFixed(1)}px,${(y - G.y0).toFixed(1)}px) scale(${G.s.toFixed(4)})`; };
+  const finir = () => { if (!G) return; const g = G; G = null; murGeste = Date.now();
+    const avant = g.ref && g.ref.getBoundingClientRect();
+    g.c.style.transform = ""; g.c.style.transformOrigin = ""; g.c.style.willChange = "";
+    murEchelle(g.z0 * g.s);
+    if (avant && g.ref.isConnected) { const apres = g.ref.getBoundingClientRect(); p.scrollLeft += apres.left - avant.left; p.scrollTop += apres.top - avant.top; } };
+  const ecart = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY), milieu = t => [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
+  p.addEventListener("touchstart", e => { if (e.touches.length === 2 && !G) { const [x, y] = milieu(e.touches); G = debut(x, y); if (G) G.d0 = ecart(e.touches) || 1; murGeste = Date.now(); } }, { passive: true });
+  p.addEventListener("touchmove", e => { if (!G || !G.d0 || e.touches.length !== 2) return; e.preventDefault(); const [x, y] = milieu(e.touches); bouger(ecart(e.touches) / G.d0, x, y); }, { passive: false });
+  p.addEventListener("touchend", e => { if (G && e.touches.length < 2) finir(); });
+  p.addEventListener("touchcancel", () => finir());
   ["gesturestart", "gesturechange", "gestureend"].forEach(t => p.addEventListener(t, e => e.preventDefault()));   // iOS : sinon toute la page zoome
-  p.addEventListener("wheel", e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); const r = p.getBoundingClientRect();
-    murEchelle(murZ * Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * .012), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  p.addEventListener("wheel", e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault();
+    if (!G) G = debut(e.clientX, e.clientY); if (!G) return;
+    bouger(G.s * Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * .012), G.x0, G.y0);
+    clearTimeout(roue); roue = setTimeout(finir, 160); }, { passive: false });
   // à la souris : attraper le mur et le déplacer (un simple clic sur une carte l'ouvre toujours)
   p.addEventListener("pointerdown", e => { if (e.pointerType !== "mouse" || e.button !== 0) return; glis = { x: e.clientX, y: e.clientY, sl: p.scrollLeft, st: p.scrollTop, bouge: false, id: e.pointerId }; });
   p.addEventListener("pointermove", e => { if (!glis) return; const dx = e.clientX - glis.x, dy = e.clientY - glis.y; if (!glis.bouge && Math.hypot(dx, dy) < 5) return;
