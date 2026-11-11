@@ -69,7 +69,7 @@ async function loadAll(){
   S.videos=vi; S.clics={}; cl.forEach(c=>S.clics[c.slug]=(S.clics[c.slug]||0)+1);
   S.leads=le; S.leadsBy={}; le.forEach(l=>S.leadsBy[l.slug]=(S.leadsBy[l.slug]||0)+1);
   S.athletes=at; S.ventes=ve;
-  S.agenda=ag.map(e=>({id:e.id,d:e.date,h:hm(e.debut),e:hm(e.fin),t:e.titre,s:e.sous_titre||'',k:e.type,kind:e.kind,auto:e.auto,pid:e.prospect_id}));
+  S.agenda=ag.map(e=>({id:e.id,d:e.date,h:hm(e.debut),e:hm(e.fin),t:e.titre,s:e.sous_titre||'',k:e.type,kind:e.kind,auto:e.auto,pid:e.prospect_id,gcal:e.gcal_id||null,meet:e.meet_url||null}));
   S.reg={}; re.forEach(r=>S.reg[r.cle]=r.valeur);
   S.offres=of; S.scripts=ms;
   await convertLeads();
@@ -98,8 +98,8 @@ const streak=()=>{let n=0;for(let i=1;i<400;i++){const k=iso(d(-i));if((S.dm[k]|
 const encMois=()=>S.ventes.filter(v=>v.date.slice(0,7)===TODAY.slice(0,7)).reduce((s,v)=>s+v.montant,0);
 const caMois=(y,m)=>S.ventes.filter(v=>v.date.slice(0,7)===`${y}-${String(m+1).padStart(2,'0')}`).reduce((s,v)=>s+v.montant,0);
 const hist12=()=>{const out=[];for(let i=11;i>=0;i--){const x=new Date(T0.getFullYear(),T0.getMonth()-i,1);out.push({m:x.toLocaleDateString('fr-FR',{month:'short'}).replace('.',''),v:caMois(x.getFullYear(),x.getMonth())})}return out};
-const dayEv=dIso=>S.agenda.filter(e=>e.d===dIso).sort((a,b)=>(a.h||'').localeCompare(b.h||''));
-const propos=dIso=>{if(diff(dIso)<0||new Date(dIso+'T12:00:00').getDay()===0)return[];const evs=S.agenda.filter(e=>e.d===dIso);return PLAGES().filter(pl=>!evs.some(e=>e.kind===pl.kind)&&!evs.some(e=>e.h&&e.e&&e.h<pl.e&&e.e>pl.h))};
+const dayEv=dIso=>S.agenda.filter(e=>e.d===dIso).concat(ggDay(dIso)).sort((a,b)=>(a.h||'').localeCompare(b.h||''));
+const propos=dIso=>{if(diff(dIso)<0||new Date(dIso+'T12:00:00').getDay()===0)return[];const evs=dayEv(dIso);return PLAGES().filter(pl=>!evs.some(e=>e.kind===pl.kind)&&!evs.some(e=>e.h&&e.e&&e.h<pl.e&&e.e>pl.h))};
 const fill=(s,p)=>String(s).replace(/\{prénom\}/g,p?prenom(p.prenom):'').replace(/\{vidéo\}/g,p&&p.video_slug?videoT(p.video_slug):'la vidéo');
 const actOf=p=>{const w=Array(12).fill(0);notesOf(p).forEach(n=>{const k=11-Math.floor(-diff(n.d)/7);if(k>=0&&k<12)w[k]++});return w};
 const slots=()=>{const out=[];for(let i=1;i<=6&&out.length<3;i++){const dd=iso(d(i));const dow=new Date(dd+'T12:00:00').getDay();if(dow===0)continue;for(const h of ['12:30','18:00','19:00']){const e=plus(h,30);if(!S.agenda.some(x=>x.d===dd&&x.h&&x.e&&x.h<e&&x.e>h)){out.push({d:dd,h});break}}}return out};
@@ -277,17 +277,17 @@ function vAgenda(){
   const mon=monday(wk);
   const days=Array.from({length:7},(_,i)=>{const x=new Date(mon);x.setDate(mon.getDate()+i);return iso(x)});
   const J=['lun','mar','mer','jeu','ven','sam','dim'];
-  const chip=e=>`<${e.k==='meet'&&e.pid?'button data-open="'+e.pid+'"':'button data-ev="'+e.id+'"'} class="evc ${e.k}"><span>${e.h?e.h+' · ':''}${esc(e.t)}</span>${e.s||e.e?`<small>${esc(e.s)}${e.e?' · '+e.e:''}</small>`:''}</button>`;
+  const chip=e=>e.g?`<a class="evc gg" href="${esc(e.url||'#')}" target="_blank" rel="noopener" title="Google Agenda · lecture seule"><span>${e.h?e.h+' · ':''}${esc(e.t)}</span><small>Google${e.e?' · '+e.e:''}</small></a>`:`<${e.k==='meet'&&e.pid?'button data-open="'+e.pid+'"':'button data-ev="'+e.id+'"'} class="evc ${e.k}"><span>${e.h?e.h+' · ':''}${esc(e.t)}</span>${e.s||e.e?`<small>${esc(e.s)}${e.e?' · '+e.e:''}</small>`:''}</button>`;
   const ghost=(dIso,pl)=>`<button class="evc ghost" data-acc="${dIso}|${pl.kind}" title="Ajouter à l'agenda"><span>${pl.h} · ${esc(pl.t)}</span><span>+</span></button>`;
   const nProp=days.reduce((a,x)=>a+propos(x).length,0);
   const sel=days.includes(selDay)?selDay:days[0];
   const dl=dayEv(sel);
-  return `<section class="block"><div class="bh"><h2 class="t">Agenda</h2><span class="badge plain">Google Agenda : étape 4</span>
+  return `<section class="block"><div class="bh"><h2 class="t">Agenda</h2>${gBadge()}
     <span class="right"><button class="btn sm" data-wk="-1" aria-label="Semaine précédente">‹</button><span class="num" style="min-width:120px;text-align:center">${fmtS(days[0])} → ${fmtS(days[6])}</span><button class="btn sm" data-wk="1" aria-label="Semaine suivante">›</button>${wk?'<button class="btn sm" data-wk="0">Aujourd\'hui</button>':''}</span></div>
     <div class="wkhead"><button class="btn sm primary" data-dictee>${ICON.mic} Dicter</button>${nProp?`<button class="btn sm" data-accall>Remplir la semaine · ${nProp} plage${nProp>1?'s':''}</button>`:'<span class="sub">Semaine remplie</span>'}<span class="sub">pointillés = proposé selon tes trous, un clic pour accepter</span></div>
     <div class="strip">${days.map((x,i)=>`<button class="${x===sel?'sel':''} ${x===TODAY?'today':''}" data-day="${x}">${J[i]}<b>${+x.slice(8)}</b>${S.agenda.some(e=>e.d===x)?'<i></i>':''}</button>`).join('')}</div>
     <div class="week">${days.map((x,i)=>`<div class="day ${x===TODAY?'today':''}"><h5><span>${J[i]}</span><b>${+x.slice(8)}</b></h5>${dayEv(x).map(chip).join('')}${propos(x).map(pl=>ghost(x,pl)).join('')}</div>`).join('')}</div>
-    <div class="dayview"><div class="agenda">${dl.length?dl.map(e=>`<div class="ev ${e.k}"><span class="h">${e.h||'—'}</span><span class="bar"></span><span style="min-width:0"><span class="t">${esc(e.t)}</span><br><span class="s">${esc(e.s)}${e.e?' · jusqu\'à '+e.e:''}</span></span>${e.k==='meet'&&e.pid?`<button class="btn sm" data-open="${e.pid}">Fiche</button>`:`<button class="btn sm" data-ev="${e.id}">…</button>`}</div>`).join(''):'<p class="empty">Rien ce jour-là.</p>'}</div>
+    <div class="dayview"><div class="agenda">${dl.length?dl.map(e=>`<div class="ev ${e.k}"><span class="h">${e.h||'—'}</span><span class="bar"></span><span style="min-width:0"><span class="t">${esc(e.t)}</span><br><span class="s">${esc(e.s)}${e.e?' · jusqu\'à '+e.e:''}</span></span>${e.g?`<a class="btn sm" href="${esc(e.url||'#')}" target="_blank" rel="noopener">Google</a>`:`<span class="quick">${e.meet?`<a class="btn sm" href="${esc(e.meet)}" target="_blank" rel="noopener">Meet</a>`:''}${e.k==='meet'&&e.pid?`<button class="btn sm" data-open="${e.pid}">Fiche</button>`:`<button class="btn sm" data-ev="${e.id}">…</button>`}</span>`}</div>`).join(''):'<p class="empty">Rien ce jour-là.</p>'}</div>
       ${propos(sel).length?`<div class="lines" style="margin-top:10px">${propos(sel).map(pl=>`<div class="line"><span class="l" style="color:var(--muted)">${pl.h} · ${esc(pl.t)}<small>proposé selon tes trous</small></span><span class="r"><button class="btn sm" data-acc="${sel}|${pl.kind}">Accepter</button></span></div>`).join('')}</div>`:''}</div>
   </section>`;
 }
@@ -298,18 +298,19 @@ function vReglages(){
     <div class="setrow"><span>Plages proposées dans l'agenda<small>${pl.map(p=>`${esc(p.t)} ${p.h} → ${p.e}`).join(' · ')||'—'} · jamais le dimanche</small></span><span class="quick">${pl.map((p,i)=>`<button class="btn sm" data-plage="${i}">${esc(p.kind)} ${p.h}</button>`).join('')}</span></div>
     <div class="setrow"><span>Objectif d'encaissement du mois<small>le trait ambre du graphique</small></span><span class="stepper"><button data-obj="-250" aria-label="Moins">−</button><span class="num">${eur(OBJ())}</span><button data-obj="250" aria-label="Plus">+</button></span></div></section>
   <section class="block"><div class="bh"><h2 class="t">Offres et prix</h2><span class="sub">prix en une fois, jamais de mensualité</span><span class="right"><button class="btn sm" data-addoffre>+ Offre</button></span></div>
-    <div class="lines">${S.offres.map(o=>`<div class="line"><span class="l">${esc(o.nom)}<small>${o.jours} jours</small></span><span class="r quick"><span class="num" style="color:var(--fg)">${eur(o.prix)}</span><button class="btn sm" data-editoffre="${o.id}">Modifier</button><button class="btn sm" data-deloffre="${o.id}" aria-label="Supprimer">✕</button></span></div>`).join('')||'<p class="empty">Aucune offre.</p>'}</div></section>
+    <div class="lines">${S.offres.map(o=>`<div class="line"><span class="l">${esc(o.nom)}<small>${o.jours} jours · ${o.lien_stripe?'<span style="color:var(--green)">lien Stripe ✓</span>':'pas encore de lien Stripe'}</small></span><span class="r quick"><span class="num" style="color:var(--fg)">${eur(o.prix)}</span><button class="btn sm" data-editoffre="${o.id}">Modifier</button><button class="btn sm" data-deloffre="${o.id}" aria-label="Supprimer">✕</button></span></div>`).join('')||'<p class="empty">Aucune offre.</p>'}</div></section>
   <section class="block"><div class="bh"><h2 class="t">Services dans l'offre</h2><span class="sub">ce que tu coches au R2</span><span class="right"><button class="btn sm" data-addsvc>+ Service</button></span></div>
     <div class="lines">${SERVICES().map((s,i)=>`<div class="line"><span class="l">${esc(s)}</span><span class="r"><button class="btn sm" data-delsvc="${i}" aria-label="Supprimer">✕</button></span></div>`).join('')}</div></section>
   <section class="block"><div class="bh"><h2 class="t">Messages types</h2><span class="sub">{prénom} et {vidéo} se remplissent tout seuls</span><span class="right"><button class="btn sm" data-addscript>+ Message</button></span></div>
     <div class="lines">${S.scripts.map(s=>`<div class="line"><span class="l">${esc(s.titre)}<small style="white-space:normal">${esc(s.texte)}</small></span><span class="r quick"><button class="btn sm" data-editscript="${s.id}">Modifier</button><button class="btn sm" data-delscript="${s.id}" aria-label="Supprimer">✕</button></span></div>`).join('')}</div></section>
   <section class="block"><div class="bh"><h2 class="t">Comptes reliés</h2></div>
-    <div class="lines"><div class="line"><span class="l">Supabase<small>ta base de données</small></span><span class="r"><span class="tag up">Relié</span></span></div><div class="line"><span class="l">Google Agenda + Meet<small>étape 4</small></span><span class="r"><span class="tag neutral">Plus tard</span></span></div><div class="line"><span class="l">Stripe<small>liens de paiement, factures · étape 3</small></span><span class="r"><span class="tag neutral">Plus tard</span></span></div><div class="line"><span class="l">LEGACY OS<small>dernière séance de chaque athlète</small></span><span class="r"><span class="tag neutral">Plus tard</span></span></div></div>
+    <div class="lines"><div class="line"><span class="l">Supabase<small>ta base de données</small></span><span class="r"><span class="tag up">Relié</span></span></div><div class="line"><span class="l">Google Agenda + Meet<small>${!G.cid?'ID client Google à ajouter dans config.js':G.on?'R1, R2 et séances envoyés dans ton agenda avec un lien Meet':'tes appels créent un événement Google avec lien Meet'}</small></span><span class="r quick">${!G.cid?'<span class="tag neutral">À configurer</span>':G.on?'<span class="tag up">Relié</span><button class="btn sm" data-gout>Déconnecter</button>':'<button class="btn sm primary" data-gconnect>Connecter Google Agenda</button>'}</span></div><div class="line"><span class="l">Stripe<small>liens de paiement par offre (Payment Links), à coller dans Offres et prix</small></span><span class="r">${S.offres.some(o=>o.lien_stripe)?`<span class="tag up">${S.offres.filter(o=>o.lien_stripe).length} lien${S.offres.filter(o=>o.lien_stripe).length>1?'s':''}</span>`:'<a class="btn sm" href="https://dashboard.stripe.com/payment-links" target="_blank" rel="noopener">Créer mes liens</a>'}</span></div><div class="line"><span class="l">LEGACY OS<small>dernière séance de chaque athlète</small></span><span class="r"><span class="tag neutral">Plus tard</span></span></div></div>
     <p class="empty" style="margin-top:12px">Connecté en tant que ${esc(S.user||'')}. <button class="btn sm" data-logout>Se déconnecter</button></p>
     <div class="setrow"><span>Mot de passe<small>pour te connecter sans attendre un email (2 emails par heure maximum)</small></span><span><button class="btn sm" data-setpass>Définir un mot de passe</button></span></div></section>`;
 }
 
 function render(){
+  if(G.on)gLoad(monday(route==='agenda'?wk:0));
   $('nav').innerHTML=nav(false); $('tabbar').innerHTML=nav(true);
   $('topbar').innerHTML=topbar(TITLES[route]);
   $('footpct').textContent=Math.min(100,Math.round(encMois()/OBJ()*100))+' %';
@@ -343,7 +344,9 @@ function openSheet(pid){
     <div class="g"><h4>Offre · du R1 au R2</h4><dl class="kv"><dt>Formule</dt><dd><select id="of-${p.id}" class="inp" data-offre>${S.offres.map(o=>`<option value="${o.id}" ${o.nom===p.offre||(!p.offre&&o.prix===p.montant)?'selected':''}>${esc(o.nom)} · ${eur(o.prix)}</option>`).join('')}</select></dd>
       <dt>Vidéo d'offre</dt><dd>${p.vid_envoyee?`<span class="tag up">Envoyée${p.vid_vue?' · regardée':''}</span>`:ouvert?`<button class="btn sm" data-vid>Marquer envoyée</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
       <dt>Offre perso</dt><dd>${p.offre_prete?`<span class="quick"><span class="tag up">Prête</span><button class="btn sm" data-present>Présenter en visio</button></span>`:ouvert?`<button class="btn sm" data-prep>Préparer l'offre</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
-      <dt>Récap + contrat</dt><dd>${p.etape==='gagne'?'<span class="tag up">Signé · payé</span>':p.recap_envoye?'<span class="tag warn">Envoyés · en attente</span>':p.offre_prete?`<button class="btn sm" data-sent>Marquer envoyés</button>`:'<span style="color:var(--dim)">après le R2</span>'}</dd></dl></div>
+      <dt>Récap + contrat</dt><dd>${p.etape==='gagne'?'<span class="tag up">Signé · payé</span>':p.recap_envoye?'<span class="tag warn">Envoyés · en attente</span>':p.offre_prete?`<button class="btn sm" data-sent>Marquer envoyés</button>`:'<span style="color:var(--dim)">après le R2</span>'}</dd>
+      ${ouvert?`<dt>Paiement</dt><dd><span class="quick">${offreOf(p).lien_stripe?'<button class="btn sm" data-paylink>Envoyer le lien de paiement</button>':'<a class="btn sm" href="#reglages">Ajouter le lien Stripe de l\'offre</a>'}<button class="btn sm" data-paid>Paiement reçu</button></span></dd>`:''}
+      ${nextMeet(p)?`<dt>Lien Meet</dt><dd><span class="quick"><a class="btn sm" href="${esc(nextMeet(p).meet)}" target="_blank" rel="noopener">Ouvrir</a>${p.tel?`<a class="btn sm" href="${wa(p.tel,`${prenom(p.prenom)}, voici le lien pour notre appel ${fmtJ(nextMeet(p).d)} à ${nextMeet(p).h} : ${nextMeet(p).meet}`)}" target="_blank" rel="noopener">${ICON.wa} Envoyer</a>`:''}<button class="btn sm" data-copy="${esc(nextMeet(p).meet)}">Copier</button></span></dd>`:''}</dl></div>
     <div class="g"><h4>Historique</h4><div style="display:flex;gap:6px;margin-bottom:12px"><input class="inp" id="note-${p.id}" placeholder="Note : appel, DM, objection…"><button class="btn sm" data-note>Ajouter</button></div><div class="tl">${notesOf(p).map(n=>`<div><small>${fmtS(n.d)}</small><span>${esc(n.t)}</span></div>`).join('')||'<p class="empty">Aucune note.</p>'}</div></div>
     <div class="g"><button class="btn sm" data-delprospect style="color:var(--dim)">Supprimer ce prospect</button></div>
   </div>
@@ -379,7 +382,7 @@ function openEdit(p){
     {k:'source',l:'Source',type:'select',opts:Object.keys(SRC).map(k=>({v:k,t:SRC[k].t})),v:p.source},{k:'objectif',l:'Objectif',v:p.objectif||''},
   ],'Enregistrer',async g=>{await upd('prospects',p.id,{prenom:g.prenom,insta:g.insta.replace('@',''),tel:g.tel,email:g.email,source:g.source,objectif:g.objectif},p);render();openSheet(p.id);toast('Fiche enregistrée')});
 }
-async function moveTo(p,k){
+async function moveTo(p,k,mode){
   const from=p.etape;
   const patch={etape:k,chance:BASE[k]};
   if(k==='gagne'){patch.next_date=null;patch.action='';patch.paye=true;patch.contrat_signe=true}
@@ -388,9 +391,9 @@ async function moveTo(p,k){
   await upd('prospects',p.id,patch,p);await addNote(p,`« ${etapeT(from)} » → « ${etapeT(k)} »`);
   if(k==='gagne'){
     const o=S.offres.find(x=>x.nom===p.offre)||S.offres.find(x=>x.prix===p.montant)||{nom:p.offre||'Coaching',prix:p.montant,jours:91};
-    const v=await ins('ventes',{date:TODAY,prenom:p.prenom,offre:o.nom,montant:p.montant,mode:'virement',facture:false,prospect_id:p.id});S.ventes.unshift(v);
+    const v=await ins('ventes',{date:TODAY,prenom:p.prenom,offre:o.nom,montant:p.montant,mode:mode||'virement',facture:false,prospect_id:p.id});S.ventes.unshift(v);
     const a=await ins('athletes',{prenom:p.prenom,offre:o.nom,prix:p.montant,debut:TODAY,fin:iso(d(o.jours||91)),derniere_seance:null,prospect_id:p.id});S.athletes.push(a);
-    closeSheet();flash(p);render();countUp();setTimeout(()=>toast(`${p.prenom} signé · ${eur(p.montant)} · note le mode de paiement dans Ventes`),reduced?700:1800);return;
+    closeSheet();flash(p);render();countUp();setTimeout(()=>toast(mode==='stripe'?`${p.prenom} signé · ${eur(p.montant)} payé par Stripe`:`${p.prenom} signé · ${eur(p.montant)} · note le mode de paiement dans Ventes`),reduced?700:1800);return;
   }
   toast(k==='perdu'?`${p.prenom} classé perdu`:`${p.prenom} → ${etapeT(k)}`);render();openSheet(p.id);
 }
@@ -443,13 +446,74 @@ function previewDictee(v){
   const KN={seance:'Séance',meet:'Appel / visio',task:'Tâche',perso:'Perso'};
   box.innerHTML=`<h4>Ce que j'ai compris</h4><dl class="kv"><dt>Quoi</dt><dd><b>${esc(dict.t)}</b> <span class="tag neutral">${KN[dict.k]}</span></dd><dt>Quand</dt><dd>${new Date(dict.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${dict.h?' · '+dict.h+(dict.e?' → '+dict.e:''):' · toute la journée'}</dd></dl>`;
 }
-async function addEvent(e){const r=await ins('agenda',{date:e.d,debut:e.h||null,fin:e.e||null,titre:e.t,sous_titre:e.s||null,type:e.k||'task',kind:e.kind||null,auto:!!e.auto,prospect_id:e.pid||null});S.agenda.push({id:r.id,d:r.date,h:hm(r.debut),e:hm(r.fin),t:r.titre,s:r.sous_titre||'',k:r.type,kind:r.kind,auto:r.auto,pid:r.prospect_id});return r}
+async function addEvent(e){const tok=G.on&&!e.auto?await gTok(true):null;const r=await ins('agenda',{date:e.d,debut:e.h||null,fin:e.e||null,titre:e.t,sous_titre:e.s||null,type:e.k||'task',kind:e.kind||null,auto:!!e.auto,prospect_id:e.pid||null});S.agenda.push({id:r.id,d:r.date,h:hm(r.debut),e:hm(r.fin),t:r.titre,s:r.sous_titre||'',k:r.type,kind:r.kind,auto:r.auto,pid:r.prospect_id,gcal:null,meet:null});
+  if(tok){const loc=S.agenda[S.agenda.length-1];const ge=await gPush(loc);if(ge&&ge.id){loc.gcal=ge.id;loc.meet=ge.hangoutLink||null;await upd('agenda',r.id,{gcal_id:ge.id,meet_url:loc.meet})}}
+  else if(G.on&&!e.auto)toast('Google Agenda à reconnecter (Agenda → Reconnecter)');
+  return r}
 function openEvent(id){
   const e=S.agenda.find(x=>x.id===id);if(!e)return;
   formSheet('Événement',[{k:'t',l:'Titre',req:true,v:e.t},{k:'d',l:'Date',type:'date',v:e.d},{k:'h',l:'Début',type:'time',v:e.h},{k:'e',l:'Fin',type:'time',v:e.e},{k:'s',l:'Détail',v:e.s},{k:'k',l:'Type',type:'select',opts:[{v:'seance',t:'Séance'},{v:'meet',t:'Appel / visio'},{v:'task',t:'Tâche'},{v:'perso',t:'Perso'}],v:e.k}],'Enregistrer',
-    async g=>{await upd('agenda',e.id,{titre:g.t,date:g.d,debut:g.h||null,fin:g.e||null,sous_titre:g.s||null,type:g.k});Object.assign(e,{t:g.t,d:g.d,h:g.h,e:g.e,s:g.s,k:g.k});closeSheet();render();toast('Enregistré')},
+    async g=>{await upd('agenda',e.id,{titre:g.t,date:g.d,debut:g.h||null,fin:g.e||null,sous_titre:g.s||null,type:g.k});Object.assign(e,{t:g.t,d:g.d,h:g.h,e:g.e,s:g.s,k:g.k});if(e.gcal&&await gTok(true))await gPush(e);closeSheet();render();toast('Enregistré')},
     `<button class="btn sm" data-delev="${e.id}" style="margin-top:6px">Supprimer</button>`);
 }
+
+// ---------- Stripe (liens de paiement) ----------
+const offreOf=p=>S.offres.find(x=>x.nom===p.offre)||S.offres.find(x=>x.prix===p.montant)||{nom:p.offre||'Coaching',prix:p.montant,jours:91};
+const nextMeet=p=>S.agenda.filter(e=>e.pid===p.id&&e.meet&&diff(e.d)>=0).sort((a,b)=>(a.d+a.h).localeCompare(b.d+b.h))[0];
+
+// ---------- Google Agenda + Meet (navigateur seulement, jeton 1 h) ----------
+const G={cid:(window.LEGACY_CFG||{}).gcalClientId||'',on:false,tok:null,exp:0,tc:null,cache:{},busy:{}};
+const GAPI='https://www.googleapis.com/calendar/v3/calendars/primary/events';
+try{const x=JSON.parse(localStorage.getItem('qg_g')||'null');if(x&&G.cid){G.on=true;G.tok=x.t;G.exp=x.e||0}}catch(_){}
+function gSave(){try{G.on?localStorage.setItem('qg_g',JSON.stringify({t:G.tok,e:G.exp})):localStorage.removeItem('qg_g')}catch(_){}}
+const gValid=()=>G.tok&&Date.now()<G.exp-60000;
+function gLib(){return window.google&&google.accounts&&google.accounts.oauth2?Promise.resolve():new Promise((ok,ko)=>{const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
+gLib().catch(()=>{});
+function gTok(interactive,consent){
+  if(gValid())return Promise.resolve(G.tok);
+  if(!interactive||!G.cid)return Promise.resolve(null);
+  const run=()=>new Promise(ok=>{
+    const done=r=>{if(r&&r.access_token){G.tok=r.access_token;G.exp=Date.now()+(+r.expires_in||3600)*1000;G.on=true;gSave();ok(G.tok)}else ok(null)};
+    if(!G.tc)G.tc=google.accounts.oauth2.initTokenClient({client_id:G.cid,scope:'https://www.googleapis.com/auth/calendar.events',callback:done,error_callback:()=>ok(null)});
+    G.tc.callback=done;G.tc.error_callback=()=>ok(null);
+    G.tc.requestAccessToken({prompt:consent?'consent':''});
+  });
+  return window.google&&google.accounts&&google.accounts.oauth2?run():gLib().then(run).catch(()=>null);
+}
+async function gConnect(){if(!G.cid){toast('ID client Google manquant dans config.js');return}const t=await gTok(true,!G.on);if(t){G.cache={};toast('Google Agenda relié');render()}else toast('Connexion Google annulée')}
+function gOut(){try{G.tok&&google.accounts.oauth2.revoke(G.tok,()=>{})}catch(_){}G.on=false;G.tok=null;G.exp=0;G.cache={};gSave();render();toast('Google Agenda déconnecté')}
+async function gApi(path,opt={}){
+  const t=await gTok(false);if(!t)return null;
+  const r=await fetch(GAPI+path,{...opt,headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'}});
+  if(r.status===401){G.tok=null;G.exp=0;gSave();return null}
+  if(!r.ok||r.status===204)return r.ok?{}:null;return r.json();
+}
+function gBody(e){
+  const b={summary:e.t,description:(e.s||'')+'\nLEGACY QG'};
+  if(e.h){const fin=e.e&&e.e>e.h?e.e:plus(e.h,30);b.start={dateTime:`${e.d}T${e.h}:00`,timeZone:'Europe/Paris'};b.end={dateTime:`${e.d}T${fin}:00`,timeZone:'Europe/Paris'}}
+  else{const n=new Date(e.d+'T12:00:00');n.setDate(n.getDate()+1);b.start={date:e.d};b.end={date:iso(n)}}
+  return b;
+}
+async function gPush(e){
+  try{
+    if(e.gcal){const r=await gApi('/'+encodeURIComponent(e.gcal),{method:'PATCH',body:JSON.stringify(gBody(e))});G.cache={};return r}
+    const b=gBody(e);if(e.k==='meet')b.conferenceData={createRequest:{requestId:'qg-'+e.id,conferenceSolutionKey:{type:'hangoutsMeet'}}};
+    const r=await gApi('?conferenceDataVersion=1',{method:'POST',body:JSON.stringify(b)});G.cache={};return r;
+  }catch(err){console.error(err);return null}
+}
+async function gDel(id){try{if(await gTok(true))await gApi('/'+encodeURIComponent(id),{method:'DELETE'});G.cache={}}catch(err){console.error(err)}}
+function gLoad(mon){
+  const k=iso(mon);if(!G.on||!gValid()||G.cache[k]||G.busy[k])return;G.busy[k]=1;
+  const end=new Date(mon);end.setDate(mon.getDate()+7);
+  gApi(`?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(new Date(k+'T00:00:00').toISOString())}&timeMax=${encodeURIComponent(new Date(iso(end)+'T00:00:00').toISOString())}`).then(r=>{
+    delete G.busy[k];if(!r||!r.items)return;
+    G.cache[k]=r.items.filter(x=>x.status!=='cancelled').map(x=>{const s=x.start||{},f=x.end||{};const ds=s.dateTime?new Date(s.dateTime):null,df=f.dateTime?new Date(f.dateTime):null;
+      return {id:x.id,g:true,k:'gg',d:ds?iso(ds):s.date,h:ds?ds.toTimeString().slice(0,5):'',e:df?df.toTimeString().slice(0,5):'',t:x.summary||'(sans titre)',s:'Google Agenda',url:x.htmlLink,meet:x.hangoutLink||null}});
+    render();
+  }).catch(()=>{delete G.busy[k]});
+}
+const ggDay=dIso=>{const mine=new Set(S.agenda.map(e=>e.gcal).filter(Boolean));return Object.values(G.cache).flat().filter(x=>x.d===dIso&&!mine.has(x.id))};
+const gBadge=()=>!G.cid?'':!G.on?'<button class="btn sm" data-gconnect>Connecter Google Agenda</button>':gValid()?'<span class="badge plain">Google Agenda relié</span>':'<button class="btn sm" data-gconnect>Reconnecter Google</button>';
 
 // ---------- événements ----------
 document.addEventListener('click',async e=>{
@@ -473,10 +537,12 @@ document.addEventListener('click',async e=>{
   if(t.dataset.renew!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.renew);const o=S.offres.find(x=>x.nom===a.offre)||S.offres[0]||{jours:91,prix:a.prix,nom:a.offre};const deb=a.fin&&diff(a.fin)>0?a.fin:TODAY;await upd('athletes',a.id,{debut:deb,fin:iso(new Date(new Date(deb+'T12:00:00').getTime()+(o.jours||91)*DAY))},a);const v=await ins('ventes',{date:TODAY,prenom:a.prenom,offre:'Renouvellement · '+(o.nom||''),montant:o.prix||a.prix,mode:'virement',facture:false});S.ventes.unshift(v);render();toast(`${a.prenom} renouvelé · ${eur(o.prix||a.prix)} à encaisser`);return}
   if(t.hasAttribute('data-newvideo')){formSheet('Idée de vidéo',[{k:'titre',l:'Titre',req:true,ph:'Comment je choisis le jour où je PR'},{k:'slug',l:'Nom du lien (/go/…)',req:true,ph:'jourpr'}],'Ajouter',async g=>{const slug=g.slug.toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40);if(!slug)return toast('Nom de lien invalide');const r=await ins('videos',{slug,titre:g.titre,statut:1});S.videos.push(r);closeSheet();render();toast('Idée ajoutée · lien /go/'+slug)});return}
   if(t.dataset.vstep){const v=S.videos.find(x=>x.slug===t.dataset.vstep);const st=Math.min(4,v.statut+1);await q(T('videos').update({statut:st,publiee_le:st===4?TODAY:v.publiee_le}).eq('slug',v.slug));v.statut=st;if(st===4)v.publiee_le=TODAY;render();toast(st===4?`Publiée · colle ${C.site}/go/${v.slug} en description`:`${v.titre} → ${STEPS[st-1]}`);return}
+  if(t.hasAttribute('data-gconnect')){await gConnect();return}
+  if(t.hasAttribute('data-gout')){gOut();return}
   if(t.dataset.wk!==undefined){wk=t.dataset.wk==='0'?0:wk+(+t.dataset.wk);if(t.dataset.wk==='0')selDay=TODAY;render();return}
   if(t.dataset.day){selDay=t.dataset.day;render();return}
   if(t.dataset.ev){openEvent(t.dataset.ev);return}
-  if(t.dataset.delev){const id=t.dataset.delev;await del('agenda',id);S.agenda=S.agenda.filter(x=>x.id!==id);closeSheet();render();toast('Supprimé');return}
+  if(t.dataset.delev){const id=t.dataset.delev;const ev=S.agenda.find(x=>x.id===id);if(ev&&ev.gcal)await gDel(ev.gcal);await del('agenda',id);S.agenda=S.agenda.filter(x=>x.id!==id);closeSheet();render();toast('Supprimé');return}
   if(t.dataset.acc){const [dd,k]=t.dataset.acc.split('|');const pl=PLAGES().find(x=>x.kind===k);await addEvent({d:dd,h:pl.h,e:pl.e,t:pl.t,s:pl.s,k:'task',kind:k,auto:true});render();toast("Ajouté à l'agenda");return}
   if(t.hasAttribute('data-accall')){const mon=monday(wk);let c=0;for(let i=0;i<7;i++){const x=new Date(mon);x.setDate(mon.getDate()+i);const di=iso(x);for(const pl of propos(di)){await addEvent({d:di,h:pl.h,e:pl.e,t:pl.t,s:pl.s,k:'task',kind:pl.kind,auto:true});c++}}render();toast(`${c} plages ajoutées`);return}
   if(t.hasAttribute('data-dictee')){openDictee();return}
@@ -487,8 +553,8 @@ document.addEventListener('click',async e=>{
   if(t.dataset.dm){await setReg('objectif_dm',Math.max(5,OBJ_DM()+(+t.dataset.dm)));render();return}
   if(t.dataset.obj){await setReg('objectif_mois',Math.max(500,OBJ()+(+t.dataset.obj)));render();return}
   if(t.dataset.plage!==undefined){const i=+t.dataset.plage,pl=[...(S.reg.plages||[])];const p0=pl[i];formSheet('Plage · '+p0.kind,[{k:'t',l:'Nom',v:p0.t},{k:'h',l:'Début',type:'time',v:p0.h},{k:'e',l:'Fin',type:'time',v:p0.e}],'Enregistrer',async g=>{pl[i]={...p0,t:g.t,h:g.h,e:g.e};await setReg('plages',pl);closeSheet();render();toast('Plage modifiée')});return}
-  if(t.hasAttribute('data-addoffre')){formSheet('Nouvelle offre',[{k:'nom',l:'Nom',req:true,ph:'Coaching 3 mois'},{k:'prix',l:'Prix (€, en une fois)',type:'number',req:true},{k:'jours',l:'Durée (jours)',type:'number',v:'91'}],'Ajouter',async g=>{const r=await ins('offres',{nom:g.nom,prix:+g.prix,jours:+g.jours||91,ordre:S.offres.length+1});S.offres.push(r);closeSheet();render();toast('Offre ajoutée')});return}
-  if(t.dataset.editoffre){const o=S.offres.find(x=>x.id===t.dataset.editoffre);formSheet('Modifier l\'offre',[{k:'nom',l:'Nom',req:true,v:o.nom},{k:'prix',l:'Prix (€)',type:'number',req:true,v:String(o.prix)},{k:'jours',l:'Durée (jours)',type:'number',v:String(o.jours)}],'Enregistrer',async g=>{await upd('offres',o.id,{nom:g.nom,prix:+g.prix,jours:+g.jours||91},o);closeSheet();render();toast('Offre modifiée')});return}
+  if(t.hasAttribute('data-addoffre')){formSheet('Nouvelle offre',[{k:'nom',l:'Nom',req:true,ph:'Coaching 3 mois'},{k:'prix',l:'Prix (€, en une fois)',type:'number',req:true},{k:'jours',l:'Durée (jours)',type:'number',v:'91'},{k:'lien',l:'Lien de paiement Stripe',type:'url',ph:'https://buy.stripe.com/…'}],'Ajouter',async g=>{const r=await ins('offres',{nom:g.nom,prix:+g.prix,jours:+g.jours||91,ordre:S.offres.length+1,lien_stripe:g.lien||null});S.offres.push(r);closeSheet();render();toast('Offre ajoutée')});return}
+  if(t.dataset.editoffre){const o=S.offres.find(x=>x.id===t.dataset.editoffre);formSheet('Modifier l\'offre',[{k:'nom',l:'Nom',req:true,v:o.nom},{k:'prix',l:'Prix (€)',type:'number',req:true,v:String(o.prix)},{k:'jours',l:'Durée (jours)',type:'number',v:String(o.jours)},{k:'lien',l:'Lien de paiement Stripe',type:'url',ph:'https://buy.stripe.com/…',v:o.lien_stripe||''}],'Enregistrer',async g=>{await upd('offres',o.id,{nom:g.nom,prix:+g.prix,jours:+g.jours||91,lien_stripe:g.lien||null},o);closeSheet();render();toast('Offre modifiée')});return}
   if(t.dataset.deloffre){const id=t.dataset.deloffre;await del('offres',id);S.offres=S.offres.filter(x=>x.id!==id);render();toast('Offre supprimée');return}
   if(t.hasAttribute('data-addsvc')){formSheet('Nouveau service',[{k:'s',l:'Service',req:true,ph:'Analyse vidéo de chaque PR'}],'Ajouter',async g=>{await setReg('services',[...SERVICES(),g.s]);closeSheet();render();toast('Service ajouté')});return}
   if(t.dataset.delsvc!==undefined){const i=+t.dataset.delsvc;await setReg('services',SERVICES().filter((_,k)=>k!==i));render();return}
@@ -498,6 +564,8 @@ document.addEventListener('click',async e=>{
   // ---- actions sur la fiche ouverte ----
   const p=P();if(!p)return;
   if(t.dataset.move){await moveTo(p,t.dataset.move);return}
+  if(t.hasAttribute('data-paid')){if(t.dataset.sure){await addNote(p,'Paiement Stripe reçu.');await moveTo(p,'gagne','stripe')}else{t.dataset.sure='1';t.textContent='Confirmer : payé ?';t.style.color='var(--green)'}return}
+  if(t.hasAttribute('data-paylink')){const o=offreOf(p);const m=`${prenom(p.prenom)}, comme convenu voici le lien pour régler ton ${o.nom} (${eur(o.prix)}, en une fois) : ${o.lien_stripe}\nDès que c'est fait, on démarre. Bienvenue dans la team LEGACY.`;if(p.tel)window.open(wa(p.tel,m),'_blank','noopener');else navigator.clipboard&&navigator.clipboard.writeText(m);await addNote(p,`Lien de paiement Stripe envoyé (${o.nom}).`);openSheet(p.id);toast(p.tel?'WhatsApp ouvert avec le lien':'Message + lien copiés');return}
   if(t.hasAttribute('data-edit')){openEdit(p);return}
   if(t.hasAttribute('data-delprospect')){if(t.dataset.sure){await del('prospects',p.id);S.prospects=S.prospects.filter(x=>x.id!==p.id);closeSheet();render();toast('Prospect supprimé')}else{t.dataset.sure='1';t.textContent='Confirmer la suppression';t.style.color='var(--red)'}return}
   if(t.dataset.push){const nd=iso(d(Math.max(0,diff(p.next_date||TODAY))+(+t.dataset.push)));await upd('prospects',p.id,{next_date:nd},p);await addNote(p,`Relance repoussée au ${fmtS(nd)}.`);render();openSheet(p.id);toast('Relance repoussée');return}
@@ -514,10 +582,10 @@ document.addEventListener('click',async e=>{
 });
 async function calerMeet(p,dd,hh){
   const r=p.etape==='r1'?'r2':'r1';
+  await addEvent({d:dd,h:hh,e:plus(hh,30),t:r.toUpperCase()+' · '+p.prenom,s:r==='r1'?'Appel découverte':"Présentation de l'offre",k:'meet',pid:p.id});
   await upd('prospects',p.id,{etape:r,chance:BASE[r],action:NEXT[r],next_date:dd},p);
   await addNote(p,`${r.toUpperCase()} calé ${fmtJ(dd)} à ${hh}.`);
-  await addEvent({d:dd,h:hh,e:plus(hh,30),t:r.toUpperCase()+' · '+p.prenom,s:r==='r1'?'Appel découverte':"Présentation de l'offre",k:'meet',pid:p.id});
-  closeSheet();render();openSheet(p.id);toast(`${r.toUpperCase()} calé ${fmtJ(dd)} ${hh} · pense à envoyer le lien Meet`);
+  closeSheet();render();openSheet(p.id);toast(nextMeet(p)?`${r.toUpperCase()} calé ${fmtJ(dd)} ${hh} · lien Meet prêt, envoie-le depuis la fiche`:`${r.toUpperCase()} calé ${fmtJ(dd)} ${hh} · pense à envoyer le lien Meet`);
 }
 document.addEventListener('input',e=>{if(e.target.matches('[data-chance]')){const p=P();if(!p)return;p.chance=+e.target.value;$('chv-'+p.id).innerHTML=chanceHTML(p.chance)}});
 document.addEventListener('change',async e=>{
