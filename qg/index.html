@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>LEGACY QG</title>
+<meta name="theme-color" content="#0c0c0e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LEGACY QG">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px)}
+.login{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center}
+.login .box{max-width:360px;width:100%;display:flex;flex-direction:column;gap:14px;align-items:center}
+.login img{height:72px;width:auto;margin-bottom:6px}
+.login .wordmark{font-size:16px}
+.login p{color:var(--muted);margin:0;font-size:13px}
+.login form{display:flex;flex-direction:column;gap:8px;width:100%}
+.login .inp{text-align:center;padding:11px}
+.login .btn{justify-content:center;padding:10px}
+.loading{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:80;color:var(--muted);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+.loading img{height:48px;width:auto;margin-bottom:14px;opacity:.9}
+.err{color:var(--red);font-size:12px}
+</style>
+</head>
+<body>
+<div class="loading" id="loading"><div style="text-align:center"><img src="logo.png" alt=""><br>chargement</div></div>
+
+<div class="app" id="app" hidden>
+  <aside class="side" aria-label="Navigation">
+    <div class="side-top"><div class="logo"><img src="logo.png" alt=""></div><div><div class="wordmark">LEGACY <em>QG</em></div><small id="who">coach</small></div></div>
+    <div class="side-scroll"><nav class="nav" id="nav"></nav></div>
+    <div class="side-foot"><div><b class="big num" id="footpct">—</b><small>de l'objectif du mois</small></div><button class="btn sm" data-add>+ Prospect</button></div>
+  </aside>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <div class="view" id="view"></div>
+  </div>
+</div>
+<nav class="tabbar" id="tabbar" aria-label="Navigation" hidden></nav>
+
+<div class="login" id="login" hidden>
+  <div class="box">
+    <img src="logo.png" alt="">
+    <div class="wordmark">LEGACY <em>QG</em></div>
+    <p>Ton poste de commandement. Entre ton email, tu reçois un lien de connexion.</p>
+    <form id="loginform">
+      <input class="inp" id="login-email" type="email" required placeholder="ton@email.com" autocomplete="email">
+      <input class="inp" id="login-code" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="Code à 6 chiffres" maxlength="6" hidden>
+      <input class="inp" id="login-pass" type="password" autocomplete="current-password" placeholder="Mot de passe" hidden>
+      <button class="btn primary" id="login-btn" type="submit">Recevoir mon code</button>
+    </form>
+    <button class="btn sm" id="login-switch" type="button">Me connecter avec mon mot de passe</button>
+    <p id="login-msg"></p>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="sheet" id="sheet" aria-hidden="true" role="dialog" aria-modal="true"></aside>
+<div class="present" id="present" hidden></div>
+<div class="flash" id="flash" aria-hidden="true"><div class="in"><img src="logo.png" alt=""><div class="k">NOUVEAU LEGACY</div><div class="nm" id="flashname"></div><div class="m" id="flashsub"></div></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

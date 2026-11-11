@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Prépare ta perf · LEGACY</title>
+<meta name="description" content="La méthode LEGACY pour préparer une perf d'entraînement ou de compétition en street lifting. Vidéo gratuite.">
+<meta property="og:title" content="PRÉPARE TA PERF · LA MÉTHODE LEGACY">
+<meta property="og:description" content="Vidéo gratuite : comment je prépare mes athlètes à une perf en street lifting.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#060607;--fg:#f3f2ef;--muted:#9b9aa1;--red:#ff3b3b;--line:rgba(255,255,255,.12)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Inter",system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;justify-content:center;gap:22px;padding:32px 0}
+.logo{height:56px;width:auto;align-self:center}
+h1{font-family:"Oswald",Impact,sans-serif;font-weight:700;text-transform:uppercase;font-size:clamp(34px,10vw,56px);line-height:.95;margin:0;text-align:center;letter-spacing:.01em}
+h1 span{display:block;color:var(--red)}
+p.lead{margin:0;text-align:center;color:var(--muted);font-size:15px;line-height:1.5}
+form{display:flex;flex-direction:column;gap:10px;border:1px solid var(--red);border-radius:12px;padding:18px}
+input{width:100%;background:#111114;border:1px solid var(--line);border-radius:8px;padding:14px;font:inherit;font-size:16px;color:var(--fg)}
+input:focus{outline:2px solid var(--red);outline-offset:1px}
+button{background:var(--red);color:#fff;border:0;border-radius:8px;padding:15px;font:inherit;font-weight:700;font-size:15px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+button:disabled{opacity:.6}
+.err{color:var(--red);font-size:13px;margin:0;text-align:center}
+.video{display:none;flex-direction:column;gap:14px}
+.video iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#000}
+.video a{display:block;text-align:center;color:var(--fg);font-weight:600}
+.ok h2{font-family:"Oswald",Impact,sans-serif;font-weight:700;text-transform:uppercase;font-size:28px;margin:0;text-align:center}
+.ok p{text-align:center;color:var(--muted);margin:6px 0 0}
+small.foot{text-align:center;color:#55555c;font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="../qg/logo.png" alt="LEGACY">
+  <div id="step1">
+    <h1>Prépare ta perf <span>la méthode LEGACY</span></h1>
+    <p class="lead" style="margin:16px 0 20px">Une vidéo gratuite pour préparer une perf à l'entraînement ou en compétition, comme mes athlètes.</p>
+    <form id="f">
+      <input id="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="Ton numéro" required>
+      <input id="email" type="email" autocomplete="email" placeholder="Ton email" required>
+      <button id="go" type="submit">Voir la vidéo</button>
+      <p class="err" id="err"></p>
+    </form>
+  </div>
+  <div class="video" id="step2">
+    <div class="ok"><h2>C'est parti</h2><p>Regarde-la jusqu'au bout, je t'écris juste après.</p></div>
+    <iframe id="yt" src="" title="Prépare ta perf" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    <a id="ytlink" href="#" target="_blank" rel="noopener">Ouvrir sur YouTube →</a>
+  </div>
+  <small class="foot">LEGACY · Build your own legacy</small>
+</div>
+<script src="../qg/config.js"></script>
+<script>
+(function(){
+  const C=window.LEGACY_CFG, q=new URLSearchParams(location.search), slug=(q.get('v')||'direct').replace(/[^a-z0-9_-]/gi,'').slice(0,40)||'direct';
+  const ytId=(C.leadMagnet.match(/(?:youtu\.be\/|v=)([\w-]{11})/)||[])[1];
+  const f=document.getElementById('f'), err=document.getElementById('err'), go=document.getElementById('go');
+  f.addEventListener('submit', async e=>{
+    e.preventDefault(); err.textContent=''; go.disabled=true; go.textContent='Un instant…';
+    const tel=document.getElementById('tel').value.trim(), email=document.getElementById('email').value.trim();
+    try{
+      const r=await fetch(C.url+'/rest/v1/leads',{method:'POST',headers:{'apikey':C.key,'Authorization':'Bearer '+C.key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({slug,tel,email})});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+    }catch(x){ err.textContent='Petit souci de connexion, réessaie dans une seconde.'; go.disabled=false; go.textContent='Voir la vidéo'; return; }
+    document.getElementById('step1').style.display='none';
+    const v=document.getElementById('step2'); v.style.display='flex';
+    document.getElementById('yt').src='https://www.youtube-nocookie.com/embed/'+ytId+'?autoplay=1&rel=0';
+    document.getElementById('ytlink').href=C.leadMagnet;
+    window.scrollTo(0,0);
+  });
+})();
+</script>
+</body>
+</html>
