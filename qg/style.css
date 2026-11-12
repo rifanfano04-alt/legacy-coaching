@@ -328,3 +328,9 @@ button.evc.meet:hover{background:var(--hover)}
 .evc.gg{background:transparent;border-left:2px solid var(--line2);color:var(--muted);text-decoration:none}
 .evc.gg:hover{color:var(--fg)}
 .ev.gg .bar{background:var(--line2)}.ev.gg .t{color:var(--muted)}
+.present .svc .it{padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.present .svc .it:first-child{border-top:0}
+.prepsvc{display:flex;flex-direction:column}
+.prepsvc label{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:13.5px;cursor:pointer;text-transform:none;letter-spacing:0;color:var(--fg)}
+.prepsvc label:first-child{border-top:0}
+.prepsvc input{accent-color:var(--red);width:16px;height:16px;flex:none}
