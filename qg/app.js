@@ -243,14 +243,13 @@ function vProsp(){
   const sc=(i)=>S.scripts[i]?S.scripts[i].texte:'';
   return `
   <div class="kpis">${stats.map((s,i)=>`<div class="kpi"><span class="lab">${s.t}${i?`<span class="tag neutral">${stats[i-1].n?Math.round(s.n/stats[i-1].n*100)+' %':'—'}</span>`:'<span class="tag up">7 jours</span>'}</span><span class="val">${num(s.n)}</span><span class="sub">${i?'du niveau précédent':'cette semaine'}</span></div>`).join('')}</div>
+  ${asBlock()}
   <div class="split">
     <section class="block"><div class="bh"><h2 class="t">À contacter aujourd'hui</h2><span class="badge plain">${rest} restant${rest>1?'s':''}</span><span class="right"><button class="btn sm" data-addig>+ Ajouter un @</button></span></div>
       ${todayBlock()}
       <div class="lines" style="margin-top:14px">${todoList.length?todoList.map(x=>`<div class="todo ${x.fait?'done':''}"><button class="cb" data-ig="${x.id}" aria-label="Contacté"></button><span style="min-width:0"><span class="t">@${esc(x.handle)}</span><br><span class="s">${esc(x.provenance||'')}</span></span><span class="quick"><span class="tag ${x.chaud?'bad':'neutral'}">${x.chaud?'chaud':'tiède'}</span>${x.fait?`<button class="btn sm ${x.repondu?'on':''}" data-rep="${x.id}">${x.repondu?'A répondu':'Répondu ?'}</button>`:''}<a class="btn sm" href="${igUrl(x.handle)}" target="_blank" rel="noopener" aria-label="Ouvrir sur Instagram">${ICON.ig}</a><button class="btn sm" data-copy="${esc(fill(sc(x.chaud?1:0),{prenom:x.handle.split(/[._]/)[0].replace(/^./,c=>c.toUpperCase())}))}">Copier le DM</button><button class="btn sm" data-igprospect="${x.id}" title="En faire un prospect">→ CRM</button><button class="btn sm" data-igdel="${x.id}" aria-label="Retirer de la liste" title="Retirer de la liste">✕</button></span></div>`).join(''):'<p class="empty">Liste vide. Ajoute les @ des gens qui ont liké, commenté ou répondu à ta story.</p>'}</div>
     </section>
-    <section class="block"><div class="bh"><h2>Messages types</h2><span class="sub">{prénom} se remplit tout seul</span></div>
-      <div class="scripts">${S.scripts.map(s=>`<div class="script"><b>${esc(s.titre)}</b><p>${esc(s.texte)}</p><button class="btn sm" data-copy="${esc(s.texte)}">Copier</button></div>`).join('')}</div>
-      <div class="bh" style="margin-top:18px"><h2>À relancer sur Instagram</h2></div>
+    <section class="block"><div class="bh"><h2>À relancer sur Instagram</h2></div>
       <div class="lines">${open_().filter(p=>p.source==='ig').map(p=>`<div class="line"><span class="l"><button data-open="${p.id}" style="font-weight:500">${p.insta?'@'+esc(p.insta):esc(p.prenom)}</button><small>${esc(p.prenom)} · ${etapeT(p.etape)}</small></span><span class="r">${p.next_date?`<span class="tag ${diff(p.next_date)<=0?'bad':'neutral'}">${rel(p.next_date)}</span>`:''}</span></div>`).join('')||'<p class="empty">Personne pour l\'instant.</p>'}</div>
     </section>
   </div>`;
@@ -345,7 +344,7 @@ function vReglages(){
   <section class="block"><div class="bh"><h2 class="t">Messages types</h2><span class="sub">{prénom} et {vidéo} se remplissent tout seuls</span><span class="right"><button class="btn sm" data-addscript>+ Message</button></span></div>
     <div class="lines">${S.scripts.map(s=>`<div class="line"><span class="l">${esc(s.titre)}<small style="white-space:normal">${esc(s.texte)}</small></span><span class="r quick"><button class="btn sm" data-editscript="${s.id}">Modifier</button><button class="btn sm" data-delscript="${s.id}" aria-label="Supprimer">✕</button></span></div>`).join('')}</div></section>
   <section class="block"><div class="bh"><h2 class="t">Comptes reliés</h2></div>
-    <div class="lines"><div class="line"><span class="l">Supabase<small>ta base de données</small></span><span class="r"><span class="tag up">Relié</span></span></div><div class="line"><span class="l">Google Agenda + Meet<small>${!G.cid?'ID client Google à ajouter dans config.js':G.on?'R1, R2 et séances envoyés dans ton agenda avec un lien Meet':'tes appels créent un événement Google avec lien Meet'}</small></span><span class="r quick">${!G.cid?'<span class="tag neutral">À configurer</span>':G.on?'<span class="tag up">Relié</span><button class="btn sm" data-gout>Déconnecter</button>':'<button class="btn sm primary" data-gconnect>Connecter Google Agenda</button>'}</span></div><div class="line"><span class="l">Stripe<small>${stripeEtat()} · ${S.offres.filter(o=>o.lien_stripe).length} offre${S.offres.filter(o=>o.lien_stripe).length>1?'s':''} sur ${S.offres.length} avec un lien</small></span><span class="r">${STRIPE.ok===null?`<span class="tag neutral">${STRIPE.err?'Non vérifié':'Vérification…'}</span>`:STRIPE.ok?`<span class="tag up">Relié${STRIPE.test?' · mode test':''}</span>`:'<span class="tag bad">Clé manquante</span>'}</span></div><div class="line"><span class="l">LEGACY OS<small>dernière séance de chaque athlète · ${esc(osEtat())}</small></span><span class="r quick">${osTag()}</span></div></div>
+    <div class="lines"><div class="line"><span class="l">Supabase<small>ta base de données</small></span><span class="r"><span class="tag up">Relié</span></span></div><div class="line"><span class="l">Google Agenda + Meet<small>${!G.cid?'ID client Google à ajouter dans config.js':G.on?'R1, R2 et séances envoyés dans ton agenda avec un lien Meet':'tes appels créent un événement Google avec lien Meet'}</small></span><span class="r quick">${!G.cid?'<span class="tag neutral">À configurer</span>':G.on?'<span class="tag up">Relié</span><button class="btn sm" data-gout>Déconnecter</button>':'<button class="btn sm primary" data-gconnect>Connecter Google Agenda</button>'}</span></div><div class="line"><span class="l">Stripe<small>${stripeEtat()} · ${S.offres.filter(o=>o.lien_stripe).length} offre${S.offres.filter(o=>o.lien_stripe).length>1?'s':''} sur ${S.offres.length} avec un lien</small></span><span class="r">${STRIPE.ok===null?`<span class="tag neutral">${STRIPE.err?'Non vérifié':'Vérification…'}</span>`:STRIPE.ok?`<span class="tag up">Relié${STRIPE.test?' · mode test':''}</span>`:'<span class="tag bad">Clé manquante</span>'}</span></div><div class="line"><span class="l">Assistant de réponse (Claude)<small>${AI.ok?'analyse tes captures de conversation · environ 5 centimes par analyse':'clé Anthropic à coller dans Supabase → Edge Functions → Secrets (ANTHROPIC_API_KEY)'}</small></span><span class="r">${AI.ok===null?`<span class="tag neutral">${AI.err?'Non vérifié':'Vérification…'}</span>`:AI.ok?'<span class="tag up">Relié</span>':'<span class="tag bad">Clé manquante</span>'}</span></div><div class="line"><span class="l">LEGACY OS<small>dernière séance de chaque athlète · ${esc(osEtat())}</small></span><span class="r quick">${osTag()}</span></div></div>
     <p class="empty" style="margin-top:12px">Connecté en tant que ${esc(S.user||'')}. <button class="btn sm" data-logout>Se déconnecter</button></p>
     <div class="setrow"><span>Mot de passe<small>pour te connecter sans attendre un email (2 emails par heure maximum)</small></span><span><button class="btn sm" data-setpass>Définir un mot de passe</button></span></div></section>`;
 }
@@ -353,6 +352,7 @@ function vReglages(){
 function render(){
   if(G.on)gLoad(monday(route==='agenda'?wk:0));
   if(route==='reglages')stripePing();
+  if(route==='reglages'||route==='prospection')aiPing();
   $('nav').innerHTML=nav(false); $('tabbar').innerHTML=nav(true);
   $('topbar').innerHTML=topbar(TITLES[route]);
   $('footpct').textContent=Math.min(100,Math.round(encMois()/OBJ()*100))+' %';
@@ -379,7 +379,7 @@ function openSheet(pid){
   showSheet(`
   <div class="sh"><div class="avb">${ini(p.prenom)}</div><div style="min-width:0"><h3>${esc(p.prenom)}</h3><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}</span></div>${X}</div>
   <div class="sb">
-    <div class="g"><div class="quick">${p.tel?`<a class="btn sm" href="${wa(p.tel,msg)}" target="_blank" rel="noopener">${ICON.wa} WhatsApp</a>`:''}${p.insta?`<a class="btn sm" href="${igUrl(p.insta)}" target="_blank" rel="noopener">${ICON.ig} Instagram</a>`:''}<button class="btn sm" data-copy="${esc(msg)}">Copier « ${esc(scr.titre)} »</button><button class="btn sm" data-edit>Modifier la fiche</button></div></div>
+    <div class="g"><div class="quick">${p.tel?`<a class="btn sm" href="${wa(p.tel,msg)}" target="_blank" rel="noopener">${ICON.wa} WhatsApp</a>`:''}${p.insta?`<a class="btn sm" href="${igUrl(p.insta)}" target="_blank" rel="noopener">${ICON.ig} Instagram</a>`:''}<button class="btn sm" data-copy="${esc(msg)}">Copier « ${esc(scr.titre)} »</button><button class="btn sm" data-asfor="${p.id}">Assistant de réponse</button><button class="btn sm" data-edit>Modifier la fiche</button></div></div>
     ${ouvert?`<div class="g"><div class="nextact"><div class="a"><span>${esc(p.action||NEXT[p.etape]||'')}</span><span class="tag ${p.next_date&&diff(p.next_date)<0?'bad':p.next_date&&diff(p.next_date)===0?'warn':'neutral'}">${p.next_date?rel(p.next_date):'—'}</span></div><div class="acts"><button class="btn sm" data-done>Fait</button><button class="btn sm" data-push="2">+2 j</button><button class="btn sm" data-push="7">+1 sem.</button>${['nouveau','contacte','r1'].includes(p.etape)?`<button class="btn sm" data-slots>Caler le ${p.etape==='r1'?'R2':'R1'}</button>`:''}</div><div class="slots" id="slots" hidden>${SL.map((s,k)=>`<button class="btn sm" data-meet="${s.d}|${s.h}">${fmtJ(s.d)} · ${s.h}</button>`).join('')}<button class="btn sm" data-meetcustom>Autre créneau…</button></div></div></div>`:''}
     <div class="g"><h4>Chances de signer</h4><div class="slider"><input type="range" id="ch-${p.id}" min="5" max="95" step="5" value="${chance(p)}" data-chance ${ouvert?'':'disabled'}><span id="chv-${p.id}">${chanceHTML(chance(p))}</span></div></div>
     <div class="g"><h4>Contact</h4><dl class="kv"><dt>Instagram</dt><dd>${p.insta?'@'+esc(p.insta):'<span style="color:var(--dim)">—</span>'}</dd><dt>Téléphone</dt><dd>${p.tel?`<code>${esc(p.tel)}</code> <button class="btn sm" data-copy="${esc(p.tel)}" style="margin-left:6px">Copier</button>`:'<span style="color:var(--dim)">—</span>'}</dd><dt>Email</dt><dd>${esc(p.email||'—')}</dd><dt>Objectif</dt><dd>${esc(p.objectif||'—')}</dd><dt>Source</dt><dd>${SRC[p.source]?SRC[p.source].t:'—'}${p.video_slug?' · « '+esc(videoT(p.video_slug))+' »':''}</dd></dl></div>
@@ -518,6 +518,85 @@ function openEvent(id){
     `<button class="btn sm" data-delev="${e.id}" style="margin-top:6px">Supprimer</button>`);
 }
 
+// ---------- Assistant de réponse (IA) : capture d'une conversation IG/WhatsApp → 2-3 messages à renvoyer ----------
+// L'analyse se fait dans la fonction Supabase « assistant-dm » (clé Anthropic dans les secrets Supabase, jamais ici).
+const AS={imgs:[],texte:'',sel:'',consigne:'',res:null,busy:false,err:'',t0:0,timer:null};
+const AI={ok:null,vu:false,err:false};
+function aiPing(){if(AI.vu)return;AI.vu=true;SB.functions.invoke('assistant-dm',{body:{ping:true}}).then(({data,error})=>{if(error||!data){AI.err=true;return}AI.ok=!!data.ok}).catch(()=>{AI.err=true}).finally(()=>{if(route==='reglages')render();else if(route==='prospection')asRefresh()})}
+const AS_INT={'ouvrir':'Ouvrir','relancer':'Relancer','curiosité':'Curiosité','qualifier':'Qualifier','valeur':'Donner de la valeur','lead magnet':'Lead magnet','appel R1':'Amener au R1','objection':'Objection','suivi':'Suivi','sortie':'Message de sortie'};
+const asSel=()=>{const [k,id]=(AS.sel||'').split(':');return k==='p'?{p:S.prospects.find(x=>x.id===id)}:k==='i'?{i:S.ig.find(x=>x.id===id)}:{}};
+const asHandle=()=>{const {p,i}=asSel();return (p&&p.insta)||(i&&i.handle)||''};
+// Ce que l'IA reçoit de la fiche (jamais le téléphone, l'email ni le prix)
+function asCtx(){
+  const {p,i}=asSel();
+  if(p)return {prenom:p.prenom,instagram:p.insta?'@'+p.insta:'',etape:etapeT(p.etape),prochaine_action:(p.action||NEXT[p.etape]||'')+(p.next_date?' ('+rel(p.next_date)+')':''),objectif:p.objectif||'',source:SRC[p.source]?SRC[p.source].t:'',video_d_origine:p.video_slug?videoT(p.video_slug):'',lead_magnet:p.lm_envoye?'vidéo envoyée le '+fmtS(p.lm_envoye):'pas encore envoyé',video_d_offre:p.vid_envoyee?'envoyée'+(p.vid_vue?', regardée':''):'',historique:notesOf(p).slice(0,12).map(n=>fmtS(n.d)+' : '+n.t)};
+  if(i)return {instagram:'@'+i.handle,statut:'pas encore dans le CRM, dans la liste « à contacter »',provenance:i.provenance||'',deja_contacte:i.fait?'oui, le '+fmtS(i.fait_le||TODAY):'non',a_repondu:i.repondu?'oui':'non',temperature:i.chaud?'chaud':'tiède'};
+  return null;
+}
+const asLien=m=>String(m||'').replace(/\[lien\]/gi,C.leadMagnet||'');
+function asBlock(){
+  const opts=`<option value="">Personne en particulier</option>${open_().length?`<optgroup label="Prospects">${open_().map(p=>`<option value="p:${p.id}" ${AS.sel==='p:'+p.id?'selected':''}>${esc(p.prenom)}${p.insta?' · @'+esc(p.insta):''} · ${etapeT(p.etape)}</option>`).join('')}</optgroup>`:''}${S.ig.length?`<optgroup label="À contacter sur Instagram">${S.ig.map(x=>`<option value="i:${x.id}" ${AS.sel==='i:'+x.id?'selected':''}>@${esc(x.handle)}${x.fait?' · contacté':''}</option>`).join('')}</optgroup>`:''}`;
+  const r=AS.res,L=r&&r.lecture;
+  const tmp=t=>`<span class="tag ${t==='chaud'?'bad':t==='tiède'?'warn':'neutral'}">${esc(t)}</span>`;
+  const out=AS.busy?`<p class="aswait"><span class="asdot"></span>L'IA lit la conversation… <span id="as-sec" class="num">${Math.round((Date.now()-AS.t0)/1000)} s</span><small>en général 20 à 40 secondes</small></p>`
+    :AS.err?`<p class="empty" style="color:var(--red)">${esc(AS.err)}</p>`
+    :r?`<div class="asread"><div class="quick">${tmp(L.temperature)}<span class="tag neutral">${esc(L.etape)}</span>${L.prenom?`<span class="tag neutral">${esc(L.prenom)}</span>`:''}</div>
+        <p>${esc(L.resume)}</p>
+        <dl class="kv"><dt>Objectif</dt><dd>${esc(L.objectif)}</dd>${(L.signaux||[]).length?`<dt>Ce qu'il a dit</dt><dd>${L.signaux.map(esc).join(' · ')}</dd>`:''}${L.a_eviter?`<dt>À éviter</dt><dd>${esc(L.a_eviter)}</dd>`:''}</dl></div>
+      ${(r.reponses||[]).map((x,k)=>`<div class="asr"><div class="quick"><span class="tag ${k?'blue':'up'}">${k?'':'① '}${esc(AS_INT[x.intention]||x.intention)}</span><span class="when">${esc(x.quand||'')}</span></div>
+        <div class="m" contenteditable="true" spellcheck="false" data-asmsg="${k}">${esc(asLien(x.message))}</div>
+        <p class="why"><b>Levier</b> ${esc(x.levier)}</p><p class="why"><b>Pourquoi</b> ${esc(x.pourquoi)}</p>
+        <div class="quick"><button class="btn sm primary" data-ascp="${k}">Copier</button><button class="btn sm" data-asig="${k}">${ICON.ig} Instagram</button><button class="btn sm" data-aswa="${k}">${ICON.wa} WhatsApp</button>${asSel().p?`<button class="btn sm" data-asnote="${k}">Noter envoyé</button>`:''}</div></div>`).join('')}
+      ${r.conseil?`<p class="why" style="margin-top:12px"><b>Conseil</b> ${esc(r.conseil)}</p>`:''}
+      <p class="empty" style="margin-top:10px">Tu peux retoucher un message avant de le copier.${r.cout_usd?` Coût de l'analyse ≈ ${String(r.cout_usd).replace('.',',')} $.`:''}</p>`
+    :`<p class="empty">Envoie une capture de la conversation (ou de son profil, de son post ou de sa story pour un premier message). L'IA lit tout et te propose 2 ou 3 messages précis pour cette personne, avec l'intention et le levier utilisé.${AI.ok===false?'<br><span style="color:var(--amber)">Clé Anthropic pas encore collée dans Supabase : voir Réglages.</span>':''}</p>`;
+  return `<section class="block" id="as"><div class="bh"><h2 class="t">Assistant de réponse</h2><span class="sub">capture d'une conversation → les meilleurs messages à renvoyer</span>${AS.res||AS.imgs.length||AS.texte?'<span class="right"><button class="btn sm" data-asreset>Effacer</button></span>':''}</div>
+    <div class="asg"><div class="asin">
+      <div class="quick"><label class="btn sm" for="as-file">Choisir une capture</label><input type="file" id="as-file" accept="image/*" multiple hidden><button class="btn sm" data-aspaste>Coller</button><span class="sub" style="color:var(--dim)">${AS.imgs.length?AS.imgs.length+' capture'+(AS.imgs.length>1?'s':'')+', dans l\'ordre':'jusqu\'à 6, dans l\'ordre'}</span></div>
+      ${AS.imgs.length?`<div class="asthumbs">${AS.imgs.map((d,k)=>`<span class="asthumb"><img src="${d}" alt="Capture ${k+1}"><button data-asdel="${k}" aria-label="Retirer la capture ${k+1}">✕</button></span>`).join('')}</div>`:''}
+      <textarea class="inp" id="as-txt" rows="3" placeholder="Ou colle le texte de la conversation">${esc(AS.texte)}</textarea>
+      <div class="field"><label for="as-sel">Prospect (facultatif)</label><select class="inp" id="as-sel">${opts}</select></div>
+      <div class="field"><label for="as-cons">Ce que tu veux (facultatif)</label><input class="inp" id="as-cons" placeholder="ex. l'amener au R1, il a une compète en mars" value="${esc(AS.consigne)}"></div>
+      <div><button class="btn primary" data-asgo ${AS.busy?'disabled':''}>${AS.busy?'Analyse…':AS.res?'Refaire l\'analyse':'Analyser'}</button></div>
+    </div><div class="asout">${out}</div></div></section>`;
+}
+function asRefresh(){const el=$('as');if(el&&route==='prospection')el.outerHTML=asBlock()}
+async function asShrink(file){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=new Image();await new Promise((ok,ko)=>{img.onload=ok;img.onerror=ko;img.src=url});
+    const k=Math.min(1,2000/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
+    c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
+    const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',.85);
+  }finally{URL.revokeObjectURL(url)}
+}
+async function asAdd(files){
+  const L=[...files].filter(f=>/^image\//.test(f.type));if(!L.length)return false;
+  for(const f of L){if(AS.imgs.length>=6){toast('6 captures maximum');break}try{AS.imgs.push(await asShrink(f))}catch(_){toast('Image illisible')}}
+  AS.res=null;AS.err='';asRefresh();return true;
+}
+const asMsg=k=>{const el=document.querySelector(`[data-asmsg="${k}"]`);return el?el.innerText.trim():''};
+async function asRun(){
+  if(!AS.imgs.length&&!AS.texte.trim()){toast('Ajoute une capture ou colle la conversation');return}
+  AS.busy=true;AS.err='';AS.t0=Date.now();asRefresh();
+  clearInterval(AS.timer);AS.timer=setInterval(()=>{const e=$('as-sec');if(e)e.textContent=Math.round((Date.now()-AS.t0)/1000)+' s'},1000);
+  try{
+    const {data,error}=await SB.functions.invoke('assistant-dm',{body:{images:AS.imgs.map(d=>({type:'image/jpeg',data:d.split(',')[1]})),texte:AS.texte,prospect:asCtx(),consigne:AS.consigne}});
+    if(error){let m='L\'assistant ne répond pas';try{m=(await error.context.json()).error||m}catch(_){}throw new Error(m)}
+    if(!data||!data.reponses)throw new Error((data&&data.error)||'Pas de réponse');
+    AS.res=data;
+  }catch(e){AS.err=e.message||'Erreur'}
+  finally{AS.busy=false;clearInterval(AS.timer);asRefresh();const o=document.querySelector('#as .asout');if(o&&matchMedia('(max-width:860px)').matches)o.scrollIntoView({behavior:reduced?'auto':'smooth',block:'start'})}
+}
+// Copier + ouvrir (synchrone : iPhone n'ouvre une fenêtre que pendant le geste)
+function asClick(t){
+  const cp=m=>{navigator.clipboard&&navigator.clipboard.writeText(m).catch(()=>{})};
+  if(t.dataset.ascp!==undefined){const m=asMsg(t.dataset.ascp);navigator.clipboard?navigator.clipboard.writeText(m).then(()=>toast('Copié'),()=>toast('Sélectionne le texte pour le copier')):toast('Sélectionne le texte pour le copier');return true}
+  if(t.dataset.asig!==undefined){const m=asMsg(t.dataset.asig),h=asHandle().replace('@','');cp(m);window.open(h?'https://ig.me/m/'+encodeURIComponent(h):'https://www.instagram.com/direct/inbox/','_blank','noopener');toast('Copié · colle-le dans Instagram');return true}
+  if(t.dataset.aswa!==undefined){const m=asMsg(t.dataset.aswa),{p}=asSel();window.open(p&&p.tel?wa(p.tel,m):'https://wa.me/?text='+encodeURIComponent(m),'_blank','noopener');return true}
+  return false;
+}
 // ---------- Stripe (liens de paiement) ----------
 const offreOf=p=>S.offres.find(x=>x.nom===p.offre)||S.offres.find(x=>x.prix===p.montant)||{nom:p.offre||'Coaching',prix:p.montant,jours:91};
 const STRIPE={ok:null,test:false,vu:false};
@@ -654,6 +733,13 @@ document.addEventListener('click',async e=>{
   const t=e.target.closest('button,[data-open]');if(!t)return;
   try{
   if(t.dataset.open){openSheet(t.dataset.open);return}
+  if(asClick(t))return;
+  if(t.hasAttribute('data-asgo')){AS.texte=($('as-txt')||{}).value||AS.texte;AS.consigne=($('as-cons')||{}).value||AS.consigne;await asRun();return}
+  if(t.dataset.asdel!==undefined){AS.imgs.splice(+t.dataset.asdel,1);asRefresh();return}
+  if(t.hasAttribute('data-asreset')){Object.assign(AS,{imgs:[],texte:'',consigne:'',res:null,err:''});asRefresh();return}
+  if(t.hasAttribute('data-aspaste')){let ok=false;try{if(navigator.clipboard&&navigator.clipboard.read){const items=await navigator.clipboard.read();const fs=[];for(const it of items){const ty=it.types.find(x=>x.startsWith('image/'));if(ty){const b=await it.getType(ty);fs.push(new File([b],'capture',{type:ty}))}}ok=await asAdd(fs)}}catch(_){}if(!ok)toast('Pas d\'image copiée : utilise « Choisir une capture »');return}
+  if(t.dataset.asnote!==undefined){const {p}=asSel();if(!p)return;await addNote(p,'DM envoyé : '+asMsg(t.dataset.asnote));t.textContent='Noté ✓';t.disabled=true;toast('Noté dans la fiche de '+prenom(p.prenom));return}
+  if(t.dataset.asfor!==undefined){AS.sel='p:'+t.dataset.asfor;AS.res=null;AS.err='';closeSheet();if(route==='prospection')render();else location.hash='#prospection';setTimeout(()=>{const a=$('as');a&&a.scrollIntoView({block:'start'})},80);return}
   if(t.hasAttribute('data-add')){openAdd();return}
   if(t.hasAttribute('data-close')){closeSheet();return}
   if(t.hasAttribute('data-logout')){await SB.auth.signOut();location.reload();return}
@@ -743,6 +829,10 @@ async function calerMeet(p,dd,hh){
   await addNote(p,`${r.toUpperCase()} calé ${fmtJ(dd)} à ${hh}.`);
   closeSheet();render();openSheet(p.id);toast(nextMeet(p)?`${r.toUpperCase()} calé ${fmtJ(dd)} ${hh} · lien Meet prêt, envoie-le depuis la fiche`:`${r.toUpperCase()} calé ${fmtJ(dd)} ${hh} · pense à envoyer le lien Meet`);
 }
+document.addEventListener('input',e=>{if(e.target.id==='as-txt')AS.texte=e.target.value;else if(e.target.id==='as-cons')AS.consigne=e.target.value});
+document.addEventListener('change',e=>{if(e.target.id==='as-sel'){AS.sel=e.target.value;if(AS.res)asRefresh()}else if(e.target.id==='as-file'){const f=e.target.files;asAdd(f).then(()=>{});}});
+// coller une capture (ordinateur : cmd+V n'importe où dans l'onglet Prospection)
+document.addEventListener('paste',e=>{if(route!=='prospection'||!e.clipboardData)return;const fs=[...e.clipboardData.files].filter(f=>/^image\//.test(f.type));if(!fs.length)return;e.preventDefault();asAdd(fs)});
 document.addEventListener('input',e=>{if(e.target.matches('[data-chance]')){const p=P();if(!p)return;p.chance=+e.target.value;$('chv-'+p.id).innerHTML=chanceHTML(p.chance)}});
 document.addEventListener('change',async e=>{
   const p=P();

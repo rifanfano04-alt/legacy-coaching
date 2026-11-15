@@ -339,3 +339,28 @@ button.evc.meet:hover{background:var(--hover)}
 .oslink:hover{color:var(--fg)}
 .mrow .p.quick{justify-content:flex-end}
 .mrow button.t{text-align:left}
+/* Assistant de réponse (IA) : saisie à gauche, propositions à droite ; traits fins, pas d'encadrés */
+.asg{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:0 28px;align-items:start}
+.asin{display:flex;flex-direction:column;gap:12px}
+.asin textarea{resize:vertical;min-height:64px}
+.asthumbs{display:flex;gap:10px;flex-wrap:wrap}
+.asthumb{position:relative}
+.asthumb img{height:72px;width:auto;max-width:120px;object-fit:cover;object-position:top;border-radius:5px;border:1px solid var(--line2);display:block}
+.asthumb button{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:99px;background:var(--raise);border:1px solid var(--line2);font-size:10px;color:var(--muted);display:grid;place-items:center}
+.asout{min-width:0}
+.asread p{margin:8px 0 10px;color:var(--fg);line-height:1.5}
+.asread .kv{margin:0}
+.asr{padding:14px 0 12px;border-top:1px solid var(--line);margin-top:12px}
+.asread+.asr{margin-top:14px}
+.asr .when{color:var(--dim);font-size:11.5px}
+.asr .m{font-size:14.5px;line-height:1.5;margin:9px 0 8px;white-space:pre-wrap;word-break:break-word;padding:2px 0;border-radius:4px;outline:none}
+.asr .m:focus{background:var(--raise);box-shadow:0 0 0 6px var(--raise)}
+.why{margin:0 0 3px;color:var(--muted);font-size:12px;line-height:1.45}
+.why b{color:var(--fg);font-weight:500;margin-right:4px}
+.asr .quick{margin-top:2px}
+.asr .why+.quick{margin-top:9px}
+.aswait{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--fg);margin:4px 0}
+.aswait small{flex-basis:100%;color:var(--dim);padding-left:16px}
+.asdot{width:8px;height:8px;border-radius:99px;background:var(--red);animation:asp 1s ease-in-out infinite}
+@keyframes asp{50%{opacity:.25;transform:scale(.7)}}
+@media (max-width:860px){#as .bh .sub{display:none}#as .inp,.asr .m{font-size:16px}.asg{grid-template-columns:minmax(0,1fr)}.asout{border-top:1px solid var(--line);margin-top:16px;padding-top:4px}.asout>.empty:first-child,.asout>.aswait{padding-top:12px}}
