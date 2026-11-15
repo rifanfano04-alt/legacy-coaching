@@ -28,13 +28,13 @@ const monday=(wk)=>{const m=new Date(T0);m.setDate(T0.getDate()-((T0.getDay()+6)
 const ETAPES=[{k:'nouveau',t:'Nouveau'},{k:'contacte',t:'Contacté'},{k:'r1',t:'R1 · découverte'},{k:'r2',t:'R2 · offre'},{k:'gagne',t:'Signé'},{k:'perdu',t:'Perdu'}];
 const etapeT=k=>(ETAPES.find(e=>e.k===k)||{t:k}).t;
 const BASE={nouveau:15,contacte:30,r1:50,r2:75,gagne:100,perdu:0};
-const NEXT={nouveau:'Premier message',contacte:'Caler le R1',r1:'R1 · appel découverte',r2:"R2 · présenter l'offre"};
+const NEXT={nouveau:'Premier message',contacte:'Caler le R1',lm:'Envoyer le lead magnet',r1:'R1 · appel découverte',r2:"R2 · présenter l'offre"};
 const SRC={prepa:{t:'Vidéo prépa',c:'src-prepa'},ig:{t:'Instagram',c:'src-ig'},yt:{t:'YouTube',c:'src-yt'},bao:{t:'Bouche-à-oreille',c:'src-bao'}};
 const STEPS=['Idée','Tournée','Montée','Publiée'];
 const COL={nouveau:'var(--fg)',contacte:'var(--blue)',r1:'var(--amber)',r2:'#ffab7a',gagne:'var(--green)'};
 
 // ---------- état ----------
-const S={prospects:[],notes:{},ig:[],dm:{},videos:[],clics:{},leadsBy:{},leads:[],athletes:[],ventes:[],agenda:[],reg:{},offres:[],scripts:[],user:null};
+const S={liens:[],prospects:[],notes:{},ig:[],dm:{},videos:[],clics:{},leadsBy:{},leads:[],athletes:[],ventes:[],agenda:[],reg:{},offres:[],scripts:[],user:null};
 let route='dashboard', sheetId=null, filtre='all', wk=0, selDay=TODAY, dict=null;
 const OBJ_DM=()=>+(S.reg.objectif_dm??30), OBJ=()=>+(S.reg.objectif_mois??3000);
 const SERVICES=()=>S.reg.services||[];
@@ -49,7 +49,7 @@ async function del(table,id){await q(T(table).delete().eq('id',id))}
 async function setReg(cle,valeur){await q(T('reglages').upsert({cle,valeur}));S.reg[cle]=valeur}
 
 async function loadAll(){
-  const [pr,no,ig,dm,vi,cl,le,at,ve,ag,re,of,ms]=await Promise.all([
+  const [pr,no,ig,dm,vi,cl,le,at,ve,ag,re,of,ms,li]=await Promise.all([
     q(T('prospects').select('*').order('created_at',{ascending:false})),
     q(T('notes').select('*').order('created_at',{ascending:false})),
     q(T('ig_comptes').select('*').order('created_at',{ascending:true})),
@@ -63,7 +63,9 @@ async function loadAll(){
     q(T('reglages').select('*')),
     q(T('offres').select('*').order('ordre')),
     q(T('messages_types').select('*').order('ordre')),
+    T('liens').select('*').order('created_at').then(r=>r.error?[]:r.data||[]),
   ]);
+  S.liens=li;
   S.prospects=pr; S.notes={}; no.forEach(n=>{(S.notes[n.prospect_id]=S.notes[n.prospect_id]||[]).push({d:n.created_at.slice(0,10),t:n.texte,id:n.id})});
   S.ig=ig; S.dm={}; dm.forEach(x=>S.dm[x.jour]=x.nb);
   S.videos=vi; S.clics={}; cl.forEach(c=>S.clics[c.slug]=(S.clics[c.slug]||0)+1);
@@ -79,7 +81,7 @@ async function convertLeads(){
   const todo=S.leads.filter(l=>!l.prospect_id);
   for(const l of todo){
     const nom=(l.email||'').split('@')[0].replace(/[._-]+/g,' ').trim()||(l.tel||'Inscrit');
-    const p=await ins('prospects',{prenom:nom.charAt(0).toUpperCase()+nom.slice(1),tel:l.tel,email:l.email,source:'prepa',video_slug:l.slug,objectif:'',etape:'nouveau',montant:S.offres[0]?.prix||700,chance:BASE.nouveau,action:NEXT.nouveau,next_date:l.created_at.slice(0,10)});
+    const p=await ins('prospects',{prenom:nom.charAt(0).toUpperCase()+nom.slice(1),tel:l.tel,email:l.email,source:'prepa',video_slug:l.slug,lm_envoye:l.created_at.slice(0,10),objectif:'',etape:'nouveau',montant:S.offres[0]?.prix||700,chance:BASE.nouveau,action:NEXT.nouveau,next_date:l.created_at.slice(0,10)});
     // on « réserve » l'inscrit : si un autre appareil l'a déjà converti entre-temps, on annule le doublon
     const claimed=await q(T('leads').update({prospect_id:p.id}).eq('id',l.id).is('prospect_id',null).select());
     if(!claimed.length){await del('prospects',p.id);continue}
@@ -142,7 +144,9 @@ const sparkSVG=(arr,cls)=>{const w=64,h=18,mx=Math.max(...arr,1);return `<svg cl
 const chanceHTML=c=>{const col=c>=70?'var(--green)':c>=40?'var(--amber)':'var(--red)';return `<span class="chance"><span class="segs" style="--c:${col}">${Array.from({length:12},(_,i)=>`<i class="${i<Math.round(c/100*12)?'on':''}"></i>`).join('')}</span><span class="num">${c} %</span></span>`};
 const srcPill=p=>SRC[p.source]?`<span class="pill ${SRC[p.source].c}">${SRC[p.source].t}</span>`:'';
 const stPill=k=>`<span class="pill st-${k}">${etapeT(k)}</span>`;
-const tempTag=p=>p.etape==='r2'&&!p.offre_prete?'<span class="tag warn">offre à préparer</span>':'';
+const tempTag=p=>(p.lm_envoye||p.source==='prepa'?'<span class="tag neutral">LM envoyé</span>':'')+(p.vid_envoyee?'<span class="tag neutral">vidéo d\'offre</span>':'')+(p.offre_prete?'<span class="tag up">offre prête</span>':p.etape==='r2'?'<span class="tag warn">offre à préparer</span>':'')+(p.recap_envoye&&p.etape!=='gagne'?'<span class="tag warn">récap envoyé</span>':'');
+const lastC=p=>{const n=notesOf(p)[0];return n?rel(n.d):'—'};
+const offreCell=p=>p.offre_prete||p.etape==='gagne'?eur(p.montant):'<span style="color:var(--dim)">à définir</span>';
 const avc=p=>({prepa:'g',ig:'n',yt:'a',bao:'b'})[p.source]||'n';
 const num=(v,suf='')=>`<span class="big num" data-count="${v}" data-suf="${suf}">${(+v||0).toLocaleString('fr-FR')}${suf}</span>`;
 const countUp=()=>{if(reduced)return;document.querySelectorAll('[data-count]').forEach(el=>{const end=+el.dataset.count,suf=el.dataset.suf||'',t0=performance.now(),dur=600;const step=t=>{const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3);el.textContent=Math.round(end*e).toLocaleString('fr-FR')+suf;if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)})};
@@ -217,9 +221,9 @@ function vDash(){
   </section>`;
 }
 function tableHTML(list){
-  return `<div class="tw"><table><thead><tr><th>Prospect</th><th>Source et étape</th><th>Objectif</th><th class="r">Offre</th><th>Chances de signer</th><th>Activité</th><th>Prochaine action</th></tr></thead><tbody>
-  ${list.map(p=>`<tr class="row" data-open="${p.id}"><td><span class="who"><span class="av ${avc(p)}">${ini(p.prenom)}</span><span class="name">${esc(p.prenom)}</span></span></td><td><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}</span></td><td style="color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis">${esc(p.objectif||'')}</td><td class="r num">${eur(p.montant)}</td><td>${chanceHTML(chance(p))}</td><td>${sparkSVG(actOf(p),'mini')}</td><td class="date">${p.next_date&&!['gagne','perdu'].includes(p.etape)?`<b>${fmtS(p.next_date)}</b> · ${esc(p.action||'')}${diff(p.next_date)<0?' <span class="tag bad">retard</span>':diff(p.next_date)===0?' <span class="tag warn">aujourd\'hui</span>':''}`:p.etape==='gagne'?'<span class="tag up">Signé</span>':'<span style="color:var(--dim)">—</span>'}</td></tr>`).join('')}</tbody></table></div>
-  <div class="mlist">${list.map(p=>`<button class="mrow" data-open="${p.id}"><span class="t">${esc(p.prenom)}</span><span class="e num">${eur(p.montant)}</span><span class="s">${SRC[p.source]?SRC[p.source].t+' · ':''}${p.next_date&&!['gagne','perdu'].includes(p.etape)?fmtS(p.next_date)+' · '+esc(p.action||''):etapeT(p.etape)}</span><span class="p">${stPill(p.etape)}</span></button>`).join('')}</div>`;
+  return `<div class="tw"><table><thead><tr><th>Prospect</th><th>Source et étape</th><th>Objectif</th><th class="r">Offre</th><th>Chances de signer</th><th>Dernier contact</th><th>Prochaine action</th></tr></thead><tbody>
+  ${list.map(p=>`<tr class="row" data-open="${p.id}"><td><span class="who"><span class="av ${avc(p)}">${ini(p.prenom)}</span><span class="name">${esc(p.prenom)}</span></span></td><td><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}</span></td><td style="color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis">${esc(p.objectif||'')}</td><td class="r num">${offreCell(p)}</td><td>${chanceHTML(chance(p))}</td><td style="color:var(--muted)">${lastC(p)}</td><td class="date">${p.next_date&&!['gagne','perdu'].includes(p.etape)?`<b>${fmtS(p.next_date)}</b> · ${esc(p.action||'')}${diff(p.next_date)<0?' <span class="tag bad">retard</span>':diff(p.next_date)===0?' <span class="tag warn">aujourd\'hui</span>':''}`:p.etape==='gagne'?'<span class="tag up">Signé</span>':'<span style="color:var(--dim)">—</span>'}</td></tr>`).join('')}</tbody></table></div>
+  <div class="mlist">${list.map(p=>`<button class="mrow" data-open="${p.id}"><span class="t">${esc(p.prenom)}</span><span class="e num">${offreCell(p)}</span><span class="s">${SRC[p.source]?SRC[p.source].t+' · ':''}${p.next_date&&!['gagne','perdu'].includes(p.etape)?fmtS(p.next_date)+' · '+esc(p.action||''):etapeT(p.etape)}</span><span class="p">${stPill(p.etape)}</span></button>`).join('')}</div>`;
 }
 function vCRM(){
   const list=filtre==='all'?[...S.prospects].sort((a,b)=>{const A=['gagne','perdu'].includes(a.etape),B=['gagne','perdu'].includes(b.etape);if(A!==B)return A?1:-1;return (a.next_date||'9').localeCompare(b.next_date||'9')}):S.prospects.filter(p=>p.etape===filtre);
@@ -253,17 +257,17 @@ function vProsp(){
 }
 function vVideos(){
   const all=S.videos.map(v=>({...v,ins:S.leadsBy[v.slug]||0,clics:S.clics[v.slug]||0}));
-  const pub=all.filter(v=>v.statut===4),tc=pub.reduce((s,v)=>s+v.clics,0),ti=pub.reduce((s,v)=>s+v.ins,0);
+  const pub=all.filter(v=>v.statut===4),LV=v=>S.liens.filter(l=>l.video_slug===v.slug),tc=pub.reduce((s,v)=>s+v.clics+LV(v).reduce((a,l)=>a+(S.clics[l.slug]||0),0),0),ti=pub.reduce((s,v)=>s+v.ins,0);
   const rows=[...pub].sort((a,b)=>b.ins-a.ins||b.clics-a.clics), mx=Math.max(1,...rows.map(v=>v.clics));
   const enCours=all.filter(v=>v.statut<4);
   const steps=v=>`<span class="vstep" title="${STEPS[v.statut-1]}">${STEPS.map((_,i)=>`<i class="${i<v.statut?'on':''}"></i>`).join('')}</span>`;
   const link=v=>`${C.site}/go/${v.slug}`;
   return `
   <div class="kpis"><div class="kpi"><span class="lab">Clics sur les liens<span class="tag up">total</span></span><span class="val">${num(tc)}</span><span class="sub">toutes vidéos</span></div><div class="kpi"><span class="lab">Inscrits au lead magnet<span class="tag up">${tc?Math.round(ti/tc*100)+' %':'—'}</span></span><span class="val">${num(ti)}</span><span class="sub">ont laissé numéro + email</span></div><div class="kpi"><span class="lab">Devenus prospects</span><span class="val">${num(S.prospects.filter(p=>p.source==='prepa').length)}</span><span class="sub">arrivés dans le CRM</span></div><div class="kpi"><span class="lab">Signés via une vidéo</span><span class="val">${num(S.prospects.filter(p=>p.source==='prepa'&&p.etape==='gagne').length)}</span><span class="sub">${eur(S.prospects.filter(p=>p.source==='prepa'&&p.etape==='gagne').reduce((s,p)=>s+p.montant,0))} encaissés</span></div></div>
-  <section class="block"><div class="bh"><h2 class="t">Vidéos publiées</h2><span class="sub">un lien par vidéo, à coller en description · tous mènent à « Prépare ta perf »</span></div>
+  <section class="block"><div class="bh"><h2 class="t">Vidéos publiées</h2><span class="sub">lien principal = « Prépare ta perf » · « + Lien » pour un lien WhatsApp ou autre, chacun compte ses clics</span></div>
     <div class="tw"><table><thead><tr><th>Lien</th><th>Vidéo</th><th>Publiée</th><th class="r">Clics</th><th></th><th class="r">Inscrits</th><th class="r">Taux</th><th></th></tr></thead><tbody>
-    ${rows.map(v=>`<tr><td class="mono">/go/${esc(v.slug)}</td><td>${esc(v.titre)}</td><td class="date num">${v.publiee_le?fmtS(v.publiee_le):'—'}</td><td class="r num">${v.clics}</td><td style="width:140px"><span class="meter" style="display:block;width:120px"><i class="${v===rows[0]?'hot':''}" style="width:${v.clics/mx*100}%"></i></span></td><td class="r num">${v.ins}</td><td class="r num">${v.clics?Math.round(v.ins/v.clics*100)+' %':'—'}</td><td class="r"><button class="btn sm" data-copy="${link(v)}">Copier le lien</button></td></tr>`).join('')||'<tr><td colspan="8" class="empty">Aucune vidéo publiée.</td></tr>'}</tbody></table></div>
-    <div class="mlist">${rows.map(v=>`<div class="mrow"><span class="t mono">/go/${esc(v.slug)}</span><span class="e num">${v.ins} inscrit${v.ins>1?'s':''}</span><span class="s">${esc(v.titre)}</span><span class="p"><button class="btn sm" data-copy="${link(v)}">Copier · ${v.clics} clics</button></span></div>`).join('')||'<p class="empty">Aucune vidéo publiée.</p>'}</div>
+    ${rows.map(v=>`<tr><td class="mono">/go/${esc(v.slug)}</td><td>${esc(v.titre)}</td><td class="date num">${v.publiee_le?fmtS(v.publiee_le):'—'}</td><td class="r num">${v.clics}</td><td style="width:140px"><span class="meter" style="display:block;width:120px"><i class="${v===rows[0]?'hot':''}" style="width:${v.clics/mx*100}%"></i></span></td><td class="r num">${v.ins}</td><td class="r num">${v.clics?Math.round(v.ins/v.clics*100)+' %':'—'}</td><td class="r"><span class="quick" style="justify-content:flex-end"><button class="btn sm" data-copy="${link(v)}">Copier · lead magnet</button><button class="btn sm" data-addlien="${esc(v.slug)}">+ Lien</button></span></td></tr>${LV(v).map(l=>`<tr><td class="mono" style="color:var(--muted)">↳ /go/${esc(l.slug)}</td><td style="color:var(--muted)">${esc(l.nom)}</td><td></td><td class="r num">${S.clics[l.slug]||0}</td><td colspan="3"></td><td class="r"><span class="quick" style="justify-content:flex-end"><button class="btn sm" data-copy="${C.site}/go/${esc(l.slug)}">Copier</button><button class="btn sm" data-dellien="${esc(l.slug)}" aria-label="Supprimer le lien">✕</button></span></td></tr>`).join('')}`).join('')||'<tr><td colspan="8" class="empty">Aucune vidéo publiée.</td></tr>'}</tbody></table></div>
+    <div class="mlist">${rows.map(v=>`<div class="mrow"><span class="t mono">/go/${esc(v.slug)}</span><span class="e num">${v.ins} inscrit${v.ins>1?'s':''}</span><span class="s">${esc(v.titre)}</span><span class="p quick"><button class="btn sm" data-copy="${link(v)}">Lead magnet · ${v.clics} clics</button>${LV(v).map(l=>`<button class="btn sm" data-copy="${C.site}/go/${esc(l.slug)}">${esc(l.nom)} · ${S.clics[l.slug]||0}</button>`).join('')}<button class="btn sm" data-addlien="${esc(v.slug)}">+ Lien</button></span></div>`).join('')||'<p class="empty">Aucune vidéo publiée.</p>'}</div>
   </section>
   <section class="block"><div class="bh"><h2 class="t">En préparation</h2><span class="sub">idée → tournée → montée → publiée · le lien existe dès la publication</span><span class="right"><button class="btn sm primary" data-newvideo>+ Idée de vidéo</button></span></div>
     <div class="lines">${enCours.map(v=>`<div class="line"><span class="l">${esc(v.titre)}<small>${STEPS[v.statut-1]} · lien /go/${esc(v.slug)}</small></span><span class="r" style="display:flex;gap:10px;align-items:center">${steps(v)}<button class="btn sm" data-vstep="${esc(v.slug)}">${v.statut===3?'Publier':'Étape suivante'}</button></span></div>`).join('')||'<p class="empty">Aucune vidéo en préparation.</p>'}</div>
@@ -380,7 +384,9 @@ function openSheet(pid){
     <div class="g"><h4>Chances de signer</h4><div class="slider"><input type="range" id="ch-${p.id}" min="5" max="95" step="5" value="${chance(p)}" data-chance ${ouvert?'':'disabled'}><span id="chv-${p.id}">${chanceHTML(chance(p))}</span></div></div>
     <div class="g"><h4>Contact</h4><dl class="kv"><dt>Instagram</dt><dd>${p.insta?'@'+esc(p.insta):'<span style="color:var(--dim)">—</span>'}</dd><dt>Téléphone</dt><dd>${p.tel?`<code>${esc(p.tel)}</code> <button class="btn sm" data-copy="${esc(p.tel)}" style="margin-left:6px">Copier</button>`:'<span style="color:var(--dim)">—</span>'}</dd><dt>Email</dt><dd>${esc(p.email||'—')}</dd><dt>Objectif</dt><dd>${esc(p.objectif||'—')}</dd><dt>Source</dt><dd>${SRC[p.source]?SRC[p.source].t:'—'}${p.video_slug?' · « '+esc(videoT(p.video_slug))+' »':''}</dd></dl></div>
     <div class="g"><h4>Offre · du R1 au R2</h4><dl class="kv"><dt>Formule</dt><dd><select id="of-${p.id}" class="inp" data-offre>${S.offres.map(o=>`<option value="${o.id}" ${o.nom===p.offre||(!p.offre&&o.prix===p.montant)?'selected':''}>${esc(o.nom)} · ${eur(o.prix)}</option>`).join('')}</select></dd>
-      <dt>Vidéo d'offre</dt><dd>${p.vid_envoyee?`<span class="tag up">Envoyée${p.vid_vue?' · regardée':''}</span>`:ouvert?`<button class="btn sm" data-vid>Marquer envoyée</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
+      <dt>Lead magnet</dt><dd>${p.lm_envoye||p.source==='prepa'?`<span class="tag up">Envoyé${p.lm_envoye?' · '+fmtS(p.lm_envoye):''}</span>`:ouvert?'<button class="btn sm" data-lm>Marquer envoyé</button>':'<span style="color:var(--dim)">—</span>'}</dd>
+      ${['r1','r2','gagne'].includes(p.etape)||p.vid_envoyee?`<dt>Vidéo d'offre</dt><dd>${p.vid_envoyee?`<span class="tag up">Envoyée${p.vid_vue?' · regardée':''}</span>`:ouvert?`<button class="btn sm" data-vid>Marquer envoyée</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
+      `:''}
       <dt>Offre perso</dt><dd>${p.offre_prete?`<span class="quick"><span class="tag up">Prête · ${eur(p.montant)}</span><button class="btn sm" data-present>Présenter en visio</button><button class="btn sm" data-prep>Modifier</button></span>`:ouvert?`<button class="btn sm" data-prep>Préparer l'offre</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
       <dt>Récap + contrat</dt><dd>${p.etape==='gagne'?'<span class="tag up">Signé · payé</span>':p.recap_envoye?'<span class="tag warn">Envoyés · en attente</span>':p.offre_prete?`<button class="btn sm" data-sent>Marquer envoyés</button>`:'<span style="color:var(--dim)">après le R2</span>'}</dd>
       ${ouvert?`<dt>Paiement</dt><dd><span class="quick">${offreOf(p).lien_stripe?'<button class="btn sm" data-paylink>Envoyer le lien de paiement</button>':'<a class="btn sm" href="#reglages">Ajouter le lien Stripe de l\'offre</a>'}<button class="btn sm" data-paysur>Lien sur mesure</button><button class="btn sm" data-paid>Paiement reçu</button></span></dd>`:''}
@@ -479,23 +485,26 @@ function parseDictee(txt){
   const H="(\\d{1,2}\\s*(?:h|:)\\s*(?:\\d{2})?|\\d{1,2}\\s*heures?(?:\\s*\\d{2})?)";
   m=low().match(new RegExp("\\bde\\s+"+H+"\\s*(?:à|a|jusqu'à)\\s+"+H));if(m){h=tm(m[1]);e=tm(m[2]);cut(m[0])}
   if(!h){m=low().match(new RegExp("(?:^|\\s)(?:à|a|vers)\\s+"+H));if(m){h=tm(m[1]);cut(m[0])}}
+  if(!h){m=low().match(/(?:^|\s)(\d{1,2}\s*h\s*(?:\d{2})?)(?=\s|$|,)/);if(m){h=tm(m[1]);cut(m[0])}}
   let t=o.replace(/\s+/g,' ').replace(/^[\s,.:;]+|[\s,.:;]+$/g,'').replace(/^(?:le|la|une?|des?)\s+/i,'');t=t.charAt(0).toUpperCase()+t.slice(1);
   const L=t.toLowerCase();const k=/séance|seance|sport|entra|street|muscu|salle|compét|compet/.test(L)?'seance':/appel|visio|meet|\br1\b|\br2\b/.test(L)?'meet':/anniv|resto|famille|dentiste|médecin|medecin|vacances|perso/.test(L)?'perso':'task';
-  return {date:date||TODAY,h:h||'',e:e||(h?plus(h,60):''),t:t||'Sans titre',k};
+  return {date:date||TODAY,dated:!!date,h:h||'',e:e||(h?plus(h,60):''),t:t||'Sans titre',k};
 }
+function parseMulti(v){const out=[];v.split(/\s*(?:;|\n|,?\s*\bpuis\b|,?\s*\bensuite\b|,?\s*\bet après\b|,?\s*\bet aussi\b)\s*/i).map(x=>x.trim()).filter(Boolean).forEach(x=>{const r=parseDictee(x);if(!r.dated&&out.length)r.date=out[out.length-1].date;out.push(r)});return out}
 function openDictee(){
   sheetId=null;
-  showSheet(`<div class="sh"><div class="avb">${ICON.mic}</div><div><h3>Dicter une tâche</h3><span class="sub">« Le 22 novembre, séance street lifting de 18 h à 20 h »</span></div>${X}</div>
-  <div class="sb"><div class="g"><div style="display:flex;gap:6px"><input class="inp" id="dict-in" placeholder="Dis-le ou écris-le…" autocomplete="off"><button class="btn primary" data-mic aria-label="Parler">${ICON.mic}</button></div><p class="empty">Appuie sur le micro et parle, ou écris la phrase. Je comprends la date, l'heure et le titre.</p></div>
+  showSheet(`<div class="sh"><div class="avb">${ICON.mic}</div><div><h3>Dicter</h3><span class="sub">« Demain 18 h séance Karim, puis jeudi 12 h appel Maëlle »</span></div>${X}</div>
+  <div class="sb"><div class="g"><div style="display:flex;gap:6px"><input class="inp" id="dict-in" placeholder="Dis-le ou écris-le…" autocomplete="off"><button class="btn primary" data-mic aria-label="Parler">${ICON.mic}</button></div><p class="empty">Appuie sur le micro et parle, ou écris la phrase. Je comprends la date, l'heure et le titre. Plusieurs choses d'un coup : sépare-les par « puis » ou « ensuite ».</p></div>
   <div class="g" id="dict-prev" hidden></div></div>
   <div class="sf"><button class="btn primary" data-dictadd disabled>Ajouter à l'agenda</button></div>`);
   const inp=$('dict-in');inp.focus();inp.addEventListener('input',()=>previewDictee(inp.value));
 }
 function previewDictee(v){
   const box=$('dict-prev'),btn=sheet.querySelector('[data-dictadd]');if(!v.trim()){box.hidden=true;btn.disabled=true;dict=null;return}
-  dict=parseDictee(v);box.hidden=false;btn.disabled=false;
+  dict=parseMulti(v);box.hidden=!dict.length;btn.disabled=!dict.length;
   const KN={seance:'Séance',meet:'Appel / visio',task:'Tâche',perso:'Perso'};
-  box.innerHTML=`<h4>Ce que j'ai compris</h4><dl class="kv"><dt>Quoi</dt><dd><b>${esc(dict.t)}</b> <span class="tag neutral">${KN[dict.k]}</span></dd><dt>Quand</dt><dd>${new Date(dict.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${dict.h?' · '+dict.h+(dict.e?' → '+dict.e:''):' · toute la journée'}</dd></dl>`;
+  btn.textContent=dict.length>1?`Ajouter les ${dict.length} à l'agenda`:"Ajouter à l'agenda";
+  box.innerHTML=`<h4>Ce que j'ai compris</h4><div class="lines">${dict.map(x=>`<div class="line"><span class="l"><b>${esc(x.t)}</b><small>${new Date(x.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}${x.h?' · '+x.h+(x.e?' → '+x.e:''):' · toute la journée'}</small></span><span class="r"><span class="tag neutral">${KN[x.k]}</span></span></div>`).join('')}</div>`;
 }
 async function addEvent(e){const tok=G.on&&!e.auto?await gTok(true):null;const r=await ins('agenda',{date:e.d,debut:e.h||null,fin:e.e||null,titre:e.t,sous_titre:e.s||null,type:e.k||'task',kind:e.kind||null,auto:!!e.auto,prospect_id:e.pid||null});S.agenda.push({id:r.id,d:r.date,h:hm(r.debut),e:hm(r.fin),t:r.titre,s:r.sous_titre||'',k:r.type,kind:r.kind,auto:r.auto,pid:r.prospect_id,gcal:null,meet:null});
   if(tok){const loc=S.agenda[S.agenda.length-1];const ge=await gPush(loc);if(ge&&ge.id){loc.gcal=ge.id;loc.meet=ge.hangoutLink||null;await upd('agenda',r.id,{gcal_id:ge.id,meet_url:loc.meet})}}
@@ -668,6 +677,11 @@ document.addEventListener('click',async e=>{
   if(t.dataset.editath!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.editath);const mx=mensuels()[a.id]||{};const op=S.offres.map(o=>({v:o.nom,t:o.nom+' · '+eur(o.prix)}));if(a.offre&&!op.some(o=>o.v===a.offre))op.unshift({v:a.offre,t:a.offre});op.unshift({v:'',t:'Ancienne offre / aucune'});formSheet('Modifier '+prenom(a.prenom),[{k:'prenom',l:'Prénom et nom',req:true,v:a.prenom},{k:'offre',l:'Offre',type:'select',v:a.offre||'',opts:op},{k:'debut',l:'Début',type:'date',v:a.debut||''},{k:'fin',l:'Fin',type:'date',v:a.fin||''},{k:'mm',l:'Payé tous les mois (€ par mois · vide = en une fois)',type:'number',v:String(mx.m||'')},{k:'mj',l:'Jour du paiement dans le mois',type:'number',v:String(mx.j||1)},{k:'m2',l:'Le montant change ? Nouveau montant par mois',type:'number',v:String(mx.m2||'')},{k:'d2',l:'À partir du mois de',type:'month',v:mx.d2||''}],'Enregistrer',async g=>{const patch={prenom:g.prenom,offre:g.offre||null,debut:g.debut||null,fin:g.fin||null};const o=S.offres.find(x=>x.nom===g.offre);if(o&&g.offre!==a.offre)patch.prix=o.prix;await upd('athletes',a.id,patch,a);const M={...mensuels()};if(+g.mm>0)M[a.id]={...mx,m:+g.mm,j:Math.min(28,Math.max(1,+g.mj||1)),m2:+g.m2>0?+g.m2:null,d2:+g.m2>0&&g.d2?g.d2:null};else delete M[a.id];if(JSON.stringify(M)!==JSON.stringify(mensuels()))await setReg('mensuels',M);closeSheet();render();toast('Athlète modifié')});return}
   if(t.dataset.seance!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.seance);await upd('athletes',a.id,{derniere_seance:TODAY},a);render();toast('Séance notée');return}
   if(t.dataset.renew!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.renew);const o=S.offres.find(x=>x.nom===a.offre)||S.offres[0]||{jours:91,prix:a.prix,nom:a.offre};const deb=a.fin&&diff(a.fin)>0?a.fin:TODAY;await upd('athletes',a.id,{debut:deb,fin:iso(new Date(new Date(deb+'T12:00:00').getTime()+(o.jours||91)*DAY))},a);const v=await ins('ventes',{date:TODAY,prenom:a.prenom,offre:'Renouvellement · '+(o.nom||''),montant:o.prix||a.prix,mode:'virement',facture:false});S.ventes.unshift(v);render();toast(`${a.prenom} renouvelé · ${eur(o.prix||a.prix)} à encaisser`);return}
+  if(t.dataset.addlien){const v=S.videos.find(x=>x.slug===t.dataset.addlien);formSheet('Nouveau lien · '+v.titre,[{k:'nom',l:'Nom du lien',req:true,v:'WhatsApp'},{k:'type',l:'Il envoie vers',type:'select',opts:[{v:'wa',t:'Mon WhatsApp (message déjà écrit)'},{v:'url',t:'Un autre lien'}],v:'wa'},{k:'tel',l:'Mon numéro WhatsApp (si WhatsApp)',type:'tel',v:S.reg.wa_num||''},{k:'msg',l:'Message déjà écrit (si WhatsApp)',v:`Salut ! Je viens de ta vidéo « ${v.titre} »`},{k:'url',l:'Adresse (si autre lien)',type:'url',ph:'https://…'}],'Créer le lien',async g=>{
+    let cible;if(g.type==='wa'){if(!g.tel){toast('Mets ton numéro WhatsApp');return}cible=wa(g.tel,g.msg);if(g.tel!==S.reg.wa_num)await setReg('wa_num',g.tel)}else{if(!/^https:\/\//.test(g.url)){toast('L\'adresse doit commencer par https://');return}cible=g.url}
+    const base=(v.slug+'-'+g.nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')).slice(0,36).replace(/-+$/,'');let slug=base,n=2;while(S.liens.some(l=>l.slug===slug)||S.videos.some(x=>x.slug===slug))slug=base+'-'+n++;
+    const r=await ins('liens',{slug,video_slug:v.slug,nom:g.nom,cible});S.liens.push(r);closeSheet();render();navigator.clipboard&&navigator.clipboard.writeText(`${C.site}/go/${slug}`).catch(()=>{});toast(`Lien /go/${slug} créé et copié`)});return}
+  if(t.dataset.dellien){if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Supprimer ?';t.style.color='var(--red)';return}const sl=t.dataset.dellien;await q(T('liens').delete().eq('slug',sl));S.liens=S.liens.filter(l=>l.slug!==sl);render();toast('Lien supprimé');return}
   if(t.hasAttribute('data-newvideo')){formSheet('Idée de vidéo',[{k:'titre',l:'Titre',req:true,ph:'Comment je choisis le jour où je PR'},{k:'slug',l:'Nom du lien (/go/…)',req:true,ph:'jourpr'}],'Ajouter',async g=>{const slug=g.slug.toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40);if(!slug)return toast('Nom de lien invalide');const r=await ins('videos',{slug,titre:g.titre,statut:1});S.videos.push(r);closeSheet();render();toast('Idée ajoutée · lien /go/'+slug)});return}
   if(t.dataset.vstep){const v=S.videos.find(x=>x.slug===t.dataset.vstep);const st=Math.min(4,v.statut+1);await q(T('videos').update({statut:st,publiee_le:st===4?TODAY:v.publiee_le}).eq('slug',v.slug));v.statut=st;if(st===4)v.publiee_le=TODAY;render();toast(st===4?`Publiée · colle ${C.site}/go/${v.slug} en description`:`${v.titre} → ${STEPS[st-1]}`);return}
   if(t.hasAttribute('data-gconnect')){await gConnect();return}
@@ -682,7 +696,7 @@ document.addEventListener('click',async e=>{
   if(t.hasAttribute('data-addev')){formSheet('Ajouter à l\'agenda',[{k:'t',l:'Titre',req:true,ph:'Séance Karim, appel, tournage…'},{k:'d',l:'Date',type:'date',v:selDay||TODAY},{k:'h',l:'Début',type:'time',v:'18:00'},{k:'e',l:'Fin',type:'time',v:'19:00'},{k:'s',l:'Détail',ph:'facultatif'},{k:'k',l:'Type',type:'select',opts:[{v:'seance',t:'Séance'},{v:'meet',t:'Appel / visio (lien Meet)'},{v:'task',t:'Tâche'},{v:'perso',t:'Perso'}],v:'seance'}],'Ajouter',async g=>{await addEvent({d:g.d,h:g.h||'',e:g.e||'',t:g.t,s:g.s,k:g.k});selDay=g.d;closeSheet();render();toast(G.on?'Ajouté · aussi dans Google Agenda':'Ajouté à l\'agenda')});return}
   if(t.hasAttribute('data-clrauto')){if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Retirer les plages de la semaine ?';t.style.color='var(--red)';return}const mon=monday(wk),fin=new Date(mon);fin.setDate(mon.getDate()+7);const a=iso(mon),b=iso(fin);const ids=S.agenda.filter(e=>e.auto&&e.d>=a&&e.d<b).map(e=>e.id);for(const id of ids)await del('agenda',id);S.agenda=S.agenda.filter(e=>!ids.includes(e.id));render();toast(`${ids.length} plage${ids.length>1?'s':''} retirée${ids.length>1?'s':''}`);return}
   if(t.hasAttribute('data-mic')){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;const inp=$('dict-in');if(!SR){toast('Pas de micro ici : écris la phrase');inp.focus();return}try{const r=new SR();r.lang='fr-FR';r.onresult=ev=>{inp.value=ev.results[0][0].transcript;previewDictee(inp.value)};r.onerror=()=>{toast('Micro refusé : écris la phrase');inp.focus()};r.start();toast("Je t'écoute…")}catch(err){toast('Pas de micro ici : écris la phrase');inp.focus()}return}
-  if(t.hasAttribute('data-dictadd')){if(!dict)return;await addEvent({d:dict.date,h:dict.h,e:dict.e,t:dict.t,s:dict.k==='perso'?'':'Dicté',k:dict.k});selDay=dict.date;wk=Math.floor((new Date(dict.date+'T12:00:00')-monday(0))/(7*DAY));closeSheet();if(route!=='agenda')location.hash='agenda';else render();toast(`« ${dict.t} » ajouté à l'agenda`);return}
+  if(t.hasAttribute('data-dictadd')){if(!dict||!dict.length)return;t.disabled=true;for(const x of dict)await addEvent({d:x.date,h:x.h,e:x.e,t:x.t,s:x.k==='perso'?'':'Dicté',k:x.k});const f=dict[0];selDay=f.date;wk=Math.floor((new Date(f.date+'T12:00:00')-monday(0))/(7*DAY));closeSheet();if(route!=='agenda')location.hash='agenda';else render();toast(dict.length>1?`${dict.length} ajouts à l'agenda`:`« ${f.t} » ajouté à l'agenda`);return}
   if(t.hasAttribute('data-pclose')){closePresent();return}
   if(t.hasAttribute('data-setpass')){formSheet('Définir un mot de passe',[{k:'p1',l:'Nouveau mot de passe (8 caractères minimum)',type:'password',req:true},{k:'p2',l:'Encore une fois',type:'password',req:true}],'Enregistrer',async g=>{if(g.p1.length<8)return toast('8 caractères minimum');if(g.p1!==g.p2)return toast('Les deux ne sont pas identiques');const {error}=await SB.auth.updateUser({password:g.p1});if(error)return toast('Refusé : '+error.message);closeSheet();toast('Mot de passe enregistré')});return}
   if(t.dataset.dm){await setReg('objectif_dm',Math.max(5,OBJ_DM()+(+t.dataset.dm)));render();return}
@@ -706,10 +720,11 @@ document.addEventListener('click',async e=>{
   if(t.hasAttribute('data-edit')){openEdit(p);return}
   if(t.hasAttribute('data-delprospect')){if(t.dataset.sure){await del('prospects',p.id);S.prospects=S.prospects.filter(x=>x.id!==p.id);closeSheet();render();toast('Prospect supprimé')}else{t.dataset.sure='1';t.textContent='Confirmer la suppression';t.style.color='var(--red)'}return}
   if(t.dataset.push){const nd=iso(d(Math.max(0,diff(p.next_date||TODAY))+(+t.dataset.push)));await upd('prospects',p.id,{next_date:nd},p);await addNote(p,`Relance repoussée au ${fmtS(nd)}.`);render();openSheet(p.id);toast('Relance repoussée');return}
-  if(t.hasAttribute('data-done')){const patch={next_date:iso(d(2))};patch.action=p.etape==='r2'?'Relancer après le R2':p.etape==='r1'?'Caler le R2':'Relancer';if(p.etape==='nouveau'){patch.etape='contacte';patch.chance=BASE.contacte;patch.action=NEXT.contacte}await addNote(p,`Fait : ${p.action||''}.`);await upd('prospects',p.id,patch,p);render();openSheet(p.id);toast('Noté · relance dans 2 jours');return}
+  if(t.hasAttribute('data-done')){const patch={next_date:iso(d(2))};patch.action=p.etape==='r2'?'Relancer après le R2':p.etape==='r1'?'Caler le R2':'Relancer';if(p.etape==='nouveau'){patch.etape='contacte';patch.chance=BASE.contacte;patch.action=p.lm_envoye?NEXT.contacte:NEXT.lm}if(p.action===NEXT.lm){await lmSent(p);return}await addNote(p,`Fait : ${p.action||''}.`);await upd('prospects',p.id,patch,p);render();openSheet(p.id);toast('Noté · relance dans 2 jours');return}
   if(t.hasAttribute('data-slots')){const s=$('slots');s.hidden=!s.hidden;return}
   if(t.hasAttribute('data-meetcustom')){formSheet('Caler l\'appel',[{k:'d',l:'Date',type:'date',v:iso(d(1))},{k:'h',l:'Heure',type:'time',v:'18:00'}],'Caler',async g=>{await calerMeet(p,g.d,g.h)});return}
   if(t.dataset.meet!==undefined){const [dd,hh]=t.dataset.meet.split('|');await calerMeet(p,dd,hh);return}
+  if(t.hasAttribute('data-lm')){await lmSent(p);return}
   if(t.hasAttribute('data-vid')){await upd('prospects',p.id,{vid_envoyee:true},p);await addNote(p,"Vidéo d'offre envoyée.");render();openSheet(p.id);toast("Vidéo d'offre marquée envoyée");return}
   if(t.hasAttribute('data-prep')){openPrep(p);return}
   if(t.hasAttribute('data-present')){openPresent(p);return}
@@ -717,6 +732,7 @@ document.addEventListener('click',async e=>{
   if(t.hasAttribute('data-note')){const i=$('note-'+p.id);if(i.value.trim()){await addNote(p,i.value.trim());openSheet(p.id);toast('Note ajoutée')}return}
   }catch(err){console.error(err)}
 });
+async function lmSent(p){const patch={lm_envoye:TODAY};if(['nouveau','contacte'].includes(p.etape)){patch.etape='contacte';patch.chance=BASE.contacte;patch.action=NEXT.contacte;patch.next_date=iso(d(2))}await upd('prospects',p.id,patch,p);await addNote(p,'Lead magnet envoyé.');render();openSheet(p.id);toast('Lead magnet noté · prochaine étape : caler le R1')}
 async function calerMeet(p,dd,hh){
   const r=p.etape==='r1'?'r2':'r1';
   await addEvent({d:dd,h:hh,e:plus(hh,30),t:r.toUpperCase()+' · '+p.prenom,s:r==='r1'?'Appel découverte':"Présentation de l'offre",k:'meet',pid:p.id});

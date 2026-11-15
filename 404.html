@@ -12,16 +12,20 @@ h1{font-size:18px;font-weight:600;margin:0 0 8px}p{color:#9b9aa1;margin:0}a{colo
 <body>
 <div id="m"><h1>Un instant…</h1><p>On t'emmène vers la vidéo.</p></div>
 <script>
-// Liens /go/<vidéo> : compte le clic puis envoie vers la page « Prépare ta perf ». Toute autre adresse = page introuvable.
+// Liens /go/<vidéo> : compte le clic puis envoie vers « Prépare ta perf » (ou vers la destination d'un lien en plus : WhatsApp, autre). Toute autre adresse = page introuvable.
 (function(){
   const C={url:"https://cocydoftuehajzqwvbge.supabase.co",key:"sb_publishable_5AUQtgQPiiJNCB0n9Sh9NA_hYp_gwxk"};
   const m=location.pathname.match(/\/legacy-coaching\/go\/([a-z0-9_-]{1,40})\/?$/i);
   if(!m){document.getElementById('m').innerHTML='<h1>Page introuvable</h1><p>Cette adresse n\'existe pas. <a href="/legacy-coaching/">Retour à LEGACY</a></p>';return}
   const slug=m[1].toLowerCase();
-  const dest='/legacy-coaching/prepa/?v='+encodeURIComponent(slug);
-  const t=setTimeout(()=>location.replace(dest),1200);
-  fetch(C.url+'/rest/v1/clics',{method:'POST',keepalive:true,headers:{'apikey':C.key,'Authorization':'Bearer '+C.key,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({slug,ua:navigator.userAgent.slice(0,200),ref:document.referrer.slice(0,200)})})
-    .finally(()=>{clearTimeout(t);location.replace(dest)});
+  let dest='/legacy-coaching/prepa/?v='+encodeURIComponent(slug);
+  const H={'apikey':C.key,'Authorization':'Bearer '+C.key};
+  const go=()=>location.replace(dest);
+  const t=setTimeout(go,2500);
+  // lien en plus d'une vidéo (WhatsApp, autre…) : sa destination est dans la table « liens »
+  fetch(C.url+'/rest/v1/liens?select=cible&slug=eq.'+encodeURIComponent(slug),{headers:H}).then(r=>r.ok?r.json():[]).then(a=>{if(a&&a[0]&&/^https:\/\//.test(a[0].cible))dest=a[0].cible}).catch(()=>{})
+    .then(()=>fetch(C.url+'/rest/v1/clics',{method:'POST',keepalive:true,headers:{...H,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({slug,ua:navigator.userAgent.slice(0,200),ref:document.referrer.slice(0,200)})}))
+    .catch(()=>{}).finally(()=>{clearTimeout(t);go()});
 })();
 </script>
 </body>
