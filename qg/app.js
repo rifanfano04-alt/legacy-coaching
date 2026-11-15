@@ -384,8 +384,8 @@ function openSheet(pid){
     <div class="g"><h4>Chances de signer</h4><div class="slider"><input type="range" id="ch-${p.id}" min="5" max="95" step="5" value="${chance(p)}" data-chance ${ouvert?'':'disabled'}><span id="chv-${p.id}">${chanceHTML(chance(p))}</span></div></div>
     <div class="g"><h4>Contact</h4><dl class="kv"><dt>Instagram</dt><dd>${p.insta?'@'+esc(p.insta):'<span style="color:var(--dim)">—</span>'}</dd><dt>Téléphone</dt><dd>${p.tel?`<code>${esc(p.tel)}</code> <button class="btn sm" data-copy="${esc(p.tel)}" style="margin-left:6px">Copier</button>`:'<span style="color:var(--dim)">—</span>'}</dd><dt>Email</dt><dd>${esc(p.email||'—')}</dd><dt>Objectif</dt><dd>${esc(p.objectif||'—')}</dd><dt>Source</dt><dd>${SRC[p.source]?SRC[p.source].t:'—'}${p.video_slug?' · « '+esc(videoT(p.video_slug))+' »':''}</dd></dl></div>
     <div class="g"><h4>Offre · du R1 au R2</h4><dl class="kv"><dt>Formule</dt><dd><select id="of-${p.id}" class="inp" data-offre>${S.offres.map(o=>`<option value="${o.id}" ${o.nom===p.offre||(!p.offre&&o.prix===p.montant)?'selected':''}>${esc(o.nom)} · ${eur(o.prix)}</option>`).join('')}</select></dd>
-      <dt>Lead magnet</dt><dd>${p.lm_envoye||p.source==='prepa'?`<span class="tag up">Envoyé${p.lm_envoye?' · '+fmtS(p.lm_envoye):''}</span>`:ouvert?'<button class="btn sm" data-lm>Marquer envoyé</button>':'<span style="color:var(--dim)">—</span>'}</dd>
-      ${['r1','r2','gagne'].includes(p.etape)||p.vid_envoyee?`<dt>Vidéo d'offre</dt><dd>${p.vid_envoyee?`<span class="tag up">Envoyée${p.vid_vue?' · regardée':''}</span>`:ouvert?`<button class="btn sm" data-vid>Marquer envoyée</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
+      <dt>Lead magnet</dt><dd>${p.lm_envoye||p.source==='prepa'?`<span class="quick"><span class="tag up">Envoyé${p.lm_envoye?' · '+fmtS(p.lm_envoye):''}</span>${p.lm_envoye?'<button class="btn sm" data-unlm title="Annuler">Annuler</button>':''}</span>`:ouvert?'<button class="btn sm" data-lm>Marquer envoyé</button>':'<span style="color:var(--dim)">—</span>'}</dd>
+      ${['r1','r2','gagne'].includes(p.etape)||p.vid_envoyee?`<dt>Vidéo d'offre</dt><dd>${p.vid_envoyee?`<span class="quick"><span class="tag up">Envoyée${p.vid_vue?' · regardée':''}</span><button class="btn sm" data-unvid title="Annuler">Annuler</button></span>`:ouvert?`<button class="btn sm" data-vid>Marquer envoyée</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
       `:''}
       <dt>Offre perso</dt><dd>${p.offre_prete?`<span class="quick"><span class="tag up">Prête · ${eur(p.montant)}</span><button class="btn sm" data-present>Présenter en visio</button><button class="btn sm" data-prep>Modifier</button></span>`:ouvert?`<button class="btn sm" data-prep>Préparer l'offre</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
       <dt>Récap + contrat</dt><dd>${p.etape==='gagne'?'<span class="tag up">Signé · payé</span>':p.recap_envoye?'<span class="tag warn">Envoyés · en attente</span>':p.offre_prete?`<button class="btn sm" data-sent>Marquer envoyés</button>`:'<span style="color:var(--dim)">après le R2</span>'}</dd>
@@ -485,6 +485,7 @@ function parseDictee(txt){
   const H="(\\d{1,2}\\s*(?:h|:)\\s*(?:\\d{2})?|\\d{1,2}\\s*heures?(?:\\s*\\d{2})?)";
   m=low().match(new RegExp("\\bde\\s+"+H+"\\s*(?:à|a|jusqu'à)\\s+"+H));if(m){h=tm(m[1]);e=tm(m[2]);cut(m[0])}
   if(!h){m=low().match(new RegExp("(?:^|\\s)(?:à|a|vers)\\s+"+H));if(m){h=tm(m[1]);cut(m[0])}}
+  if(!h){m=low().match(/(?:^|\s)(\d{1,2}\s*h\s*(?:\d{2})?)\s*(?:-|–|à|a|jusqu'à|et)?\s*(\d{1,2}\s*h\s*(?:\d{2})?)(?=\s|$|,)/);if(m){h=tm(m[1]);e=tm(m[2]);cut(m[0])}}
   if(!h){m=low().match(/(?:^|\s)(\d{1,2}\s*h\s*(?:\d{2})?)(?=\s|$|,)/);if(m){h=tm(m[1]);cut(m[0])}}
   let t=o.replace(/\s+/g,' ').replace(/^[\s,.:;]+|[\s,.:;]+$/g,'').replace(/^(?:le|la|une?|des?)\s+/i,'');t=t.charAt(0).toUpperCase()+t.slice(1);
   const L=t.toLowerCase();const k=/séance|seance|sport|entra|street|muscu|salle|compét|compet/.test(L)?'seance':/appel|visio|meet|\br1\b|\br2\b/.test(L)?'meet':/anniv|resto|famille|dentiste|médecin|medecin|vacances|perso/.test(L)?'perso':'task';
@@ -725,6 +726,8 @@ document.addEventListener('click',async e=>{
   if(t.hasAttribute('data-meetcustom')){formSheet('Caler l\'appel',[{k:'d',l:'Date',type:'date',v:iso(d(1))},{k:'h',l:'Heure',type:'time',v:'18:00'}],'Caler',async g=>{await calerMeet(p,g.d,g.h)});return}
   if(t.dataset.meet!==undefined){const [dd,hh]=t.dataset.meet.split('|');await calerMeet(p,dd,hh);return}
   if(t.hasAttribute('data-lm')){await lmSent(p);return}
+  if(t.hasAttribute('data-unlm')){await upd('prospects',p.id,{lm_envoye:null},p);render();openSheet(p.id);toast('Lead magnet : annulé');return}
+  if(t.hasAttribute('data-unvid')){await upd('prospects',p.id,{vid_envoyee:false,vid_vue:false},p);render();openSheet(p.id);toast("Vidéo d'offre : annulé");return}
   if(t.hasAttribute('data-vid')){await upd('prospects',p.id,{vid_envoyee:true},p);await addNote(p,"Vidéo d'offre envoyée.");render();openSheet(p.id);toast("Vidéo d'offre marquée envoyée");return}
   if(t.hasAttribute('data-prep')){openPrep(p);return}
   if(t.hasAttribute('data-present')){openPresent(p);return}
