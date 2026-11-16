@@ -417,3 +417,6 @@ td.recs{white-space:normal}
 .mday span.meet{border-color:var(--blue)}.mday span.seance{border-color:var(--green)}.mday span.task{border-color:var(--amber)}.mday span.perso{border-color:#c9a6ff}.mday span.gg{border-color:var(--line2)}
 .mday small{font-size:10.5px;color:var(--dim)}
 @media (max-width:860px){.wg{display:none}.mday{min-height:58px}.mday span{display:none}}
+
+/* bloc « Contactés · en attente » : boutons sous le nom, même sur ordinateur (colonne étroite) */
+.todo.stack{grid-template-columns:auto minmax(0,1fr)}.todo.stack .quick{grid-column:2;flex-wrap:wrap}
