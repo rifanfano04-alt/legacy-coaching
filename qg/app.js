@@ -49,7 +49,7 @@ async function del(table,id){await q(T(table).delete().eq('id',id))}
 async function setReg(cle,valeur){await q(T('reglages').upsert({cle,valeur}));S.reg[cle]=valeur}
 
 async function loadAll(){
-  const [pr,no,ig,dm,vi,cl,le,at,ve,ag,re,of,ms,li]=await Promise.all([
+  const [pr,no,ig,dm,vi,cl,le,at,ve,ag,re,of,ms,li,co]=await Promise.all([
     q(T('prospects').select('*').order('created_at',{ascending:false})),
     q(T('notes').select('*').order('created_at',{ascending:false})),
     q(T('ig_comptes').select('*').order('created_at',{ascending:true})),
@@ -60,12 +60,13 @@ async function loadAll(){
     q(T('athletes').select('*').order('fin',{ascending:true})),
     q(T('ventes').select('*').order('date',{ascending:false})),
     q(T('agenda').select('*')),
-    q(T('reglages').select('*')),
+    q(T('reglages').select('*').neq('cle','transfos')),   // les photos de transfos sont chargées à part (lourdes)
     q(T('offres').select('*').order('ordre')),
     q(T('messages_types').select('*').order('ordre')),
     T('liens').select('*').order('created_at').then(r=>r.error?[]:r.data||[]),
+    T('contrats').select('id,prospect_id,created_at,signe_le,signe_nom,prix').order('created_at',{ascending:false}).then(r=>r.error?null:r.data||[]),
   ]);
-  S.liens=li;
+  S.liens=li;S.contrats=co||[];S.contratsOk=co!==null;
   S.prospects=pr; S.notes={}; no.forEach(n=>{(S.notes[n.prospect_id]=S.notes[n.prospect_id]||[]).push({d:n.created_at.slice(0,10),t:n.texte,id:n.id})});
   S.ig=ig; S.dm={}; dm.forEach(x=>S.dm[x.jour]=x.nb);
   S.videos=vi; S.clics={}; cl.forEach(c=>S.clics[c.slug]=(S.clics[c.slug]||0)+1);
@@ -94,9 +95,18 @@ const videoT=slug=>(S.videos.find(v=>v.slug===slug)||{}).titre||slug||'la vidéo
 const notesOf=p=>S.notes[p.id]||[];
 const chance=p=>p.etape==='gagne'?100:p.etape==='perdu'?0:p.chance;
 const open_=()=>S.prospects.filter(p=>!['gagne','perdu'].includes(p.etape));
-const late=()=>open_().filter(p=>p.next_date&&diff(p.next_date)<=0).sort((a,b)=>a.next_date.localeCompare(b.next_date));
+// Relances : date de relance passée, OU contacté / R2 sans aucune nouvelle depuis 3 jours (remonte tout seul)
+const dernierJ=p=>{const n=notesOf(p)[0];return n?n.d:(p.created_at||'').slice(0,10)};
+const muet=p=>['contacte','r2'].includes(p.etape)&&diff(dernierJ(p))<=-3&&!(p.next_date&&diff(p.next_date)<=0);
+const cleRel=p=>p.next_date&&diff(p.next_date)<=0?p.next_date:dernierJ(p);
+const late=()=>open_().filter(p=>(p.next_date&&diff(p.next_date)<=0)||muet(p)).sort((a,b)=>cleRel(a).localeCompare(cleRel(b)));
+const relLine=p=>{const m=muet(p);return `<div class="line"><span class="l"><button class="name" data-open="${p.id}" style="font-weight:500">${esc(p.prenom)}</button><small>${esc(p.action||etapeT(p.etape))}</small></span><span class="r quick">${m?`<span class="tag warn">sans nouvelle · ${-diff(dernierJ(p))} j</span><button class="btn sm" data-asfor="${p.id}">Assistant</button>`:`<span class="tag ${diff(p.next_date)<0?'bad':'warn'}">${rel(p.next_date)}</span>`}</span></div>`};
 const dmToday=()=>S.dm[TODAY]||0;
-const streak=()=>{let n=0;for(let i=1;i<400;i++){const k=iso(d(-i));if((S.dm[k]||0)>=OBJ_DM())n++;else break}return n+((dmToday()>=OBJ_DM())?1:0)};
+// Objectif du jour = DM + relances faites (« Fait : … » ou « DM envoyé : … » noté dans une fiche)
+const relFaites=j=>Object.values(S.notes).reduce((s,L)=>s+L.filter(n=>n.d===j&&/^(Fait :|DM envoyé :|Lead magnet envoyé)/.test(n.t)).length,0);
+const faitJour=j=>(S.dm[j]||0)+relFaites(j);
+const objJour=()=>OBJ_DM()+late().length+relFaites(TODAY);
+const streak=()=>{let n=0;for(let i=1;i<400;i++){const k=iso(d(-i));if(faitJour(k)>=OBJ_DM())n++;else break}return n+((faitJour(TODAY)>=objJour())?1:0)};
 const encMois=()=>S.ventes.filter(v=>v.date.slice(0,7)===TODAY.slice(0,7)).reduce((s,v)=>s+v.montant,0);
 const caMois=(y,m)=>S.ventes.filter(v=>v.date.slice(0,7)===`${y}-${String(m+1).padStart(2,'0')}`).reduce((s,v)=>s+v.montant,0);
 // Anciens athlètes payés tous les mois (les nouvelles offres restent en une fois). reglages.mensuels = { id athlète : { m: €/mois, j: jour du mois, m2: nouveau montant, d2: 'AAAA-MM' à partir duquel m2 s'applique, paye: ['AAAA-MM', …] } }
@@ -165,9 +175,9 @@ function topbar(title){
   return `<img class="mlogo" src="logo.png" alt=""><h1>${title}</h1><span class="spacer"></span><a class="ic" href="#reglages" aria-label="Réglages">${ICON.settings}</a><button class="ic" data-logout aria-label="Se déconnecter" title="Se déconnecter">${ICON.out}</button><span class="me"><span class="av">${ini(S.user||'C')}</span><span>${esc(prenom(S.user||'Coach'))}</span></span>`;
 }
 function todayBlock(){
-  const dmPct=Math.min(100,Math.round(dmToday()/OBJ_DM()*100)),todo=late(),st=streak();
+  const rf=relFaites(TODAY),dmPct=Math.min(100,Math.round(faitJour(TODAY)/objJour()*100)),todo=late(),st=streak();
   return `<div class="today"><svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#1c1c22" stroke-width="3"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--red)" stroke-width="3" stroke-linecap="round" stroke-dasharray="${dmPct*0.974} 100" transform="rotate(-90 18 18)"/><text x="18" y="21.5" text-anchor="middle" font-size="9" font-weight="600" fill="var(--fg)">${dmPct}%</text></svg>
-    <div><b class="big num">${dmToday()} / ${OBJ_DM()}</b><small>DM envoyés aujourd'hui</small><div class="streak"><img src="logo.png" alt="">${st?st+' jour'+(st>1?'s':'')+" d'affilée à l'objectif":"la série commence aujourd'hui"}</div></div>
+    <div><b class="big num">${faitJour(TODAY)} / ${objJour()}</b><small>${dmToday()} DM sur ${OBJ_DM()} · ${rf} relance${rf>1?'s':''} sur ${rf+todo.length}</small><div class="streak"><img src="logo.png" alt="">${st?st+' jour'+(st>1?'s':'')+" d'affilée à l'objectif":"la série commence aujourd'hui"}</div></div>
     <div style="flex:1 1 140px;min-width:0;display:flex;flex-direction:column;gap:4px"><div class="line" style="padding:0;border:0"><span class="l">Relances en retard</span><span class="r num" style="color:${todo.length?'var(--red)':'var(--muted)'}">${todo.length}</span></div><div class="line" style="padding:0;border:0"><span class="l">R1 / R2 cette semaine</span><span class="r num">${S.agenda.filter(e=>e.k==='meet'&&diff(e.d)>=0&&diff(e.d)<7).length}</span></div><div class="line" style="padding:0;border:0"><span class="l">Comptes à contacter</span><span class="r num">${S.ig.filter(x=>!x.fait).length}</span></div></div></div>`;
 }
 
@@ -184,52 +194,60 @@ function vDash(){
   const smax=Math.max(1,...srcs.map(s=>s.n));
   const renouv=S.athletes.filter(a=>a.fin&&diff(a.fin)<=14).sort((a,b)=>a.fin.localeCompare(b.fin));
   const lignes=[...open_()].sort((a,b)=>(chance(b)*b.montant)-(chance(a)*a.montant)).slice(0,6);
-  const pub=S.videos.filter(v=>v.statut===4).map(v=>({...v,ins:S.leadsBy[v.slug]||0,clics:S.clics[v.slug]||0})).sort((a,b)=>b.ins-a.ins).slice(0,3);
+  const pub=S.videos.filter(v=>v.statut===4&&!isReel(v)).map(v=>({...v,ins:S.leadsBy[v.slug]||0,clics:S.clics[v.slug]||0})).sort((a,b)=>b.ins-a.ins).slice(0,3);
   const nR2=S.prospects.filter(p=>p.etape==='r2'&&!p.offre_prete).length;
   return `
   <div class="kpis">
     <div class="kpi"><span class="lab">${ICON.sales}Encaissé ce mois<span class="tag up">${pct} %</span></span><span class="val">${num(enc,' €')}${sparkSVG(vals.slice(-8))}</span><span class="sub">objectif ${eur(OBJ())}${totMensuel()?' · dont '+eur(totMensuel())+'/mois en mensuel':' · paiements en une fois'}</span></div>
     <div class="kpi"><span class="lab">${ICON.crm}En jeu<span class="tag neutral">${pipe.length} R1 et R2 en cours</span></span><span class="val">${num(pipeV,' €')}</span><span class="sub">${nR2} offre${nR2>1?'s':''} à préparer avant le R2</span></div>
-    <div class="kpi"><span class="lab">${ICON.links}Nouveaux prospects · 7 j<span class="tag up">+${leads7}</span></span><span class="val">${num(leads7)}</span><span class="sub">vidéos, Instagram, bouche-à-oreille</span></div>
+    <div class="kpi"><span class="lab">${ICON.links}Nouveaux prospects · 7 j<span class="tag up">+${leads7}</span></span><span class="val">${num(leads7)}</span></div>
     <div class="kpi"><span class="lab">${ICON.prosp}Relances en retard<span class="tag ${todo.length?'bad':'up'}">${todo.length?'à faire':'à jour'}</span></span><span class="val">${num(todo.length)}</span><span class="sub">${g} signé${g>1?'s':''} sur ${g+l} décision${g+l>1?'s':''}${g+l?' · '+Math.round(g/(g+l)*100)+' %':''}</span></div>
   </div>
   <div class="split first">
-    <section class="block"><div class="bh"><h2>Aujourd'hui</h2><span class="sub">${T0.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</span><span class="right"><a class="btn sm" href="#prospection">Prospecter</a><a class="btn sm" href="#agenda">Agenda</a></span></div>
+    <section class="block"><div class="bh"><h2>Aujourd'hui</h2><span class="sub">${T0.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</span><span class="right"><a class="btn sm" href="#prospection">Prospecter</a><a class="btn sm" href="#agenda">Agenda</a><button class="btn sm" data-newvideo>+ Idée</button></span></div>
       ${todayBlock()}
-      <div class="agenda" style="margin-top:14px">${dayEv(TODAY).slice(0,6).map(e=>`<div class="ev ${e.k}"><span class="h">${e.h||'—'}</span><span class="bar"></span><span style="min-width:0"><span class="t">${esc(e.t)}</span><br><span class="s">${esc(e.s)}</span></span>${e.k==='meet'&&e.pid?`<button class="btn sm" data-open="${e.pid}">Fiche</button>`:''}</div>`).join('')||'<p class="empty">Rien dans l\'agenda aujourd\'hui. Dicte une tâche depuis l\'Agenda.</p>'}</div>
+      <div class="agenda" style="margin-top:14px">${dayEv(TODAY).slice(0,6).map(e=>`<div class="ev ${e.k}"><span class="h">${e.h||'—'}</span><span class="bar"></span><span style="min-width:0"><span class="t">${esc(e.t)}</span><br><span class="s">${esc(e.s)}</span></span>${e.k==='meet'&&e.pid?`<button class="btn sm" data-open="${e.pid}">Fiche</button>`:''}</div>`).join('')||'<p class="empty">Rien dans l\'agenda aujourd\'hui.</p>'}</div>
     </section>
     <section class="block"><div class="bh"><h2>À relancer</h2><span class="right"><a class="btn sm" href="#crm">Tout le CRM</a></span></div>
-      <div class="lines">${todo.length?todo.map(p=>`<div class="line"><span class="l"><button class="name" data-open="${p.id}" style="font-weight:500">${esc(p.prenom)}</button><small>${esc(p.action||'')} · ${etapeT(p.etape)}</small></span><span class="r"><span class="tag ${diff(p.next_date)<0?'bad':'warn'}">${rel(p.next_date)}</span></span></div>`).join(''):'<p class="empty">Rien en retard.</p>'}</div>
+      <div class="lines">${todo.length?todo.map(relLine).join(''):'<p class="empty">Rien en retard.</p>'}</div>
       <div class="bh" style="margin-top:18px"><h2>Renouvellements</h2><span class="right"><a class="btn sm" href="#athletes">Athlètes</a></span></div>
-      <div class="lines">${renouv.length?renouv.map(a=>`<div class="line"><span class="l">${esc(a.prenom)}<small>${esc(a.offre||'')} · fin le ${fmtS(a.fin)}</small></span><span class="r"><span class="tag ${diff(a.fin)<=7?'bad':'warn'}">J-${diff(a.fin)}</span></span></div>`).join(''):'<p class="empty">Rien dans les 14 jours.</p>'}</div>${(()=>{const h=mensuelsBlock(true);return h?`<div class="bh" style="margin-top:18px"><h2>Mensualités à encaisser</h2><span class="right"><a class="btn sm" href="#ventes">Ventes</a></span></div>`+h:''})()}
+      <div class="lines">${renouv.length?renouv.map(a=>`<div class="line"><span class="l">${esc(a.prenom)}<small>${esc(a.offre||'')} · fin le ${fmtS(a.fin)}</small></span><span class="r quick">${RENOUV()[a.id]?'<span class="tag neutral">lien envoyé</span>':''}<span class="tag ${diff(a.fin)<=7?'bad':'warn'}">J-${diff(a.fin)}</span></span></div>`).join(''):'<p class="empty">Rien dans les 14 jours.</p>'}</div>${(()=>{const h=mensuelsBlock(true);return h?`<div class="bh" style="margin-top:18px"><h2>Mensualités à encaisser</h2><span class="right"><a class="btn sm" href="#ventes">Ventes</a></span></div>`+h:''})()}
     </section>
   </div>
   <div class="split">
     <section class="block"><div class="bh"><h2>Chiffre d'affaires</h2><span class="right"><span class="badge plain">12 mois</span></span></div>
-      <div class="bignum">${num(vals.reduce((a,b)=>a+b,0),' €')}</div><small>trait ambre = objectif mensuel</small>
+      <div class="bignum">${num(vals.reduce((a,b)=>a+b,0),' €')}</div>
       <div class="led">${led}</div><div class="ledx">${H.map((x,i)=>`<span class="${i===11?'cur':''}">${x.m}</span>`).join('')}</div>
     </section>
     <section class="block"><div class="bh"><h2>D'où viennent les prospects</h2><span class="right sub">${S.prospects.length} au total</span></div>
-      <div class="bignum">${num(srcs[0].n)} <span style="font-size:14px;color:var(--muted);font-weight:500;font-family:var(--font)">via ${SRC[srcs[0].k].t.toLowerCase()}</span></div><small>la source qui ramène le plus</small>
+      <div class="bignum">${num(srcs[0].n)} <span style="font-size:14px;color:var(--muted);font-weight:500;font-family:var(--font)">via ${SRC[srcs[0].k].t.toLowerCase()}</span></div>
       <div class="lines" style="margin-top:14px">${srcs.map(s=>`<div class="line"><span class="l">${SRC[s.k].t}</span><span class="r num">${s.n} · ${s.w} signé${s.w>1?'s':''}</span><span class="meter"><i class="${s.k===srcs[0].k?'hot':''}" style="width:${s.n/smax*100}%"></i></span></div>`).join('')}</div>
       <div class="bh" style="margin-top:18px"><h2>Vidéos qui ramènent le plus</h2><span class="right"><a class="btn sm" href="#videos">Vidéos</a></span></div>
       <div class="lines">${pub.length?pub.map(v=>`<div class="line"><span class="l" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.titre)}</span><span class="r num">${v.ins} inscrit${v.ins>1?'s':''}${v.clics?' · '+Math.round(v.ins/v.clics*100)+' %':''}</span></div>`).join(''):'<p class="empty">Aucune vidéo publiée avec un lien.</p>'}</div>
     </section>
   </div>
-  <section class="block"><div class="bh"><h2 class="t">Prospects chauds</h2><span class="badge plain">${open_().length}</span><span class="sub">triés par ce qu'ils valent</span><span class="right"><a class="btn sm" href="#crm">Voir le CRM</a><button class="btn sm primary" data-add>+ Nouveau prospect</button></span></div>
+  <section class="block"><div class="bh"><h2 class="t">Prospects chauds</h2><span class="badge plain">${open_().length}</span><span class="right"><a class="btn sm" href="#crm">Voir le CRM</a><button class="btn sm primary" data-add>+ Nouveau prospect</button></span></div>
     ${lignes.length?tableHTML(lignes):'<p class="empty">Aucun prospect en cours. Ajoute-en un, ou attends les inscrits de tes vidéos.</p>'}
   </section>`;
 }
 function tableHTML(list){
   return `<div class="tw"><table><thead><tr><th>Prospect</th><th>Source et étape</th><th>Objectif</th><th class="r">Offre</th><th>Chances de signer</th><th>Dernier contact</th><th>Prochaine action</th></tr></thead><tbody>
-  ${list.map(p=>`<tr class="row" data-open="${p.id}"><td><span class="who"><span class="av ${avc(p)}">${ini(p.prenom)}</span><span class="name">${esc(p.prenom)}</span></span></td><td><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}</span></td><td style="color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis">${esc(p.objectif||'')}</td><td class="r num">${offreCell(p)}</td><td>${chanceHTML(chance(p))}</td><td style="color:var(--muted)">${lastC(p)}</td><td class="date">${p.next_date&&!['gagne','perdu'].includes(p.etape)?`<b>${fmtS(p.next_date)}</b> · ${esc(p.action||'')}${diff(p.next_date)<0?' <span class="tag bad">retard</span>':diff(p.next_date)===0?' <span class="tag warn">aujourd\'hui</span>':''}`:p.etape==='gagne'?'<span class="tag up">Signé</span>':'<span style="color:var(--dim)">—</span>'}</td></tr>`).join('')}</tbody></table></div>
+  ${list.map(p=>`<tr class="row" data-open="${p.id}"><td><span class="who"><span class="av ${avc(p)}">${ini(p.prenom)}</span><span class="name">${esc(p.prenom)}</span></span></td><td><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}</span></td><td style="color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis">${esc(p.objectif||'')}</td><td class="r num">${offreCell(p)}</td><td>${chanceHTML(chance(p))}</td><td style="color:var(--muted)">${lastC(p)}</td><td class="date">${p.next_date&&!['gagne','perdu'].includes(p.etape)?`<b>${fmtS(p.next_date)}</b> · ${esc(p.action||'')}${diff(p.next_date)<0?' <span class="tag bad">retard</span>':diff(p.next_date)===0?' <span class="tag warn">aujourd\'hui</span>':''}`:p.etape==='gagne'?'<span class="tag up">Signé</span>':`<span style="color:var(--dim)">${esc(p.etape==='perdu'&&p.action||'—')}</span>`}</td></tr>`).join('')}</tbody></table></div>
   <div class="mlist">${list.map(p=>`<button class="mrow" data-open="${p.id}"><span class="t">${esc(p.prenom)}</span><span class="e num">${offreCell(p)}</span><span class="s">${SRC[p.source]?SRC[p.source].t+' · ':''}${p.next_date&&!['gagne','perdu'].includes(p.etape)?fmtS(p.next_date)+' · '+esc(p.action||''):etapeT(p.etape)}</span><span class="p">${stPill(p.etape)}</span></button>`).join('')}</div>`;
 }
 function vCRM(){
   const list=filtre==='all'?[...S.prospects].sort((a,b)=>{const A=['gagne','perdu'].includes(a.etape),B=['gagne','perdu'].includes(b.etape);if(A!==B)return A?1:-1;return (a.next_date||'9').localeCompare(b.next_date||'9')}):S.prospects.filter(p=>p.etape===filtre);
   return `<section class="block"><div class="bh"><h2 class="t">Prospects</h2><span class="badge plain">${list.length}</span><span class="right"><button class="btn sm primary" data-add>+ Nouveau prospect</button></span></div>
   <div class="pills" style="gap:6px;margin-bottom:14px"><button class="btn sm ${filtre==='all'?'on':''}" data-filtre="all">Tous</button>${ETAPES.map(e=>`<button class="btn sm ${filtre===e.k?'on':''}" data-filtre="${e.k}">${e.t} <span class="num" style="opacity:.6">${S.prospects.filter(p=>p.etape===e.k).length}</span></button>`).join('')}</div>
+  ${filtre==='perdu'?raisonsHTML():''}
   ${list.length?tableHTML(list):'<p class="empty">Personne ici pour l\'instant.</p>'}</section>`;
+}
+// Pourquoi on perd des ventes : une ligne par raison, la plus fréquente en premier
+function raisonsHTML(){
+  const L=S.prospects.filter(p=>p.etape==='perdu');if(!L.length)return '';
+  const c={};L.forEach(p=>{const r=RAISONS.includes(p.action)?p.action:'Non précisée';c[r]=(c[r]||0)+1});
+  const R=Object.entries(c).sort((a,b)=>b[1]-a[1]),mx=R[0][1];
+  return `<div class="lines" style="margin:0 0 18px;max-width:520px">${R.map(([r,n],i)=>`<div class="line"><span class="l">${esc(r)}</span><span class="r num">${n} · ${Math.round(n/L.length*100)} %</span><span class="meter loss"><i class="${i?'':'hot'}" style="width:${n/mx*100}%"></i></span></div>`).join('')}</div>`;
 }
 function vProsp(){
   const rest=S.ig.filter(x=>!x.fait).length;
@@ -242,37 +260,69 @@ function vProsp(){
   const todoList=S.ig.filter(x=>!x.fait).concat(S.ig.filter(x=>x.fait&&x.fait_le===TODAY));
   const sc=(i)=>S.scripts[i]?S.scripts[i].texte:'';
   return `
-  <div class="kpis">${stats.map((s,i)=>`<div class="kpi"><span class="lab">${s.t}${i?`<span class="tag neutral">${stats[i-1].n?Math.round(s.n/stats[i-1].n*100)+' %':'—'}</span>`:'<span class="tag up">7 jours</span>'}</span><span class="val">${num(s.n)}</span><span class="sub">${i?'du niveau précédent':'cette semaine'}</span></div>`).join('')}</div>
+  <div class="kpis">${stats.map((s,i)=>`<div class="kpi"><span class="lab">${s.t}${i?`<span class="tag neutral">${stats[i-1].n?Math.round(s.n/stats[i-1].n*100)+' %':'—'}</span>`:'<span class="tag up">7 jours</span>'}</span><span class="val">${num(s.n)}</span></div>`).join('')}</div>
   ${asBlock()}
   <div class="split">
     <section class="block"><div class="bh"><h2 class="t">À contacter aujourd'hui</h2><span class="badge plain">${rest} restant${rest>1?'s':''}</span><span class="right"><button class="btn sm" data-addig>+ Ajouter un @</button></span></div>
       ${todayBlock()}
-      <div class="lines" style="margin-top:14px">${todoList.length?todoList.map(x=>`<div class="todo ${x.fait?'done':''}"><button class="cb" data-ig="${x.id}" aria-label="Contacté"></button><span style="min-width:0"><span class="t">@${esc(x.handle)}</span><br><span class="s">${esc(x.provenance||'')}</span></span><span class="quick"><span class="tag ${x.chaud?'bad':'neutral'}">${x.chaud?'chaud':'tiède'}</span>${x.fait?`<button class="btn sm ${x.repondu?'on':''}" data-rep="${x.id}">${x.repondu?'A répondu':'Répondu ?'}</button>`:''}<a class="btn sm" href="${igUrl(x.handle)}" target="_blank" rel="noopener" aria-label="Ouvrir sur Instagram">${ICON.ig}</a><button class="btn sm" data-copy="${esc(fill(sc(x.chaud?1:0),{prenom:x.handle.split(/[._]/)[0].replace(/^./,c=>c.toUpperCase())}))}">Copier le DM</button><button class="btn sm" data-igprospect="${x.id}" title="En faire un prospect">→ CRM</button><button class="btn sm" data-igdel="${x.id}" aria-label="Retirer de la liste" title="Retirer de la liste">✕</button></span></div>`).join(''):'<p class="empty">Liste vide. Ajoute les @ des gens qui ont liké, commenté ou répondu à ta story.</p>'}</div>
+      <div class="lines" style="margin-top:14px">${todoList.length?todoList.map(x=>`<div class="todo ${x.fait?'done':''}"><button class="cb" data-ig="${x.id}" aria-label="Contacté"></button><span style="min-width:0"><span class="t">@${esc(x.handle)}</span><br><span class="s">${esc(x.provenance||'')}${IGREEL()[x.id]?' · « '+esc(videoT(IGREEL()[x.id]))+' »':''}</span></span><span class="quick"><span class="tag ${x.chaud?'bad':'neutral'}">${x.chaud?'chaud':'tiède'}</span>${x.fait?`<button class="btn sm ${x.repondu?'on':''}" data-rep="${x.id}">${x.repondu?'A répondu':'Répondu ?'}</button>`:''}<a class="btn sm" href="${igUrl(x.handle)}" target="_blank" rel="noopener" aria-label="Ouvrir sur Instagram">${ICON.ig}</a><button class="btn sm" data-igprospect="${x.id}" title="En faire un prospect">→ CRM</button><button class="btn sm" data-igdel="${x.id}" aria-label="Retirer de la liste" title="Retirer de la liste">✕</button></span></div>`).join(''):'<p class="empty">Liste vide. Ajoute les @ des gens qui ont liké, commenté ou répondu à ta story.</p>'}</div>
     </section>
     <section class="block"><div class="bh"><h2>À relancer sur Instagram</h2></div>
       <div class="lines">${open_().filter(p=>p.source==='ig').map(p=>`<div class="line"><span class="l"><button data-open="${p.id}" style="font-weight:500">${p.insta?'@'+esc(p.insta):esc(p.prenom)}</button><small>${esc(p.prenom)} · ${etapeT(p.etape)}</small></span><span class="r">${p.next_date?`<span class="tag ${diff(p.next_date)<=0?'bad':'neutral'}">${rel(p.next_date)}</span>`:''}</span></div>`).join('')||'<p class="empty">Personne pour l\'instant.</p>'}</div>
     </section>
   </div>`;
 }
+// Contenus : vidéos YouTube (lien /go/ traçable) et réels Instagram (les @ récoltés sont reliés au réel d'où ils viennent)
+const TYPES=()=>S.reg.types_contenus||{};
+const isReel=v=>TYPES()[v.slug]==='reel';
+const IGREEL=()=>S.reg.ig_reel||{};
+const reelsPub=()=>S.videos.filter(v=>isReel(v)&&v.statut===4).sort((a,b)=>(b.publiee_le||'').localeCompare(a.publiee_le||''));
+const slugify=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,32).replace(/-+$/,'');
+// Vues YouTube (API YouTube Data, clé publique limitée au site) : gardées 6 h sur l'appareil
+const YT={v:{},t:0,busy:false};
+try{const c=JSON.parse(localStorage.getItem('qg_yt')||'null');if(c){YT.v=c.v||{};YT.t=c.t||0}}catch(_){}
+const ytId=u=>{const m=String(u||'').match(/(?:youtu\.be\/|v=|shorts\/|embed\/|live\/)([\w-]{11})/);return m?m[1]:null};
+function ytLoad(force){
+  if(!C.ytKey||YT.busy||(!force&&Date.now()-YT.t<6*3600e3))return;
+  const ids=S.videos.filter(v=>!isReel(v)&&ytId(v.youtube_url)).map(v=>ytId(v.youtube_url));if(!ids.length)return;
+  YT.busy=true;
+  fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${ids.slice(0,50).join(',')}&key=${encodeURIComponent(C.ytKey)}`).then(r=>r.json()).then(j=>{
+    if(!j.items)throw new Error((j.error&&j.error.message)||'YouTube');
+    j.items.forEach(x=>YT.v[x.id]=+((x.statistics||{}).viewCount||0));YT.t=Date.now();
+    try{localStorage.setItem('qg_yt',JSON.stringify({v:YT.v,t:YT.t}))}catch(_){}
+    if(['videos','dashboard'].includes(route))render();
+  }).catch(e=>console.error('YouTube',e)).finally(()=>{YT.busy=false});
+}
+const vues=v=>{const i=ytId(v.youtube_url);return i&&YT.v[i]!=null?YT.v[i]:null};
 function vVideos(){
+  ytLoad();
   const all=S.videos.map(v=>({...v,ins:S.leadsBy[v.slug]||0,clics:S.clics[v.slug]||0}));
-  const pub=all.filter(v=>v.statut===4),LV=v=>S.liens.filter(l=>l.video_slug===v.slug),tc=pub.reduce((s,v)=>s+v.clics+LV(v).reduce((a,l)=>a+(S.clics[l.slug]||0),0),0),ti=pub.reduce((s,v)=>s+v.ins,0);
+  const yt=all.filter(v=>!isReel(v));
+  const pub=yt.filter(v=>v.statut===4),LV=v=>S.liens.filter(l=>l.video_slug===v.slug),tc=pub.reduce((s,v)=>s+v.clics+LV(v).reduce((a,l)=>a+(S.clics[l.slug]||0),0),0),ti=pub.reduce((s,v)=>s+v.ins,0);
   const rows=[...pub].sort((a,b)=>b.ins-a.ins||b.clics-a.clics), mx=Math.max(1,...rows.map(v=>v.clics));
   const enCours=all.filter(v=>v.statut<4);
   const steps=v=>`<span class="vstep" title="${STEPS[v.statut-1]}">${STEPS.map((_,i)=>`<i class="${i<v.statut?'on':''}"></i>`).join('')}</span>`;
   const link=v=>`${C.site}/go/${v.slug}`;
+  const sig=sl=>S.prospects.filter(p=>p.video_slug===sl&&p.etape==='gagne');
+  const vu=v=>{const n=vues(v);return n==null?(v.youtube_url?(C.ytKey?'…':'—'):`<button class="btn sm" data-yturl="${esc(v.slug)}">Lien YouTube</button>`):n.toLocaleString('fr-FR')};
+  const reels=reelsPub().map(v=>{const ats=Object.entries(IGREEL()).filter(([,sl])=>sl===v.slug).length,pr=S.prospects.filter(p=>p.video_slug===v.slug);return {...v,ats,pr:pr.length,sg:pr.filter(p=>p.etape==='gagne').length,ca:pr.filter(p=>p.etape==='gagne').reduce((s,p)=>s+p.montant,0)}}).sort((a,b)=>b.sg-a.sg||b.pr-a.pr||b.ats-a.ats);
+  const tv=pub.reduce((s,v)=>s+(vues(v)||0),0);
   return `
-  <div class="kpis"><div class="kpi"><span class="lab">Clics sur les liens<span class="tag up">total</span></span><span class="val">${num(tc)}</span><span class="sub">toutes vidéos</span></div><div class="kpi"><span class="lab">Inscrits au lead magnet<span class="tag up">${tc?Math.round(ti/tc*100)+' %':'—'}</span></span><span class="val">${num(ti)}</span><span class="sub">ont laissé numéro + email</span></div><div class="kpi"><span class="lab">Devenus prospects</span><span class="val">${num(S.prospects.filter(p=>p.source==='prepa').length)}</span><span class="sub">arrivés dans le CRM</span></div><div class="kpi"><span class="lab">Signés via une vidéo</span><span class="val">${num(S.prospects.filter(p=>p.source==='prepa'&&p.etape==='gagne').length)}</span><span class="sub">${eur(S.prospects.filter(p=>p.source==='prepa'&&p.etape==='gagne').reduce((s,p)=>s+p.montant,0))} encaissés</span></div></div>
-  <section class="block"><div class="bh"><h2 class="t">Vidéos publiées</h2><span class="sub">lien principal = « Prépare ta perf » · « + Lien » pour un lien WhatsApp ou autre, chacun compte ses clics</span></div>
-    <div class="tw"><table><thead><tr><th>Lien</th><th>Vidéo</th><th>Publiée</th><th class="r">Clics</th><th></th><th class="r">Inscrits</th><th class="r">Taux</th><th></th></tr></thead><tbody>
-    ${rows.map(v=>`<tr><td class="mono">/go/${esc(v.slug)}</td><td>${esc(v.titre)}</td><td class="date num">${v.publiee_le?fmtS(v.publiee_le):'—'}</td><td class="r num">${v.clics}</td><td style="width:140px"><span class="meter" style="display:block;width:120px"><i class="${v===rows[0]?'hot':''}" style="width:${v.clics/mx*100}%"></i></span></td><td class="r num">${v.ins}</td><td class="r num">${v.clics?Math.round(v.ins/v.clics*100)+' %':'—'}</td><td class="r"><span class="quick" style="justify-content:flex-end"><button class="btn sm" data-copy="${link(v)}">Copier · lead magnet</button><button class="btn sm" data-addlien="${esc(v.slug)}">+ Lien</button></span></td></tr>${LV(v).map(l=>`<tr><td class="mono" style="color:var(--muted)">↳ /go/${esc(l.slug)}</td><td style="color:var(--muted)">${esc(l.nom)}</td><td></td><td class="r num">${S.clics[l.slug]||0}</td><td colspan="3"></td><td class="r"><span class="quick" style="justify-content:flex-end"><button class="btn sm" data-copy="${C.site}/go/${esc(l.slug)}">Copier</button><button class="btn sm" data-dellien="${esc(l.slug)}" aria-label="Supprimer le lien">✕</button></span></td></tr>`).join('')}`).join('')||'<tr><td colspan="8" class="empty">Aucune vidéo publiée.</td></tr>'}</tbody></table></div>
+  <div class="kpis"><div class="kpi"><span class="lab">Vues YouTube</span><span class="val">${C.ytKey?num(tv):'—'}</span>${C.ytKey?'':'<span class="sub">lecture des vues pas encore branchée</span>'}</div><div class="kpi"><span class="lab">Clics sur les liens${tv?`<span class="tag neutral">${(tc/tv*100).toLocaleString('fr-FR',{maximumFractionDigits:1})} % des vues</span>`:''}</span><span class="val">${num(tc)}</span></div><div class="kpi"><span class="lab">Inscrits au lead magnet<span class="tag up">${tc?Math.round(ti/tc*100)+' %':'—'}</span></span><span class="val">${num(ti)}</span></div><div class="kpi"><span class="lab">Signés via une vidéo</span><span class="val">${num(S.prospects.filter(p=>p.source==='prepa'&&p.etape==='gagne').length)}</span><span class="sub">${eur(S.prospects.filter(p=>p.source==='prepa'&&p.etape==='gagne').reduce((s,p)=>s+p.montant,0))} encaissés</span></div></div>
+  <section class="block"><div class="bh"><h2 class="t">Vidéos YouTube publiées</h2>${C.ytKey?`<span class="right"><button class="btn sm" data-ytsync ${YT.busy?'disabled':''}>Actualiser les vues</button></span>`:''}</div>
+    <div class="tw"><table><thead><tr><th>Lien</th><th>Vidéo</th><th>Publiée</th><th class="r">Vues</th><th class="r">Clics</th><th></th><th class="r">Inscrits</th><th class="r">Signés</th><th></th></tr></thead><tbody>
+    ${rows.map(v=>`<tr><td class="mono">/go/${esc(v.slug)}</td><td>${esc(v.titre)}</td><td class="date num">${v.publiee_le?fmtS(v.publiee_le):'—'}</td><td class="r num">${vu(v)}</td><td class="r num">${v.clics}</td><td style="width:130px"><span class="meter" style="display:block;width:110px"><i class="${v===rows[0]?'hot':''}" style="width:${v.clics/mx*100}%"></i></span></td><td class="r num">${v.ins}${v.clics?` <span style="color:var(--dim)">· ${Math.round(v.ins/v.clics*100)} %</span>`:''}</td><td class="r num">${sig(v.slug).length||'—'}</td><td class="r"><span class="quick" style="justify-content:flex-end"><button class="btn sm" data-copy="${link(v)}">Copier · lead magnet</button><button class="btn sm" data-addlien="${esc(v.slug)}">+ Lien</button>${v.youtube_url?`<button class="btn sm" data-yturl="${esc(v.slug)}" title="Changer le lien YouTube">▶</button>`:''}</span></td></tr>${LV(v).map(l=>`<tr><td class="mono" style="color:var(--muted)">↳ /go/${esc(l.slug)}</td><td style="color:var(--muted)">${esc(l.nom)}</td><td></td><td></td><td class="r num">${S.clics[l.slug]||0}</td><td colspan="3"></td><td class="r"><span class="quick" style="justify-content:flex-end"><button class="btn sm" data-copy="${C.site}/go/${esc(l.slug)}">Copier</button><button class="btn sm" data-dellien="${esc(l.slug)}" aria-label="Supprimer le lien">✕</button></span></td></tr>`).join('')}`).join('')||'<tr><td colspan="9" class="empty">Aucune vidéo publiée.</td></tr>'}</tbody></table></div>
     <div class="mlist">${rows.map(v=>`<div class="mrow"><span class="t mono">/go/${esc(v.slug)}</span><span class="e num">${v.ins} inscrit${v.ins>1?'s':''}</span><span class="s">${esc(v.titre)}</span><span class="p quick"><button class="btn sm" data-copy="${link(v)}">Lead magnet · ${v.clics} clics</button>${LV(v).map(l=>`<button class="btn sm" data-copy="${C.site}/go/${esc(l.slug)}">${esc(l.nom)} · ${S.clics[l.slug]||0}</button>`).join('')}<button class="btn sm" data-addlien="${esc(v.slug)}">+ Lien</button></span></div>`).join('')||'<p class="empty">Aucune vidéo publiée.</p>'}</div>
   </section>
-  <section class="block"><div class="bh"><h2 class="t">En préparation</h2><span class="sub">idée → tournée → montée → publiée · le lien existe dès la publication</span><span class="right"><button class="btn sm primary" data-newvideo>+ Idée de vidéo</button></span></div>
-    <div class="lines">${enCours.map(v=>`<div class="line"><span class="l">${esc(v.titre)}<small>${STEPS[v.statut-1]} · lien /go/${esc(v.slug)}</small></span><span class="r" style="display:flex;gap:10px;align-items:center">${steps(v)}<button class="btn sm" data-vstep="${esc(v.slug)}">${v.statut===3?'Publier':'Étape suivante'}</button></span></div>`).join('')||'<p class="empty">Aucune vidéo en préparation.</p>'}</div>
+  <section class="block"><div class="bh"><h2 class="t">Réels publiés</h2></div>
+    ${reels.length?`<div class="tw"><table><thead><tr><th>Réel</th><th>Publié</th><th class="r">@ récoltés</th><th class="r">Prospects</th><th class="r">Signés</th><th class="r">Encaissé</th></tr></thead><tbody>${reels.map(v=>`<tr><td>${esc(v.titre)}</td><td class="date num">${v.publiee_le?fmtS(v.publiee_le):'—'}</td><td class="r num">${v.ats}</td><td class="r num">${v.pr}</td><td class="r num">${v.sg||'—'}</td><td class="r num">${v.ca?eur(v.ca):'—'}</td></tr>`).join('')}</tbody></table></div>
+    <div class="mlist">${reels.map(v=>`<div class="mrow"><span class="t">${esc(v.titre)}</span><span class="e num">${v.sg} signé${v.sg>1?'s':''}</span><span class="s">${v.ats} @ · ${v.pr} prospect${v.pr>1?'s':''}</span></div>`).join('')}</div>`:'<p class="empty">Aucun réel publié. Ajoute une idée de réel juste en dessous.</p>'}
   </section>
-  <section class="block"><div class="bh"><h2>Derniers inscrits</h2><span class="sub">arrivent tout seuls dans le CRM en « Nouveau »</span></div>
-    <div class="lines">${S.leads.slice(0,8).map(l=>{const p=S.prospects.find(x=>x.id===l.prospect_id);return `<div class="line"><span class="l">${p?`<button data-open="${p.id}" style="font-weight:500">${esc(p.prenom)}</button>`:esc(l.email||l.tel||'?')}<small>${fmtS(l.created_at.slice(0,10))} · via « ${esc(videoT(l.slug))} »</small></span><span class="r">${p?stPill(p.etape):''}</span></div>`}).join('')||'<p class="empty">Pas encore d\'inscrit. Mets un lien /go/ sous une vidéo.</p>'}</div>
+  <section class="block"><div class="bh"><h2 class="t">À tourner, à monter</h2><span class="right"><button class="btn sm primary" data-newvideo>+ Idée</button></span></div>
+    <div class="lines">${enCours.map(v=>`<div class="line"><span class="l">${esc(v.titre)}<small>${isReel(v)?'Réel':'YouTube'} · ${STEPS[v.statut-1]}</small></span><span class="r" style="display:flex;gap:10px;align-items:center">${steps(v)}<button class="btn sm" data-vstep="${esc(v.slug)}">${v.statut===3?'Publier':'Étape suivante'}</button><button class="btn sm" data-delvideo="${esc(v.slug)}" aria-label="Supprimer l'idée">✕</button></span></div>`).join('')||'<p class="empty">Rien en préparation.</p>'}</div>
+  </section>
+  <section class="block"><div class="bh"><h2>Derniers inscrits</h2></div>
+    <div class="lines">${S.leads.slice(0,8).map(l=>{const p=S.prospects.find(x=>x.id===l.prospect_id);return `<div class="line"><span class="l">${p?`<button data-open="${p.id}" style="font-weight:500">${esc(p.prenom)}</button>`:esc(l.email||l.tel||'?')}<small>${fmtS(l.created_at.slice(0,10))} · via « ${esc(videoT(l.slug))} »</small></span><span class="r">${p?stPill(p.etape):''}</span></div>`}).join('')||'<p class="empty">Pas encore d\'inscrit.</p>'}</div>
   </section>`;
 }
 // Dernière séance : lue dans LEGACY OS si l'athlète y est relié ; sinon bouton manuel (gardé tant que LEGACY OS n'est pas relié).
@@ -297,66 +347,113 @@ async function osAjouter(liste){
   await setReg('os_liens',l);render();await osSync(true);
 }
 const offreTxt=a=>{const x=mensuelDe(a);return x?`${a.offre?esc(a.offre)+' · ':''}<span style="color:var(--green)">${eur(montantMois(x,MOIS))}/mois</span>`:esc(a.offre||'')};
+// Athlètes : téléphone (fiche prospect d'origine, sinon noté dans reglages.ath_tel), records lus dans LEGACY OS, renouvellement en attente
+const athTel=a=>(S.reg.ath_tel||{})[a.id]||((S.prospects.find(p=>p.id===a.prospect_id)||{}).tel)||'';
+const athRec=a=>(S.reg.os_records||{})[a.id]||[];
+const recTxt=a=>athRec(a).map(x=>`<span class="rec"><b>${esc(x.e)}</b> ${String(x.v).replace('.',',')} kg${x.g>0?` <i>+${String(x.g).replace('.',',')}</i>`:''}</span>`).join('');
+const athMsg=a=>`Salut ${prenom(a.prenom)}, pas vu de séance passer depuis ${rel(a.derniere_seance).replace('il y a ','')} : tout va bien ? Dis-moi si on doit adapter ta semaine.`;
+function athActs(a,court){
+  const r=a.fin?diff(a.fin):null,s=a.derniere_seance?diff(a.derniere_seance):null,rn=RENOUV()[a.id];
+  return `${s!==null&&s<=-5?`<button class="btn sm" data-athwa="${a.id}">${ICON.wa} ${court?'':'Relancer'}</button>`:''}${rn?`<span class="tag warn">lien envoyé ${fmtS(rn.le)}</span><button class="btn sm primary" data-renrecu="${a.id}">Paiement reçu</button><button class="btn sm" data-renann="${a.id}" title="Annuler le renouvellement">✕</button>`:r!==null&&r<=14?`<button class="btn sm" data-renew="${a.id}">Renouveler</button>`:''}<button class="btn sm" data-delath="${a.id}" aria-label="Supprimer ${esc(a.prenom)}" title="Supprimer">✕</button>`;
+}
 function vAth(){
   const rows=[...S.athletes].sort((a,b)=>(a.fin||'9').localeCompare(b.fin||'9'));
-  return `<div class="kpis"><div class="kpi"><span class="lab">Athlètes coachés</span><span class="val">${num(S.athletes.length)}</span><span class="sub">en ce moment</span></div><div class="kpi"><span class="lab">Fin d'offre sous 14 j<span class="tag warn">à renouveler</span></span><span class="val">${num(S.athletes.filter(a=>a.fin&&diff(a.fin)<=14).length)}</span><span class="sub">proposer la suite avant la fin</span></div><div class="kpi"><span class="lab">Sans séance depuis 5 j<span class="tag bad">à relancer</span></span><span class="val">${num(S.athletes.filter(a=>a.derniere_seance&&diff(a.derniere_seance)<=-5).length)}</span><span class="sub">${OS.code?'lu dans LEGACY OS':'relie LEGACY OS dans Réglages'}</span></div><div class="kpi"><span class="lab">Valeur des offres en cours</span><span class="val">${num(S.athletes.reduce((s,a)=>s+(mensuelDe(a)?0:(a.prix||0)),0),' €')}</span><span class="sub">${totMensuel()?'+ '+eur(totMensuel())+' par mois (mensuels)':'déjà encaissée'}</span></div></div>
-  <section class="block"><div class="bh"><h2 class="t">Athlètes</h2><span class="sub">${OS.code?'dernière séance lue dans LEGACY OS · '+(OS.busy?'lecture…':OS.t?relT(OS.t):'pas encore lue'):'dernière séance : relie LEGACY OS dans Réglages'}</span><span class="right quick">${OS.code?`<button class="btn sm" data-ossync ${OS.busy?'disabled':''}>Actualiser</button>`:''}<button class="btn sm" data-addath>+ Athlète</button></span></div>
-  <div class="tw"><table><thead><tr><th>Athlète</th><th>Offre</th><th>Début</th><th>Fin</th><th class="r">Reste</th><th>Dernière séance</th><th></th></tr></thead><tbody>${rows.map(a=>{const r=a.fin?diff(a.fin):null,s=a.derniere_seance?diff(a.derniere_seance):null;return `<tr><td><span class="who"><span class="av g">${ini(a.prenom)}</span><button class="name" data-editath="${a.id}" title="Modifier">${esc(a.prenom)}</button></span></td><td>${offreTxt(a)}</td><td class="num date">${a.debut?fmtS(a.debut):'—'}</td><td class="num date">${a.fin?fmtS(a.fin):'—'}</td><td class="r">${r===null?'—':`<span class="tag ${r<=7?'bad':r<=14?'warn':'up'}">${r} j</span>`}</td><td style="color:${s!==null&&s<=-5?'var(--red)':'var(--muted)'}">${a.derniere_seance?rel(a.derniere_seance):'—'} ${osCell(a)}</td><td class="r"><span class="quick" style="justify-content:flex-end">${r!==null&&r<=14?`<button class="btn sm" data-renew="${a.id}">Renouveler</button>`:''}<button class="btn sm" data-delath="${a.id}" aria-label="Supprimer ${esc(a.prenom)}" title="Supprimer">✕</button></span></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">Aucun athlète pour l\'instant. Ils arrivent ici quand un prospect signe, ou depuis LEGACY OS (juste en dessous).</td></tr>'}</tbody></table></div>
-  <div class="mlist">${rows.map(a=>`<div class="mrow"><button class="t" data-editath="${a.id}">${esc(a.prenom)}</button><span class="e">${a.fin?`<span class="tag ${diff(a.fin)<=7?'bad':diff(a.fin)<=14?'warn':'up'}">J-${diff(a.fin)}</span>`:''}</span><span class="s">${offreTxt(a)||'offre à préciser'} · séance ${a.derniere_seance?rel(a.derniere_seance):'—'}</span><span class="p quick">${osCell(a,1)}<button class="btn sm" data-delath="${a.id}" aria-label="Supprimer ${esc(a.prenom)}" title="Supprimer">✕</button></span></div>`).join('')||'<p class="empty">Aucun athlète pour l\'instant.</p>'}</div>${osImport()}</section>`;
+  return `<div class="kpis"><div class="kpi"><span class="lab">Athlètes coachés</span><span class="val">${num(S.athletes.length)}</span></div><div class="kpi"><span class="lab">Fin d'offre sous 14 j<span class="tag warn">à renouveler</span></span><span class="val">${num(S.athletes.filter(a=>a.fin&&diff(a.fin)<=14).length)}</span></div><div class="kpi"><span class="lab">Sans séance depuis 5 j<span class="tag bad">à relancer</span></span><span class="val">${num(S.athletes.filter(a=>a.derniere_seance&&diff(a.derniere_seance)<=-5).length)}</span>${OS.code?'':'<span class="sub">relie LEGACY OS dans Réglages</span>'}</div><div class="kpi"><span class="lab">Valeur des offres en cours</span><span class="val">${num(S.athletes.reduce((s,a)=>s+(mensuelDe(a)?0:(a.prix||0)),0),' €')}</span>${totMensuel()?`<span class="sub">+ ${eur(totMensuel())} par mois (mensuels)</span>`:''}</div></div>
+  <section class="block"><div class="bh"><h2 class="t">Athlètes</h2><span class="sub">${OS.code?'LEGACY OS · '+(OS.busy?'lecture…':OS.t?'lu '+relT(OS.t):'pas encore lu'):''}</span><span class="right quick">${OS.code?`<button class="btn sm" data-ossync ${OS.busy?'disabled':''}>Actualiser</button>`:''}<button class="btn sm" data-addath>+ Athlète</button></span></div>
+  <div class="tw"><table><thead><tr><th>Athlète</th><th>Offre</th><th>Fin</th><th class="r">Reste</th><th>Dernière séance</th><th>Records (1RM estimé · progression)</th><th></th></tr></thead><tbody>${rows.map(a=>{const r=a.fin?diff(a.fin):null,s=a.derniere_seance?diff(a.derniere_seance):null;return `<tr><td><span class="who"><span class="av g">${ini(a.prenom)}</span><button class="name" data-editath="${a.id}" title="Modifier">${esc(a.prenom)}</button></span></td><td>${offreTxt(a)}</td><td class="num date">${a.fin?fmtS(a.fin):'—'}</td><td class="r">${r===null?'—':`<span class="tag ${r<=7?'bad':r<=14?'warn':'up'}">${r} j</span>`}</td><td style="color:${s!==null&&s<=-5?'var(--red)':'var(--muted)'}">${a.derniere_seance?rel(a.derniere_seance):'—'} ${osCell(a)}</td><td class="recs">${recTxt(a)||'<span style="color:var(--dim)">—</span>'}</td><td class="r"><span class="quick" style="justify-content:flex-end">${athActs(a)}</span></td></tr>`}).join('')||'<tr><td colspan="7" class="empty">Aucun athlète pour l\'instant.</td></tr>'}</tbody></table></div>
+  <div class="mlist">${rows.map(a=>`<div class="mrow"><button class="t" data-editath="${a.id}">${esc(a.prenom)}</button><span class="e">${a.fin?`<span class="tag ${diff(a.fin)<=7?'bad':diff(a.fin)<=14?'warn':'up'}">J-${diff(a.fin)}</span>`:''}</span><span class="s">${offreTxt(a)||'offre à préciser'} · séance ${a.derniere_seance?rel(a.derniere_seance):'—'}</span><span class="p quick">${osCell(a,1)}${athActs(a,1)}</span></div>`).join('')||'<p class="empty">Aucun athlète pour l\'instant.</p>'}</div>${osImport()}</section>`;
 }
+// Frais Stripe (Europe) : 1,5 % + 0,25 € par paiement par carte
+const fraisV=v=>v.mode==='stripe'?Math.round((v.montant*0.015+0.25)*100)/100:0;
+const eur2=n=>(+n||0).toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:2})+' €';
+// Prévision du mois : déjà encaissé + R1/R2 en cours × chances + mensualités pas encore reçues + renouvellements envoyés
+const RENOUV=()=>S.reg.renouv||{};
+function prevision(){
+  const pipe=open_().filter(p=>['r1','r2'].includes(p.etape)).reduce((s,p)=>s+p.montant*chance(p)/100,0);
+  const mens=duMois().filter(x=>!x.paye).reduce((s,x)=>s+x.m,0);
+  const ren=Object.values(RENOUV()).reduce((s,r)=>s+(+r.prix||0)*BASE.r2/100,0);
+  return {tot:Math.round(encMois()+pipe+mens+ren),pipe:Math.round(pipe),mens,ren:Math.round(ren)};
+}
+// D'où vient l'argent : la source du prospect signé ; sinon les athlètes déjà là (renouvellements, mensualités)
+function srcVente(v){const p=v.prospect_id&&S.prospects.find(x=>x.id===v.prospect_id);if(p&&SRC[p.source])return SRC[p.source].t;return /^(Mensualité|Renouvellement)/.test(v.offre||'')?'Athlètes déjà coachés':'Autre'}
 function vVentes(){
-  const enc=encMois(), rows=[...S.ventes].sort((a,b)=>b.date.localeCompare(a.date)), af=S.ventes.filter(v=>!v.facture).length;
-  const tot12=hist12().reduce((s,x)=>s+x.v,0);
-  return `<div class="kpis"><div class="kpi"><span class="lab">Encaissé ce mois<span class="tag up">${Math.min(100,Math.round(enc/OBJ()*100))} %</span></span><span class="val">${num(enc,' €')}</span><span class="sub">objectif ${eur(OBJ())}</span></div><div class="kpi"><span class="lab">Sur 12 mois</span><span class="val">${num(tot12,' €')}</span><span class="sub">paiements en une fois</span></div><div class="kpi"><span class="lab">Factures à faire<span class="tag ${af?'bad':'up'}">${af}</span></span><span class="val">${num(af)}</span><span class="sub">PDF : étape 3</span></div><div class="kpi"><span class="lab">Panier moyen</span><span class="val">${num(S.ventes.length?Math.round(S.ventes.reduce((s,v)=>s+v.montant,0)/S.ventes.length):0,' €')}</span><span class="sub">par signature</span></div></div>
+  const enc=encMois(), rows=[...S.ventes].sort((a,b)=>b.date.localeCompare(a.date));
+  const tot12=hist12().reduce((s,x)=>s+x.v,0), fr=S.ventes.filter(v=>v.date.slice(0,7)===MOIS).reduce((s,v)=>s+fraisV(v),0), pv=prevision();
+  const an=S.ventes.filter(v=>diff(v.date)>-366),src={};an.forEach(v=>{const k=srcVente(v);src[k]=(src[k]||0)+v.montant});
+  const SR=Object.entries(src).sort((a,b)=>b[1]-a[1]),smx=Math.max(1,...SR.map(x=>x[1]));
+  return `<div class="kpis"><div class="kpi"><span class="lab">Encaissé ce mois<span class="tag up">${Math.min(100,Math.round(enc/OBJ()*100))} %</span></span><span class="val">${num(enc,' €')}</span><span class="sub">objectif ${eur(OBJ())}${fr?' · '+eur2(enc-fr)+' après frais Stripe':''}</span></div><div class="kpi"><span class="lab">Prévision du mois<span class="tag ${pv.tot>=OBJ()?'up':'warn'}">${Math.round(pv.tot/OBJ()*100)} %</span></span><span class="val">${num(pv.tot,' €')}</span><span class="sub">${[pv.pipe?eur(pv.pipe)+' d\'appels en cours':'',pv.mens?eur(pv.mens)+' de mensualités':'',pv.ren?eur(pv.ren)+' de renouvellements':''].filter(Boolean).join(' · ')||'rien en cours'}</span></div><div class="kpi"><span class="lab">Sur 12 mois</span><span class="val">${num(tot12,' €')}</span>${S.ventes.some(v=>v.mode==='stripe'&&diff(v.date)>-366)?`<span class="sub">dont ${eur2(an.reduce((s,v)=>s+fraisV(v),0))} de frais Stripe</span>`:''}</div><div class="kpi"><span class="lab">Panier moyen</span><span class="val">${num(S.ventes.length?Math.round(S.ventes.reduce((s,v)=>s+v.montant,0)/S.ventes.length):0,' €')}</span></div></div>
+  ${SR.length?`<section class="block"><div class="bh"><h2 class="t">D'où vient l'argent</h2><span class="sub">12 mois</span></div><div class="lines" style="max-width:640px">${SR.map(([k,n],i)=>`<div class="line"><span class="l">${esc(k)}</span><span class="r num">${eur(n)} · ${Math.round(n/an.reduce((s,v)=>s+v.montant,0)*100)} %</span><span class="meter"><i class="${i?'':'hot'}" style="width:${n/smx*100}%"></i></span></div>`).join('')}</div></section>`:''}
   <section class="block"><div class="bh"><h2 class="t">Mensualités · ${nomMois(MOIS)}</h2><span class="sub">${duMois().length?eur(totMensuel())+' par mois · '+duMois().filter(d=>d.paye).length+' reçue'+(duMois().filter(d=>d.paye).length>1?'s':'')+' sur '+duMois().length:'anciens athlètes payés au mois'}</span></div>${mensuelsBlock(false)}</section>
   <section class="block"><div class="bh"><h2 class="t">Paiements</h2><span class="right"><button class="btn sm" data-addvente>+ Noter un paiement</button></span></div>
-  <div class="tw"><table><thead><tr><th>Date</th><th>Athlète</th><th>Offre</th><th>Mode</th><th class="r">Montant</th><th>Facture</th></tr></thead><tbody>${rows.map(v=>`<tr><td class="num date">${fmtS(v.date)}</td><td class="name">${esc(v.prenom)}</td><td>${esc(v.offre||'')}</td><td><span class="pill ${v.mode==='stripe'?'src-ig':'st-nouveau'}">${esc(v.mode)}</span></td><td class="r num">${eur(v.montant)}</td><td><span class="quick">${v.facture?'<span class="tag up">Envoyée</span>':`<button class="btn sm" data-fact="${v.id}">Marquer envoyée</button>`}<button class="btn sm" data-delvente="${v.id}" aria-label="Supprimer ce paiement" title="Supprimer">✕</button></span></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Aucun paiement noté.</td></tr>'}</tbody></table></div>
+  <div class="tw"><table><thead><tr><th>Date</th><th>Athlète</th><th>Offre</th><th>Mode</th><th class="r">Montant</th><th>Facture</th></tr></thead><tbody>${rows.map(v=>`<tr><td class="num date">${fmtS(v.date)}</td><td class="name">${esc(v.prenom)}</td><td>${esc(v.offre||'')}</td><td><span class="pill ${v.mode==='stripe'?'src-ig':'st-nouveau'}">${esc(v.mode)}</span></td><td class="r num">${eur(v.montant)}${fraisV(v)?`<small style="display:block;color:var(--dim)">−${eur2(fraisV(v))}</small>`:''}</td><td><span class="quick">${v.facture?'<span class="tag up">Envoyée</span>':`<button class="btn sm" data-fact="${v.id}">Marquer envoyée</button>`}<button class="btn sm" data-delvente="${v.id}" aria-label="Supprimer ce paiement" title="Supprimer">✕</button></span></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Aucun paiement noté.</td></tr>'}</tbody></table></div>
   <div class="mlist">${rows.map(v=>`<div class="mrow"><span class="t">${esc(v.prenom)}</span><span class="e num">${eur(v.montant)}</span><span class="s">${fmtS(v.date)} · ${esc(v.offre||'')} · ${esc(v.mode)}</span><span class="p quick">${v.facture?'<span class="tag up">Facture envoyée</span>':`<button class="btn sm" data-fact="${v.id}">Facture envoyée</button>`}<button class="btn sm" data-delvente="${v.id}" aria-label="Supprimer ce paiement" title="Supprimer">✕</button></span></div>`).join('')||'<p class="empty">Aucun paiement noté.</p>'}</div></section>`;
 }
+// Agenda : semaine avec les heures (comme Google Agenda, clic dans un trou = ajouter) ou mois ; téléphone = un jour à la fois
+let agMode='semaine',mo=0;try{agMode=localStorage.getItem('qg_agmode')||'semaine'}catch(_){}
+const H0=7,H1=23,HPX=44;
+const mins=h=>{const [a,b]=String(h||'0:0').split(':').map(Number);return a*60+(b||0)};
+function placer(evs){const L=[];evs.forEach(e=>{const s=mins(e.h),f=Math.max(s+20,e.e&&mins(e.e)>s?mins(e.e):s+30);let k=L.findIndex(x=>x<=s);if(k<0){k=L.length;L.push(f)}else L[k]=f;e._s=s;e._f=f;e._k=k});const n=Math.max(1,L.length);evs.forEach(e=>e._n=n);return evs}
 function vAgenda(){
   const mon=monday(wk);
   const days=Array.from({length:7},(_,i)=>{const x=new Date(mon);x.setDate(mon.getDate()+i);return iso(x)});
   const J=['lun','mar','mer','jeu','ven','sam','dim'];
-  const chip=e=>e.g?`<a class="evc gg" href="${esc(e.url||'#')}" target="_blank" rel="noopener" title="Google Agenda · lecture seule"><span>${e.h?e.h+' · ':''}${esc(e.t)}</span><small>Google${e.e?' · '+e.e:''}</small></a>`:`<${e.k==='meet'&&e.pid?'button data-open="'+e.pid+'"':'button data-ev="'+e.id+'"'} class="evc ${e.k}"><span>${e.h?e.h+' · ':''}${esc(e.t)}</span>${e.s||e.e?`<small>${esc(e.s)}${e.e?' · '+e.e:''}</small>`:''}</button>`;
-  const ghost=(dIso,pl)=>`<button class="evc ghost" data-acc="${dIso}|${pl.kind}" title="Ajouter à l'agenda"><span>${pl.h} · ${esc(pl.t)}</span><span>+</span></button>`;
+  const attrs=e=>e.g?`href="${esc(e.url||'#')}" target="_blank" rel="noopener" title="Google Agenda · lecture seule"`:e.k==='meet'&&e.pid?`data-open="${e.pid}"`:`data-ev="${e.id}"`;
+  const chip=(e,st)=>`<${e.g?'a':'button'} class="evc ${e.g?'gg':e.k}" ${attrs(e)} ${st?`style="${st}"`:''}><span>${e.h?e.h+' · ':''}${esc(e.t)}</span>${e.s&&!e.g?`<small>${esc(e.s)}</small>`:''}</${e.g?'a':'button'}>`;
   const nProp=days.reduce((a,x)=>a+propos(x).length,0);
   const sel=days.includes(selDay)?selDay:days[0];
   const dl=dayEv(sel);
+  const moD=new Date(T0.getFullYear(),T0.getMonth()+mo,1);
+  const tete=agMode==='mois'?`<button class="btn sm" data-mo="-1" aria-label="Mois précédent">‹</button><span class="num" style="min-width:120px;text-align:center;text-transform:capitalize">${moD.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</span><button class="btn sm" data-mo="1" aria-label="Mois suivant">›</button>${mo?'<button class="btn sm" data-mo="0">Aujourd\'hui</button>':''}`
+    :`<button class="btn sm" data-wk="-1" aria-label="Semaine précédente">‹</button><span class="num" style="min-width:120px;text-align:center">${fmtS(days[0])} → ${fmtS(days[6])}</span><button class="btn sm" data-wk="1" aria-label="Semaine suivante">›</button>${wk?'<button class="btn sm" data-wk="0">Aujourd\'hui</button>':''}`;
+  // grille de la semaine
+  const nowM=new Date().getHours()*60+new Date().getMinutes();
+  const grille=`<div class="wg"><div class="wgh"><span></span>${days.map((x,i)=>`<span class="${x===TODAY?'auj':''}">${J[i]} <b>${+x.slice(8)}</b></span>`).join('')}</div>
+    <div class="wga"><span></span>${days.map(x=>`<div>${dayEv(x).filter(e=>!e.h).map(e=>chip(e)).join('')}</div>`).join('')}</div>
+    <div class="wgb" style="height:${(H1-H0)*HPX}px"><div class="wgt">${Array.from({length:H1-H0},(_,i)=>`<span style="top:${i*HPX}px">${H0+i} h</span>`).join('')}</div>
+    ${days.map(x=>`<div class="wcol ${x===TODAY?'auj':''}" data-col="${x}">${x===TODAY&&nowM>H0*60&&nowM<H1*60?`<i class="now" style="top:${(nowM-H0*60)/60*HPX}px"></i>`:''}${placer(dayEv(x).filter(e=>e.h)).map(e=>{const top=Math.max(0,(e._s-H0*60)/60*HPX),h=Math.max(20,(Math.min(e._f,H1*60)-Math.max(e._s,H0*60))/60*HPX-2);return chip(e,`top:${top}px;height:${h}px;left:${e._k/e._n*100}%;width:calc(${100/e._n}% - 4px)`)}).join('')}</div>`).join('')}</div></div>`;
+  // mois
+  const m0=new Date(moD);m0.setDate(1-((moD.getDay()+6)%7));
+  const nbS=Math.ceil((((moD.getDay()+6)%7)+new Date(moD.getFullYear(),moD.getMonth()+1,0).getDate())/7);
+  const mois=`<div class="mg"><div class="mgh">${J.map(j=>`<span>${j}</span>`).join('')}</div><div class="mgb">${Array.from({length:nbS*7},(_,i)=>{const x=new Date(m0);x.setDate(m0.getDate()+i);const di=iso(x),ev=dayEv(di);return `<button class="mday ${x.getMonth()!==moD.getMonth()?'out':''} ${di===TODAY?'auj':''}" data-mday="${di}"><b>${x.getDate()}</b>${ev.slice(0,3).map(e=>`<span class="${e.g?'gg':e.k}">${e.h?e.h+' ':''}${esc(e.t)}</span>`).join('')}${ev.length>3?`<small>+${ev.length-3}</small>`:''}</button>`}).join('')}</div></div>`;
   return `<section class="block"><div class="bh"><h2 class="t">Agenda</h2>${gBadge()}
-    <span class="right"><button class="btn sm" data-wk="-1" aria-label="Semaine précédente">‹</button><span class="num" style="min-width:120px;text-align:center">${fmtS(days[0])} → ${fmtS(days[6])}</span><button class="btn sm" data-wk="1" aria-label="Semaine suivante">›</button>${wk?'<button class="btn sm" data-wk="0">Aujourd\'hui</button>':''}</span></div>
-    <div class="wkhead"><button class="btn sm primary" data-addev>+ Ajouter</button><button class="btn sm" data-dictee>${ICON.mic} Dicter</button>${nProp?`<button class="btn sm" data-accall>Remplir la semaine · ${nProp} plage${nProp>1?'s':''}</button>`:''}${days.some(x=>S.agenda.some(e=>e.d===x&&e.auto))?'<button class="btn sm" data-clrauto>Retirer les plages auto</button>':''}</div>
-    <div class="strip">${days.map((x,i)=>`<button class="${x===sel?'sel':''} ${x===TODAY?'today':''}" data-day="${x}">${J[i]}<b>${+x.slice(8)}</b>${S.agenda.some(e=>e.d===x)?'<i></i>':''}</button>`).join('')}</div>
-    <div class="week">${days.map((x,i)=>`<div class="day ${x===TODAY?'today':''}"><h5><span>${J[i]}</span><b>${+x.slice(8)}</b></h5>${dayEv(x).map(chip).join('')}${propos(x).map(pl=>ghost(x,pl)).join('')}</div>`).join('')}</div>
-    <div class="dayview"><div class="agenda">${dl.length?dl.map(e=>`<div class="ev ${e.k}"><span class="h">${e.h||'—'}</span><span class="bar"></span><span style="min-width:0"><span class="t">${esc(e.t)}</span><br><span class="s">${esc(e.s)}${e.e?' · jusqu\'à '+e.e:''}</span></span>${e.g?`<a class="btn sm" href="${esc(e.url||'#')}" target="_blank" rel="noopener">Google</a>`:`<span class="quick">${e.meet?`<a class="btn sm" href="${esc(e.meet)}" target="_blank" rel="noopener">Meet</a>`:''}${e.k==='meet'&&e.pid?`<button class="btn sm" data-open="${e.pid}">Fiche</button>`:`<button class="btn sm" data-ev="${e.id}">…</button>`}</span>`}</div>`).join(''):'<p class="empty">Rien ce jour-là.</p>'}</div>
-      ${propos(sel).length?`<div class="lines" style="margin-top:10px">${propos(sel).map(pl=>`<div class="line"><span class="l" style="color:var(--muted)">${pl.h} · ${esc(pl.t)}<small>proposé selon tes trous</small></span><span class="r"><button class="btn sm" data-acc="${sel}|${pl.kind}">Accepter</button></span></div>`).join('')}</div>`:''}</div>
+    <span class="right"><span class="seg2"><button class="${agMode==='semaine'?'on':''}" data-agmode="semaine">Semaine</button><button class="${agMode==='mois'?'on':''}" data-agmode="mois">Mois</button></span>${tete}</span></div>
+    <div class="wkhead"><button class="btn sm primary" data-addev>+ Ajouter</button><button class="btn sm" data-dictee>${ICON.mic} Dicter</button>${agMode==='semaine'&&nProp?`<button class="btn sm" data-accall>Remplir ma semaine · ${nProp} plage${nProp>1?'s':''}</button>`:''}${agMode==='semaine'&&days.some(x=>S.agenda.some(e=>e.d===x&&e.auto))?'<button class="btn sm" data-clrauto>Retirer les plages auto</button>':''}</div>
+    ${agMode==='mois'?mois:`<div class="strip">${days.map((x,i)=>`<button class="${x===sel?'sel':''} ${x===TODAY?'today':''}" data-day="${x}">${J[i]}<b>${+x.slice(8)}</b>${S.agenda.some(e=>e.d===x)?'<i></i>':''}</button>`).join('')}</div>
+    ${grille}
+    <div class="dayview"><div class="agenda">${dl.length?dl.map(e=>`<div class="ev ${e.g?'gg':e.k}"><span class="h">${e.h||'—'}</span><span class="bar"></span><span style="min-width:0"><span class="t">${esc(e.t)}</span><br><span class="s">${esc(e.s)}${e.e?' · jusqu\'à '+e.e:''}</span></span>${e.g?`<a class="btn sm" href="${esc(e.url||'#')}" target="_blank" rel="noopener">Google</a>`:`<span class="quick">${e.meet?`<a class="btn sm" href="${esc(e.meet)}" target="_blank" rel="noopener">Meet</a>`:''}${e.k==='meet'&&e.pid?`<button class="btn sm" data-open="${e.pid}">Fiche</button>`:`<button class="btn sm" data-ev="${e.id}">…</button>`}</span>`}</div>`).join(''):'<p class="empty">Rien ce jour-là.</p>'}</div></div>`}
   </section>`;
 }
 function vReglages(){
   const pl=S.reg.plages||[];
   return `<section class="block"><div class="bh"><h2 class="t">Objectif du jour</h2></div>
-    <div class="setrow"><span>DM à envoyer par jour<small>la barre et la série se calent dessus</small></span><span class="stepper"><button data-dm="-5" aria-label="Moins">−</button><span class="num">${OBJ_DM()}</span><button data-dm="5" aria-label="Plus">+</button></span></div>
+    <div class="setrow"><span>DM à envoyer par jour<small>+ les relances du jour</small></span><span class="stepper"><button data-dm="-5" aria-label="Moins">−</button><span class="num">${OBJ_DM()}</span><button data-dm="5" aria-label="Plus">+</button></span></div>
     <div class="setrow"><span>Plages proposées dans l'agenda<small>${pl.map(p=>`${esc(p.t)} ${p.h} → ${p.e}`).join(' · ')||'—'} · jamais le dimanche</small></span><span class="quick">${pl.map((p,i)=>`<button class="btn sm" data-plage="${i}">${esc(p.kind)} ${p.h}</button>`).join('')}</span></div>
-    <div class="setrow"><span>Objectif d'encaissement du mois<small>le trait ambre du graphique</small></span><span class="stepper"><button data-obj="-250" aria-label="Moins">−</button><span class="num">${eur(OBJ())}</span><button data-obj="250" aria-label="Plus">+</button></span></div></section>
+    <div class="setrow"><span>Objectif d'encaissement du mois</span><span class="stepper"><button data-obj="-250" aria-label="Moins">−</button><span class="num">${eur(OBJ())}</span><button data-obj="250" aria-label="Plus">+</button></span></div></section>
   <section class="block"><div class="bh"><h2 class="t">Offres et prix</h2><span class="sub">prix en une fois, jamais de mensualité</span><span class="right"><button class="btn sm" data-addoffre>+ Offre</button></span></div>
     <div class="lines">${S.offres.map(o=>`<div class="line"><span class="l">${esc(o.nom)}<small>${o.jours} jours · ${o.lien_stripe?'<span style="color:var(--green)">lien Stripe ✓</span>':'pas encore de lien Stripe'}</small></span><span class="r quick"><span class="num" style="color:var(--fg)">${eur(o.prix)}</span>${o.lien_stripe?'':`<button class="btn sm primary" data-mklien="${o.id}">Créer le lien Stripe</button>`}<button class="btn sm" data-editoffre="${o.id}">Modifier</button><button class="btn sm" data-deloffre="${o.id}" aria-label="Supprimer">✕</button></span></div>`).join('')||'<p class="empty">Aucune offre.</p>'}</div></section>
-  <section class="block"><div class="bh"><h2 class="t">Services dans l'offre</h2><span class="sub">tout ce que tu peux proposer · pour chaque prospect, tu décoches au R2</span><span class="right"><button class="btn sm" data-addsvc>+ Service</button></span></div>
+  <section class="block"><div class="bh"><h2 class="t">Services dans l'offre</h2><span class="right"><button class="btn sm" data-addsvc>+ Service</button></span></div>
     <div class="lines">${SERVICES().map((s,i)=>`<div class="line"><span class="l">${esc(s)}</span><span class="r"><button class="btn sm" data-delsvc="${i}" aria-label="Supprimer">✕</button></span></div>`).join('')}</div></section>
+  <section class="block"><div class="bh"><h2 class="t">Transfos</h2><span class="sub">montrées en visio, jamais envoyées</span><span class="right"><button class="btn sm" data-addtr>+ Transfo</button></span></div><div id="trlist"><p class="empty">Chargement…</p></div></section>
   <section class="block"><div class="bh"><h2 class="t">Messages types</h2><span class="sub">{prénom} et {vidéo} se remplissent tout seuls</span><span class="right"><button class="btn sm" data-addscript>+ Message</button></span></div>
     <div class="lines">${S.scripts.map(s=>`<div class="line"><span class="l">${esc(s.titre)}<small style="white-space:normal">${esc(s.texte)}</small></span><span class="r quick"><button class="btn sm" data-editscript="${s.id}">Modifier</button><button class="btn sm" data-delscript="${s.id}" aria-label="Supprimer">✕</button></span></div>`).join('')}</div></section>
+  <section class="block"><div class="bh"><h2 class="t">Contrat</h2></div>
+    <div class="setrow"><span>Ton nom sur le contrat<small>${esc(S.reg.coach_nom||'pas encore indiqué')}</small></span><span><button class="btn sm" data-coachnom>Modifier</button></span></div>
+    <div class="setrow"><span>Texte du contrat<small>${S.reg.contrat_modele?'ton texte':'modèle proposé, à relire avant le 1er envoi'}</small></span><span><button class="btn sm ${S.reg.contrat_modele?'':'primary'}" data-contratmod>${S.reg.contrat_modele?'Modifier':'Relire'}</button></span></div></section>
   <section class="block"><div class="bh"><h2 class="t">Comptes reliés</h2></div>
-    <div class="lines"><div class="line"><span class="l">Supabase<small>ta base de données</small></span><span class="r"><span class="tag up">Relié</span></span></div><div class="line"><span class="l">Google Agenda + Meet<small>${!G.cid?'ID client Google à ajouter dans config.js':G.on?'R1, R2 et séances envoyés dans ton agenda avec un lien Meet':'tes appels créent un événement Google avec lien Meet'}</small></span><span class="r quick">${!G.cid?'<span class="tag neutral">À configurer</span>':G.on?'<span class="tag up">Relié</span><button class="btn sm" data-gout>Déconnecter</button>':'<button class="btn sm primary" data-gconnect>Connecter Google Agenda</button>'}</span></div><div class="line"><span class="l">Stripe<small>${stripeEtat()} · ${S.offres.filter(o=>o.lien_stripe).length} offre${S.offres.filter(o=>o.lien_stripe).length>1?'s':''} sur ${S.offres.length} avec un lien</small></span><span class="r">${STRIPE.ok===null?`<span class="tag neutral">${STRIPE.err?'Non vérifié':'Vérification…'}</span>`:STRIPE.ok?`<span class="tag up">Relié${STRIPE.test?' · mode test':''}</span>`:'<span class="tag bad">Clé manquante</span>'}</span></div><div class="line"><span class="l">Assistant de réponse (Claude)<small>${AI.ok?'analyse tes captures de conversation · environ 5 centimes par analyse':'clé Anthropic à coller dans Supabase → Edge Functions → Secrets (ANTHROPIC_API_KEY)'}</small></span><span class="r">${AI.ok===null?`<span class="tag neutral">${AI.err?'Non vérifié':'Vérification…'}</span>`:AI.ok?'<span class="tag up">Relié</span>':'<span class="tag bad">Clé manquante</span>'}</span></div><div class="line"><span class="l">LEGACY OS<small>dernière séance de chaque athlète · ${esc(osEtat())}</small></span><span class="r quick">${osTag()}</span></div></div>
+    <div class="lines"><div class="line"><span class="l">Supabase<small>ta base de données</small></span><span class="r"><span class="tag up">Relié</span></span></div><div class="line"><span class="l">Google Agenda + Meet<small>${!G.cid?'ID client Google à ajouter dans config.js':G.on?'R1, R2 et séances envoyés dans ton agenda avec un lien Meet':'tes appels créent un événement Google avec lien Meet'}</small></span><span class="r quick">${!G.cid?'<span class="tag neutral">À configurer</span>':G.on?'<span class="tag up">Relié</span><button class="btn sm" data-gout>Déconnecter</button>':'<button class="btn sm primary" data-gconnect>Connecter Google Agenda</button>'}</span></div><div class="line"><span class="l">Stripe<small>${stripeEtat()} · ${S.offres.filter(o=>o.lien_stripe).length} offre${S.offres.filter(o=>o.lien_stripe).length>1?'s':''} sur ${S.offres.length} avec un lien</small></span><span class="r">${STRIPE.ok===null?`<span class="tag neutral">${STRIPE.err?'Non vérifié':'Vérification…'}</span>`:STRIPE.ok?`<span class="tag up">Relié${STRIPE.test?' · mode test':''}</span>`:'<span class="tag bad">Clé manquante</span>'}</span></div><div class="line"><span class="l">Paiement reçu automatiquement<small>Stripe prévient QG : prospect signé, athlète créé, notification</small></span><span class="r quick">${stripeAutoOk()?`<span class="tag up">Branché${S.reg.stripe_whsec.mode==='test'?' · mode test':''}</span>`:STRIPE.ok?'<button class="btn sm primary" data-stripeauto>Brancher</button>':'<span class="tag neutral">après la clé Stripe</span>'}</span></div><div class="line"><span class="l">Assistant de réponse (Claude)<small>${AI.ok?'analyse tes captures de conversation · environ 5 centimes par analyse':'clé Anthropic à coller dans Supabase → Edge Functions → Secrets (ANTHROPIC_API_KEY)'}</small></span><span class="r">${AI.ok===null?`<span class="tag neutral">${AI.err?'Non vérifié':'Vérification…'}</span>`:AI.ok?'<span class="tag up">Relié</span>':'<span class="tag bad">Clé manquante</span>'}</span></div><div class="line"><span class="l">Notifications sur cet appareil<small>résumé du matin, « X a payé »</small></span><span class="r quick">${NOTIF.etat==='on'?'<span class="tag up">Activées</span><button class="btn sm" data-notiftest>Tester</button>':NOTIF.etat==='non'?'<span class="tag neutral">Pas possible ici</span>':'<button class="btn sm primary" data-notifon>Activer</button>'}</span></div><div class="line"><span class="l">LEGACY OS<small>dernière séance de chaque athlète · ${esc(osEtat())}</small></span><span class="r quick">${osTag()}</span></div></div>
     <p class="empty" style="margin-top:12px">Connecté en tant que ${esc(S.user||'')}. <button class="btn sm" data-logout>Se déconnecter</button></p>
     <div class="setrow"><span>Mot de passe<small>pour te connecter sans attendre un email (2 emails par heure maximum)</small></span><span><button class="btn sm" data-setpass>Définir un mot de passe</button></span></div></section>`;
 }
 
 function render(){
-  if(G.on)gLoad(monday(route==='agenda'?wk:0));
+  if(G.on){if(route==='agenda'&&agMode==='mois'){const m1=new Date(T0.getFullYear(),T0.getMonth()+mo,1),m=new Date(m1);m.setDate(1-((m1.getDay()+6)%7));for(let i=0;i<6;i++){const x=new Date(m);x.setDate(m.getDate()+i*7);x.setHours(0,0,0,0);gLoad(x)}}else gLoad(monday(route==='agenda'?wk:0))}
   if(route==='reglages')stripePing();
   if(route==='reglages'||route==='prospection')aiPing();
   $('nav').innerHTML=nav(false); $('tabbar').innerHTML=nav(true);
   $('topbar').innerHTML=topbar(TITLES[route]);
   $('footpct').textContent=Math.min(100,Math.round(encMois()/OBJ()*100))+' %';
   $('view').innerHTML=({dashboard:vDash,prospection:vProsp,crm:vCRM,videos:vVideos,athletes:vAth,ventes:vVentes,agenda:vAgenda,reglages:vReglages})[route]();
+  if(route==='reglages')trLoad().then(trListe).catch(()=>{const b=$('trlist');if(b)b.innerHTML='<p class="empty">Transfos illisibles.</p>'});
 }
 
 // ---------- fiche / panneaux ----------
@@ -388,13 +485,13 @@ function openSheet(pid){
       ${['r1','r2','gagne'].includes(p.etape)||p.vid_envoyee?`<dt>Vidéo d'offre</dt><dd>${p.vid_envoyee?`<span class="quick"><span class="tag up">Envoyée${p.vid_vue?' · regardée':''}</span><button class="btn sm" data-unvid title="Annuler">Annuler</button></span>`:ouvert?`<button class="btn sm" data-vid>Marquer envoyée</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
       `:''}
       <dt>Offre perso</dt><dd>${p.offre_prete?`<span class="quick"><span class="tag up">Prête · ${eur(p.montant)}</span><button class="btn sm" data-present>Présenter en visio</button><button class="btn sm" data-prep>Modifier</button></span>`:ouvert?`<button class="btn sm" data-prep>Préparer l'offre</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
-      <dt>Récap + contrat</dt><dd>${p.etape==='gagne'?'<span class="tag up">Signé · payé</span>':p.recap_envoye?'<span class="tag warn">Envoyés · en attente</span>':p.offre_prete?`<button class="btn sm" data-sent>Marquer envoyés</button>`:'<span style="color:var(--dim)">après le R2</span>'}</dd>
+      <dt>Récap + contrat</dt><dd>${recapCell(p)}</dd>
       ${ouvert?`<dt>Paiement</dt><dd><span class="quick">${offreOf(p).lien_stripe?'<button class="btn sm" data-paylink>Envoyer le lien de paiement</button>':'<a class="btn sm" href="#reglages">Ajouter le lien Stripe de l\'offre</a>'}<button class="btn sm" data-paysur>Lien sur mesure</button><button class="btn sm" data-paid>Paiement reçu</button></span></dd>`:''}
       ${nextMeet(p)?`<dt>Lien Meet</dt><dd><span class="quick"><a class="btn sm" href="${esc(nextMeet(p).meet)}" target="_blank" rel="noopener">Ouvrir</a>${p.tel?`<a class="btn sm" href="${wa(p.tel,`${prenom(p.prenom)}, voici le lien pour notre appel ${fmtJ(nextMeet(p).d)} à ${nextMeet(p).h} : ${nextMeet(p).meet}`)}" target="_blank" rel="noopener">${ICON.wa} Envoyer</a>`:''}<button class="btn sm" data-copy="${esc(nextMeet(p).meet)}">Copier</button></span></dd>`:''}</dl></div>
     <div class="g"><h4>Historique</h4><div style="display:flex;gap:6px;margin-bottom:12px"><input class="inp" id="note-${p.id}" placeholder="Note : appel, DM, objection…"><button class="btn sm" data-note>Ajouter</button></div><div class="tl">${notesOf(p).map(n=>`<div><small>${fmtS(n.d)}</small><span>${esc(n.t)}</span></div>`).join('')||'<p class="empty">Aucune note.</p>'}</div></div>
     <div class="g"><button class="btn sm" data-delprospect style="color:var(--dim)">Supprimer ce prospect</button></div>
   </div>
-  <div class="sf">${ouvert?`<button class="btn primary" data-move="${nxt.k}">${p.etape==='r2'?'Signé et payé':'Passer à « '+nxt.t+' »'}</button>${p.etape==='r1'?'<button class="btn" data-move="gagne">Signé dès le R1</button>':''}<button class="btn" data-move="perdu">Perdu</button>`:`<button class="btn" data-move="nouveau">Rouvrir</button>`}</div>`);
+  <div class="sf">${ouvert?`<button class="btn primary" data-move="${nxt.k}">${p.etape==='r2'?'Signé et payé':'Passer à « '+nxt.t+' »'}</button>${p.etape==='r1'?'<button class="btn" data-move="gagne">Signé dès le R1</button>':''}<button class="btn" data-perdu>Perdu</button>`:`<button class="btn" data-move="nouveau">Rouvrir</button>`}</div>`);
 }
 function formSheet(title,fields,submitLabel,onSubmit,extraTop){
   sheetId=null;
@@ -415,7 +512,7 @@ function openAdd(pre){
     {k:'note',l:'Première note',type:'textarea',ph:"Ce qu'il a dit, d'où il vient…"},
   ],'Ajouter au CRM',async g=>{
     const o=S.offres.find(x=>x.id===g.offre)||S.offres[0]||{nom:'',prix:700};
-    const p=await ins('prospects',{prenom:g.prenom,insta:g.insta.replace('@',''),tel:g.tel,source:g.source,objectif:g.objectif,etape:'nouveau',montant:o.prix,offre:o.nom,chance:BASE.nouveau,action:NEXT.nouveau,next_date:TODAY});
+    const p=await ins('prospects',{prenom:g.prenom,insta:g.insta.replace('@',''),tel:g.tel,source:g.source,video_slug:pre?.video_slug||null,objectif:g.objectif,etape:'nouveau',montant:o.prix,offre:o.nom,chance:BASE.nouveau,action:NEXT.nouveau,next_date:TODAY});
     S.prospects.unshift(p);S.notes[p.id]=[];await addNote(p,g.note||'Ajouté au CRM.');
     if(pre?.igId){const x=S.ig.find(y=>y.id===pre.igId);if(x)await upd('ig_comptes',x.id,{prospect_id:p.id},x)}
     closeSheet();filtre='all';if(location.hash!=='#crm')location.hash='crm';else render();toast("Prospect ajouté · premier message aujourd'hui")});
@@ -426,13 +523,19 @@ function openEdit(p){
     {k:'source',l:'Source',type:'select',opts:Object.keys(SRC).map(k=>({v:k,t:SRC[k].t})),v:p.source},{k:'objectif',l:'Objectif',v:p.objectif||''},
   ],'Enregistrer',async g=>{await upd('prospects',p.id,{prenom:g.prenom,insta:g.insta.replace('@',''),tel:g.tel,email:g.email,source:g.source,objectif:g.objectif},p);render();openSheet(p.id);toast('Fiche enregistrée')});
 }
-async function moveTo(p,k,mode){
+const RAISONS=['Prix','Pas le moment','Ne répond plus','Pas sérieux','Autre'];
+function openPerdu(p){
+  showSheet(`<div class="sh"><div class="avb">${ini(p.prenom)}</div><div><h3>${esc(prenom(p.prenom))} : perdu</h3><span class="sub" style="color:var(--muted);font-size:12px">pourquoi ?</span></div>${X}</div>
+  <div class="sb"><div class="lines" style="padding-top:10px">${RAISONS.map(r=>`<button class="line raison" data-raison="${esc(r)}"><span class="l">${esc(r)}</span><span class="r">›</span></button>`).join('')}</div></div>
+  <div class="sf"><button class="btn" data-open="${p.id}">Annuler</button></div>`);
+}
+async function moveTo(p,k,mode,raison){
   const from=p.etape;
   const patch={etape:k,chance:BASE[k]};
   if(k==='gagne'){patch.next_date=null;patch.action='';patch.paye=true;patch.contrat_signe=true}
-  else if(k==='perdu'){patch.next_date=null;patch.action=''}
+  else if(k==='perdu'){patch.next_date=null;patch.action=raison||''}
   else{patch.action=NEXT[k];patch.next_date=p.next_date&&diff(p.next_date)>=0?p.next_date:iso(d(k==='r1'?1:2))}
-  await upd('prospects',p.id,patch,p);await addNote(p,`« ${etapeT(from)} » → « ${etapeT(k)} »`);
+  await upd('prospects',p.id,patch,p);await addNote(p,`« ${etapeT(from)} » → « ${etapeT(k)} »${raison?' · raison : '+raison:''}`);
   if(k==='gagne'){
     const o=S.offres.find(x=>x.nom===p.offre)||S.offres.find(x=>x.prix===p.montant)||{nom:p.offre||'Coaching',prix:p.montant,jours:91};
     const v=await ins('ventes',{date:TODAY,prenom:p.prenom,offre:o.nom,montant:p.montant,mode:mode||'virement',facture:false,prospect_id:p.id});S.ventes.unshift(v);
@@ -441,16 +544,23 @@ async function moveTo(p,k,mode){
   }
   toast(k==='perdu'?`${p.prenom} classé perdu`:`${p.prenom} → ${etapeT(k)}`);render();openSheet(p.id);
 }
-function openPresent(p){
+// Transfos (photos avant/après + résultat), gardées dans reglages « transfos », chargées seulement quand on en a besoin
+const TR={l:null};
+async function trLoad(){if(TR.l)return TR.l;const r=await q(T('reglages').select('valeur').eq('cle','transfos'));TR.l=(r[0]&&r[0].valeur)||[];return TR.l}
+async function trSave(l){await q(T('reglages').upsert({cle:'transfos',valeur:l}));TR.l=l}
+const motsDe=t=>norm(t).split(/[^a-z0-9]+/).filter(w=>w.length>2);
+// celles choisies pour ce prospect, sinon les 2 qui ressemblent le plus à son objectif
+function trPour(p,l){const ch=(S.reg.transfos_choix||{})[p.id];if(ch)return l.filter(x=>ch.includes(x.id));const o=motsDe(p.objectif);return [...l].map(x=>({x,s:motsDe(x.mots+' '+x.titre).filter(w=>o.includes(w)).length})).sort((a,b)=>b.s-a.s).slice(0,2).map(y=>y.x)}
+async function openPresent(p){
   const o=S.offres.find(x=>x.nom===p.offre)||S.offres.find(x=>x.prix===p.montant)||{nom:p.offre||'',prix:p.montant,jours:91};
   const choix=selSvc(p);
-  const g=S.athletes.slice(0,2);
+  let g=[];try{g=trPour(p,await trLoad())}catch(_){}
   const el=$('present');el.hidden=false;
   el.innerHTML=`<div class="pin">
     <div class="ph"><img src="logo.png" alt=""><div><div class="k">OFFRE LEGACY</div><div class="sub" style="color:var(--muted);font-size:12px">préparée pour ${esc(prenom(p.prenom))} · ${fmtS(TODAY)}</div></div><span class="spacer"></span><button class="ic" data-pclose aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div><h2>${esc(prenom(p.prenom))}, on construit ta legacy.</h2><div class="obj" style="margin-top:8px">Objectif : ${esc(p.objectif||'—')}</div></div>
     <div class="cols"><div><h3>Ce qu'on fait ensemble · ${esc(o.nom)}</h3><div class="svc">${choix.map(s=>`<div class="it">${esc(s)}</div>`).join('')}</div></div>
-      <div><h3>Des athlètes partis du même point</h3><div class="tr">${g.length?g.map(a=>`<div>${esc(a.prenom)} · ${esc(a.offre||'')}</div>`).join(''):'<div>Tes transfos ici</div><div>Photos et chiffres</div>'}</div>
+      <div>${g.length?`<h3>Des athlètes partis du même point</h3><div class="trf">${g.map(x=>`<figure><div class="ph2">${x.avant?`<img src="${x.avant}" alt="Avant">`:''}${x.apres?`<img src="${x.apres}" alt="Après">`:''}</div><figcaption><b>${esc(x.titre)}</b>${esc(x.prenom||'')}</figcaption></figure>`).join('')}</div>`:''}
       <div class="price" style="margin-top:22px"><small>${o.jours||''} jours · paiement en une fois</small><b class="num">${eur(p.montant||o.prix)}</b><small>contrat et lien de paiement envoyés après notre appel</small></div></div></div>
     </div>`;
   sheetId=p.id;
@@ -461,11 +571,12 @@ function openPrep(p){
   showSheet(`<div class="sh"><div class="avb">${ini(p.prenom)}</div><div><h3>Offre de ${esc(prenom(p.prenom))}</h3><span class="sub" style="color:var(--muted);font-size:12px">préparée avant l'appel · lui ne voit que le résultat</span></div>${X}</div>
   <form class="sb form" id="pform"><div class="field"><label for="pf-of">Formule</label><select class="inp" id="pf-of">${S.offres.map(x=>`<option value="${x.id}" ${x.nom===o.nom?'selected':''}>${esc(x.nom)} · ${eur(x.prix)}</option>`).join('')}</select></div>
   <div class="field"><label for="pf-px">Prix pour ${esc(prenom(p.prenom))} (€, en une fois)</label><input class="inp" id="pf-px" type="number" required value="${p.montant||o.prix}"></div>
-  <div class="field"><label>Ce que tu lui proposes</label><div class="prepsvc">${SERVICES().map((x,i)=>`<label><input type="checkbox" value="${i}" ${choix.includes(x)?'checked':''}>${esc(x)}</label>`).join('')}</div></div></form>
+  <div class="field"><label>Ce que tu lui proposes</label><div class="prepsvc">${SERVICES().map((x,i)=>`<label><input type="checkbox" value="${i}" ${choix.includes(x)?'checked':''}>${esc(x)}</label>`).join('')}</div></div><div class="field" id="pf-tr"></div></form>
   <div class="sf"><button class="btn primary" form="pform" type="submit" data-then="present">Enregistrer et présenter</button><button class="btn" form="pform" type="submit">Enregistrer</button></div>`);
+  trLoad().then(l=>{const box=$('pf-tr');if(!box||!l.length)return;const sel=trPour(p,l).map(x=>x.id);box.innerHTML=`<label>Transfos à montrer</label><div class="prepsvc">${l.map(x=>`<label><input type="checkbox" data-tr value="${x.id}" ${sel.includes(x.id)?'checked':''}>${esc(x.titre)}${x.prenom?' · '+esc(x.prenom):''}</label>`).join('')}</div>`}).catch(()=>{});
   $('pf-of').addEventListener('change',e=>{const x=S.offres.find(y=>y.id===e.target.value);if(x)$('pf-px').value=x.prix});
-  $('pform').addEventListener('submit',async e=>{e.preventDefault();const x=S.offres.find(y=>y.id===$('pf-of').value)||o;const svc=[...sheet.querySelectorAll('.prepsvc input:checked')].map(c=>+c.value);const prix=+$('pf-px').value||x.prix;
-    await upd('prospects',p.id,{offre:x.nom,montant:prix,services:svc,offre_prete:true},p);await addNote(p,`Offre perso préparée : ${x.nom} · ${eur(prix)} · ${svc.length} services.`);
+  $('pform').addEventListener('submit',async e=>{e.preventDefault();const x=S.offres.find(y=>y.id===$('pf-of').value)||o;const svc=[...sheet.querySelectorAll('.prepsvc input:checked:not([data-tr])')].map(c=>+c.value);const prix=+$('pf-px').value||x.prix;
+    await upd('prospects',p.id,{offre:x.nom,montant:prix,services:svc,offre_prete:true},p);const trc=[...sheet.querySelectorAll('[data-tr]')];if(trc.length)await setReg('transfos_choix',{...(S.reg.transfos_choix||{}),[p.id]:trc.filter(c=>c.checked).map(c=>c.value)});await addNote(p,`Offre perso préparée : ${x.nom} · ${eur(prix)} · ${svc.length} services.`);
     if(e.submitter&&e.submitter.dataset.then==='present'){closeSheet();render();openPresent(p)}else{render();openSheet(p.id);toast('Offre enregistrée')}});
 }
 function closePresent(){const el=$('present');el.hidden=true;el.innerHTML=''}
@@ -645,6 +756,20 @@ function derniereDe(f){
   });
   return best;
 }
+// Records : meilleur 1RM estimé des séances FAITES sur les mouvements clés, et la progression depuis la 1re séance enregistrée
+const RECS=[['Dips',/dip/],['Traction',/tract|pull/],['Muscle-up',/muscle/],['Squat',/squat/]];
+function recsDe(f){
+  const P={};
+  Object.values((f&&f.semaines)||{}).forEach(w=>{
+    if(!w.date||w.date>TODAY)return;
+    (w.seances||[]).forEach(s=>{
+      const fait=!!String(s.difficulte||'').trim()||(s.lignes||[]).some(l=>String(l.rpe1||'').trim()||String(l.rpeLast||'').trim());
+      if(!fait)return;
+      (s.lignes||[]).forEach(l=>{if(!(l.e1rm>0))return;const R=RECS.find(([,re])=>re.test(l.nom||''));if(!R)return;(P[R[0]]=P[R[0]]||[]).push({d:w.date,v:l.e1rm})});
+    });
+  });
+  return RECS.map(([e])=>{const L=P[e];if(!L||!L.length)return null;L.sort((a,b)=>a.d.localeCompare(b.d));const d0=L[0].d,v0=Math.max(...L.filter(x=>x.d===d0).map(x=>x.v)),best=Math.max(...L.map(x=>x.v));const r=x=>Math.round(x*2)/2;return {e,v:r(best),g:r(best-v0)}}).filter(Boolean).slice(0,3);
+}
 function osSave(){try{localStorage.setItem('qg_os',JSON.stringify({l:(OS.liste||[]).map(x=>({prenom:x.prenom})),t:OS.t}))}catch(_){}}
 async function osSync(force){
   if(!OS.url||!OS.code||OS.busy)return;
@@ -654,13 +779,14 @@ async function osSync(force){
     const r=await osApi({action:'coachAthletes'});
     OS.liste=r.athletes||[];
     const todo=S.athletes.map(a=>({a,o:osDe(a)})).filter(x=>x.o&&x.o.code);
-    OS.n=todo.length;let fautes=0;
+    OS.n=todo.length;let fautes=0;const recs={};
     const un=async({a,o})=>{try{
       const f=(await osApi({action:'coachFiche',athlete:o.code})).fiche;
-      const dt=derniereDe(f);
+      const dt=derniereDe(f);recs[a.id]=recsDe(f);
       if(dt&&dt!==a.derniere_seance)await upd('athletes',a.id,{derniere_seance:dt},a);
     }catch(e){fautes++;console.error('LEGACY OS',o.prenom,e)}};
-    for(let i=0;i<todo.length;i+=3)await Promise.all(todo.slice(i,i+3).map(un));   // 3 à la fois : le serveur ouvre un Sheet par athlète
+    for(let i=0;i<todo.length;i+=3)await Promise.all(todo.slice(i,i+3).map(un));
+    const R0=S.reg.os_records||{},R1={...R0,...recs};if(JSON.stringify(R1)!==JSON.stringify(R0))await setReg('os_records',R1);   // 3 à la fois : le serveur ouvre un Sheet par athlète
     OS.t=Date.now();if(fautes)OS.err=fautes+' fiche'+(fautes>1?'s':'')+' illisible'+(fautes>1?'s':'');
     if(OS.src==='prog'){try{localStorage.setItem('qg_os_code',OS.code)}catch(_){}OS.src='qg'}
     osSave();
@@ -730,6 +856,8 @@ const gBadge=()=>!G.cid?'':!G.on?'<button class="btn sm" data-gconnect>Connecter
 // ---------- événements ----------
 document.addEventListener('click',async e=>{
   const nf=e.target.closest('[data-f]');if(nf){filtre=nf.dataset.f}
+  const col=e.target.classList&&e.target.classList.contains('wcol')?e.target:null;
+  if(col){const y=e.offsetY,m=Math.round((H0*60+y/HPX*60)/30)*30;const h=String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');openAddEv(col.dataset.col,h);return}
   const t=e.target.closest('button,[data-open]');if(!t)return;
   try{
   if(t.dataset.open){openSheet(t.dataset.open);return}
@@ -748,8 +876,8 @@ document.addEventListener('click',async e=>{
   if(t.dataset.ig!==undefined){const x=S.ig.find(y=>y.id===t.dataset.ig);const fait=!x.fait;await upd('ig_comptes',x.id,{fait,fait_le:fait?TODAY:null},x);const nb=Math.max(0,dmToday()+(fait?1:-1));await q(T('dm_jours').upsert({jour:TODAY,nb}));S.dm[TODAY]=nb;render();toast(fait?`@${x.handle} contacté · ${nb}/${OBJ_DM()}`:'Annulé');return}
   if(t.dataset.igdel!==undefined){if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Retirer ?';t.style.color='var(--red)';return}const id=t.dataset.igdel;await del('ig_comptes',id);S.ig=S.ig.filter(y=>y.id!==id);render();toast('Retiré de la liste');return}
   if(t.dataset.rep!==undefined){const x=S.ig.find(y=>y.id===t.dataset.rep);await upd('ig_comptes',x.id,{repondu:!x.repondu},x);render();return}
-  if(t.dataset.igprospect!==undefined){const x=S.ig.find(y=>y.id===t.dataset.igprospect);openAdd({prenom:x.handle.split(/[._]/)[0].replace(/^./,c=>c.toUpperCase()),insta:x.handle,source:'ig',igId:x.id});return}
-  if(t.hasAttribute('data-addig')){formSheet('Ajouter un compte à contacter',[{k:'h',l:'@ Instagram',req:true,ph:'maxou.streetlift'},{k:'p',l:"D'où il vient",type:'select',opts:['Commentaire','Like','Réponse story','Abonné récent','Abonné d\'un compte SL','Autre'].map(v=>({v,t:v})),v:'Commentaire'}],'Ajouter',async g=>{const chaud=/Commentaire|story/.test(g.p);const r=await ins('ig_comptes',{handle:g.h.replace('@','').trim(),provenance:g.p,chaud,fait:false});S.ig.push(r);closeSheet();render();toast('@'+r.handle+' ajouté à la liste du jour')});return}
+  if(t.dataset.igprospect!==undefined){const x=S.ig.find(y=>y.id===t.dataset.igprospect);openAdd({prenom:x.handle.split(/[._]/)[0].replace(/^./,c=>c.toUpperCase()),insta:x.handle,source:'ig',igId:x.id,video_slug:IGREEL()[x.id]||null});return}
+  if(t.hasAttribute('data-addig')){const RL=reelsPub().slice(0,15);formSheet('Ajouter un compte à contacter',[{k:'h',l:'@ Instagram',req:true,ph:'maxou.streetlift'},{k:'p',l:"D'où il vient",type:'select',opts:['Commentaire','Like','Réponse story','Abonné récent','Abonné d\'un compte SL','Autre'].map(v=>({v,t:v})),v:'Commentaire'}].concat(RL.length?[{k:'r',l:'Sous quel réel (facultatif)',type:'select',v:'',opts:[{v:'',t:'—'}].concat(RL.map(v=>({v:v.slug,t:v.titre})))}]:[]),'Ajouter',async g=>{const chaud=/Commentaire|story/.test(g.p);const r=await ins('ig_comptes',{handle:g.h.replace('@','').trim(),provenance:g.p,chaud,fait:false});S.ig.push(r);if(g.r)await setReg('ig_reel',{...IGREEL(),[r.id]:g.r});closeSheet();render();toast('@'+r.handle+' ajouté à la liste du jour')});return}
   if(t.dataset.fact!==undefined){const v=S.ventes.find(x=>x.id===t.dataset.fact);await upd('ventes',v.id,{facture:true},v);render();toast('Facture marquée envoyée');return}
   if(t.hasAttribute('data-addvente')){formSheet('Noter un paiement',[{k:'prenom',l:'Athlète',req:true,type:'select',opts:S.athletes.map(a=>({v:a.prenom,t:a.prenom})).concat([{v:'',t:'Autre…'}])},{k:'autre',l:'Ou un autre nom'},{k:'offre',l:'Offre',type:'select',opts:S.offres.map(o=>({v:o.nom,t:o.nom}))},{k:'montant',l:'Montant (€)',type:'number',req:true,v:String(S.offres[0]?.prix||700)},{k:'mode',l:'Mode',type:'select',opts:['virement','lydia','especes','stripe'].map(v=>({v,t:v}))},{k:'date',l:'Date',type:'date',v:TODAY}],'Enregistrer',async g=>{const r=await ins('ventes',{date:g.date,prenom:g.autre||g.prenom,offre:g.offre,montant:+g.montant,mode:g.mode,facture:false});S.ventes.unshift(r);closeSheet();render();toast('Paiement noté')});return}
   if(t.hasAttribute('data-addath')){formSheet('Ajouter un athlète',[{k:'prenom',l:'Prénom et nom',req:true},{k:'offre',l:'Offre',type:'select',opts:S.offres.map(o=>({v:o.id,t:o.nom+' · '+eur(o.prix)}))},{k:'debut',l:'Début',type:'date',v:TODAY}],'Ajouter',async g=>{const o=S.offres.find(x=>x.id===g.offre)||{nom:'',prix:0,jours:91};const r=await ins('athletes',{prenom:g.prenom,offre:o.nom,prix:o.prix,debut:g.debut,fin:iso(new Date(new Date(g.debut+'T12:00:00').getTime()+(o.jours||91)*DAY))});S.athletes.push(r);closeSheet();render();toast('Athlète ajouté')});return}
@@ -763,26 +891,48 @@ document.addEventListener('click',async e=>{
   if(t.dataset.recu!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.recu),x=mensuelDe(a);if(!x)return;t.disabled=true;const v=await ins('ventes',{date:TODAY,prenom:a.prenom,offre:'Mensualité · '+nomMois(MOIS),montant:montantMois(x,MOIS),mode:'virement',facture:false});S.ventes.unshift(v);await setReg('mensuels',{...mensuels(),[a.id]:{...x,paye:[...new Set([...(x.paye||[]),MOIS])].slice(-24)}});render();toast(prenom(a.prenom)+' · '+eur(montantMois(x,MOIS))+' reçu');return}
   if(t.dataset.editath!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.editath);const mx=mensuels()[a.id]||{};const op=S.offres.map(o=>({v:o.nom,t:o.nom+' · '+eur(o.prix)}));if(a.offre&&!op.some(o=>o.v===a.offre))op.unshift({v:a.offre,t:a.offre});op.unshift({v:'',t:'Ancienne offre / aucune'});formSheet('Modifier '+prenom(a.prenom),[{k:'prenom',l:'Prénom et nom',req:true,v:a.prenom},{k:'offre',l:'Offre',type:'select',v:a.offre||'',opts:op},{k:'debut',l:'Début',type:'date',v:a.debut||''},{k:'fin',l:'Fin',type:'date',v:a.fin||''},{k:'mm',l:'Payé tous les mois (€ par mois · vide = en une fois)',type:'number',v:String(mx.m||'')},{k:'mj',l:'Jour du paiement dans le mois',type:'number',v:String(mx.j||1)},{k:'m2',l:'Le montant change ? Nouveau montant par mois',type:'number',v:String(mx.m2||'')},{k:'d2',l:'À partir du mois de',type:'month',v:mx.d2||''}],'Enregistrer',async g=>{const patch={prenom:g.prenom,offre:g.offre||null,debut:g.debut||null,fin:g.fin||null};const o=S.offres.find(x=>x.nom===g.offre);if(o&&g.offre!==a.offre)patch.prix=o.prix;await upd('athletes',a.id,patch,a);const M={...mensuels()};if(+g.mm>0)M[a.id]={...mx,m:+g.mm,j:Math.min(28,Math.max(1,+g.mj||1)),m2:+g.m2>0?+g.m2:null,d2:+g.m2>0&&g.d2?g.d2:null};else delete M[a.id];if(JSON.stringify(M)!==JSON.stringify(mensuels()))await setReg('mensuels',M);closeSheet();render();toast('Athlète modifié')});return}
   if(t.dataset.seance!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.seance);await upd('athletes',a.id,{derniere_seance:TODAY},a);render();toast('Séance notée');return}
-  if(t.dataset.renew!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.renew);const o=S.offres.find(x=>x.nom===a.offre)||S.offres[0]||{jours:91,prix:a.prix,nom:a.offre};const deb=a.fin&&diff(a.fin)>0?a.fin:TODAY;await upd('athletes',a.id,{debut:deb,fin:iso(new Date(new Date(deb+'T12:00:00').getTime()+(o.jours||91)*DAY))},a);const v=await ins('ventes',{date:TODAY,prenom:a.prenom,offre:'Renouvellement · '+(o.nom||''),montant:o.prix||a.prix,mode:'virement',facture:false});S.ventes.unshift(v);render();toast(`${a.prenom} renouvelé · ${eur(o.prix||a.prix)} à encaisser`);return}
+  if(t.dataset.renew!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.renew);const o0=S.offres.find(x=>x.nom===a.offre)||S.offres[0]||{};formSheet('Renouveler '+prenom(a.prenom),[{k:'of',l:'Offre',type:'select',v:o0.id,opts:S.offres.map(o=>({v:o.id,t:o.nom+' · '+eur(o.prix)}))},{k:'prix',l:'Prix (€, en une fois)',type:'number',req:true,v:String(o0.prix||a.prix||'')},{k:'tel',l:'Son WhatsApp',type:'tel',v:athTel(a)}],'Créer le lien et l\'envoyer',async g=>{
+    const o=S.offres.find(x=>x.id===g.of)||o0,prix=+g.prix||o.prix;const b=sheet.querySelector('[form=gform]');b.disabled=true;b.textContent='Création…';
+    try{const url=payUrl(o.lien_stripe&&prix===o.prix?o.lien_stripe:(await mkLien((o.nom||'Coaching')+' · renouvellement · '+prenom(a.prenom),prix)).url,'r_'+a.id);
+      if(g.tel&&g.tel!==athTel(a))await setReg('ath_tel',{...(S.reg.ath_tel||{}),[a.id]:g.tel});
+      await setReg('renouv',{...RENOUV(),[a.id]:{offre:o.nom,prix,jours:o.jours||91,le:TODAY,url}});
+      const m=`${prenom(a.prenom)}, on continue ensemble ? Voici le lien pour renouveler ton ${o.nom} (${eur(prix)}, en une fois) : ${url}`;
+      if(g.tel)window.open(wa(g.tel,m),'_blank','noopener');else navigator.clipboard&&navigator.clipboard.writeText(m).catch(()=>{});
+      closeSheet();render();toast(g.tel?'Lien créé · WhatsApp ouvert':'Lien créé et copié')}catch(err){b.disabled=false;b.textContent='Créer le lien et l\'envoyer';toast(err.message)}});return}
+  if(t.dataset.renrecu!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.renrecu),rn=RENOUV()[a.id];if(!rn)return;if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Confirmer : payé ?';return}t.disabled=true;await renouvele(a,rn,'stripe');return}
+  if(t.dataset.renann!==undefined){const R={...RENOUV()};delete R[t.dataset.renann];await setReg('renouv',R);render();toast('Renouvellement annulé');return}
+  if(t.dataset.athwa!==undefined){const a=S.athletes.find(x=>x.id===t.dataset.athwa);const tel=athTel(a);if(tel){window.open(wa(tel,athMsg(a)),'_blank','noopener');return}formSheet('WhatsApp de '+prenom(a.prenom),[{k:'tel',l:'Son numéro (gardé pour la prochaine fois)',type:'tel',req:true}],'Ouvrir WhatsApp',async g=>{await setReg('ath_tel',{...(S.reg.ath_tel||{}),[a.id]:g.tel});closeSheet();window.open(wa(g.tel,athMsg(a)),'_blank','noopener')});return}
   if(t.dataset.addlien){const v=S.videos.find(x=>x.slug===t.dataset.addlien);formSheet('Nouveau lien · '+v.titre,[{k:'nom',l:'Nom du lien',req:true,v:'WhatsApp'},{k:'type',l:'Il envoie vers',type:'select',opts:[{v:'wa',t:'Mon WhatsApp (message déjà écrit)'},{v:'url',t:'Un autre lien'}],v:'wa'},{k:'tel',l:'Mon numéro WhatsApp (si WhatsApp)',type:'tel',v:S.reg.wa_num||''},{k:'msg',l:'Message déjà écrit (si WhatsApp)',v:`Salut ! Je viens de ta vidéo « ${v.titre} »`},{k:'url',l:'Adresse (si autre lien)',type:'url',ph:'https://…'}],'Créer le lien',async g=>{
     let cible;if(g.type==='wa'){if(!g.tel){toast('Mets ton numéro WhatsApp');return}cible=wa(g.tel,g.msg);if(g.tel!==S.reg.wa_num)await setReg('wa_num',g.tel)}else{if(!/^https:\/\//.test(g.url)){toast('L\'adresse doit commencer par https://');return}cible=g.url}
     const base=(v.slug+'-'+g.nom.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')).slice(0,36).replace(/-+$/,'');let slug=base,n=2;while(S.liens.some(l=>l.slug===slug)||S.videos.some(x=>x.slug===slug))slug=base+'-'+n++;
     const r=await ins('liens',{slug,video_slug:v.slug,nom:g.nom,cible});S.liens.push(r);closeSheet();render();navigator.clipboard&&navigator.clipboard.writeText(`${C.site}/go/${slug}`).catch(()=>{});toast(`Lien /go/${slug} créé et copié`)});return}
   if(t.dataset.dellien){if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Supprimer ?';t.style.color='var(--red)';return}const sl=t.dataset.dellien;await q(T('liens').delete().eq('slug',sl));S.liens=S.liens.filter(l=>l.slug!==sl);render();toast('Lien supprimé');return}
-  if(t.hasAttribute('data-newvideo')){formSheet('Idée de vidéo',[{k:'titre',l:'Titre',req:true,ph:'Comment je choisis le jour où je PR'},{k:'slug',l:'Nom du lien (/go/…)',req:true,ph:'jourpr'}],'Ajouter',async g=>{const slug=g.slug.toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,40);if(!slug)return toast('Nom de lien invalide');const r=await ins('videos',{slug,titre:g.titre,statut:1});S.videos.push(r);closeSheet();render();toast('Idée ajoutée · lien /go/'+slug)});return}
-  if(t.dataset.vstep){const v=S.videos.find(x=>x.slug===t.dataset.vstep);const st=Math.min(4,v.statut+1);await q(T('videos').update({statut:st,publiee_le:st===4?TODAY:v.publiee_le}).eq('slug',v.slug));v.statut=st;if(st===4)v.publiee_le=TODAY;render();toast(st===4?`Publiée · colle ${C.site}/go/${v.slug} en description`:`${v.titre} → ${STEPS[st-1]}`);return}
+  if(t.hasAttribute('data-newvideo')){openIdee();return}
+  if(t.hasAttribute('data-micidee')){dicter($('g-titre'));return}
+  if(t.dataset.vstep){const v=S.videos.find(x=>x.slug===t.dataset.vstep);const st=Math.min(4,v.statut+1);await q(T('videos').update({statut:st,publiee_le:st===4?TODAY:v.publiee_le}).eq('slug',v.slug));v.statut=st;if(st===4)v.publiee_le=TODAY;render();if(st===4&&!isReel(v)){openYtUrl(v);toast(`Publiée · colle ${C.site}/go/${v.slug} en description`)}else toast(st===4?`« ${v.titre} » publié`:`${v.titre} → ${STEPS[st-1]}`);return}
+  if(t.dataset.delvideo){if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Supprimer ?';t.style.color='var(--red)';return}const sl=t.dataset.delvideo;await q(T('videos').delete().eq('slug',sl));S.videos=S.videos.filter(v=>v.slug!==sl);render();toast('Idée supprimée');return}
+  if(t.dataset.yturl){openYtUrl(S.videos.find(x=>x.slug===t.dataset.yturl));return}
+  if(t.hasAttribute('data-ytsync')){ytLoad(true);toast('Lecture des vues…');return}
   if(t.hasAttribute('data-gconnect')){await gConnect();return}
+  if(t.hasAttribute('data-notifon')){await notifOn();return}
+  if(t.hasAttribute('data-stripeauto')){t.disabled=true;t.textContent='Branchement…';const {data,error}=await SB.functions.invoke('stripe-webhook',{body:{installer:true}});if(error||!data||!data.ok){let m='Pas branché';try{m=(await error.context.json()).error||m}catch(_){}t.disabled=false;t.textContent='Brancher';return toast(m)}S.reg.stripe_whsec={mode:data.mode};render();toast('Paiement automatique branché');return}
+  if(t.hasAttribute('data-notiftest')){const {data,error}=await SB.functions.invoke('notif',{body:{test:true}});toast(error||!data||!data.ok?'Notification pas envoyée':'Notification envoyée');return}
+  if(t.hasAttribute('data-coachnom')){formSheet('Ton nom sur le contrat',[{k:'n',l:'Prénom et nom',req:true,v:S.reg.coach_nom||''}],'Enregistrer',async g=>{await setReg('coach_nom',g.n);closeSheet();render();toast('Nom enregistré')});return}
+  if(t.hasAttribute('data-contratmod')){formSheet('Modèle de contrat',[{k:'m',l:'Texte · {coach} {athlete} {date} {offre} {objectif} {services} {jours} {prix} se remplissent tout seuls',type:'textarea',req:true,v:S.reg.contrat_modele||CONTRAT_DEF}],'Enregistrer',async g=>{await setReg('contrat_modele',g.m);closeSheet();render();toast('Contrat enregistré')});const ta=$('g-m');if(ta)ta.rows=22;return}
   if(t.hasAttribute('data-gout')){gOut();return}
   if(t.dataset.wk!==undefined){wk=t.dataset.wk==='0'?0:wk+(+t.dataset.wk);if(t.dataset.wk==='0')selDay=TODAY;render();return}
   if(t.dataset.day){selDay=t.dataset.day;render();return}
+  if(t.dataset.agmode){agMode=t.dataset.agmode;try{localStorage.setItem('qg_agmode',agMode)}catch(_){}if(agMode==='mois')mo=Math.round((new Date(monday(wk).getTime()+3*DAY).getFullYear()-T0.getFullYear())*12+new Date(monday(wk).getTime()+3*DAY).getMonth()-T0.getMonth());render();return}
+  if(t.dataset.mo!==undefined){mo=t.dataset.mo==='0'?0:mo+(+t.dataset.mo);render();return}
+  if(t.dataset.mday){selDay=t.dataset.mday;wk=Math.floor((new Date(selDay+'T12:00:00')-monday(0))/(7*DAY));agMode='semaine';try{localStorage.setItem('qg_agmode',agMode)}catch(_){}render();return}
   if(t.dataset.ev){openEvent(t.dataset.ev);return}
   if(t.dataset.delev){const id=t.dataset.delev;const ev=S.agenda.find(x=>x.id===id);if(ev&&ev.gcal)await gDel(ev.gcal);await del('agenda',id);S.agenda=S.agenda.filter(x=>x.id!==id);closeSheet();render();toast('Supprimé');return}
   if(t.dataset.acc){const [dd,k]=t.dataset.acc.split('|');const pl=PLAGES().find(x=>x.kind===k);await addEvent({d:dd,h:pl.h,e:pl.e,t:pl.t,s:pl.s,k:'task',kind:k,auto:true});render();toast("Ajouté à l'agenda");return}
   if(t.hasAttribute('data-accall')){const mon=monday(wk);let c=0;for(let i=0;i<7;i++){const x=new Date(mon);x.setDate(mon.getDate()+i);const di=iso(x);for(const pl of propos(di)){await addEvent({d:di,h:pl.h,e:pl.e,t:pl.t,s:pl.s,k:'task',kind:pl.kind,auto:true});c++}}render();toast(`${c} plages ajoutées`);return}
   if(t.hasAttribute('data-dictee')){openDictee();return}
-  if(t.hasAttribute('data-addev')){formSheet('Ajouter à l\'agenda',[{k:'t',l:'Titre',req:true,ph:'Séance Karim, appel, tournage…'},{k:'d',l:'Date',type:'date',v:selDay||TODAY},{k:'h',l:'Début',type:'time',v:'18:00'},{k:'e',l:'Fin',type:'time',v:'19:00'},{k:'s',l:'Détail',ph:'facultatif'},{k:'k',l:'Type',type:'select',opts:[{v:'seance',t:'Séance'},{v:'meet',t:'Appel / visio (lien Meet)'},{v:'task',t:'Tâche'},{v:'perso',t:'Perso'}],v:'seance'}],'Ajouter',async g=>{await addEvent({d:g.d,h:g.h||'',e:g.e||'',t:g.t,s:g.s,k:g.k});selDay=g.d;closeSheet();render();toast(G.on?'Ajouté · aussi dans Google Agenda':'Ajouté à l\'agenda')});return}
+  if(t.hasAttribute('data-addev')){openAddEv(selDay||TODAY,'18:00');return}
   if(t.hasAttribute('data-clrauto')){if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Retirer les plages de la semaine ?';t.style.color='var(--red)';return}const mon=monday(wk),fin=new Date(mon);fin.setDate(mon.getDate()+7);const a=iso(mon),b=iso(fin);const ids=S.agenda.filter(e=>e.auto&&e.d>=a&&e.d<b).map(e=>e.id);for(const id of ids)await del('agenda',id);S.agenda=S.agenda.filter(e=>!ids.includes(e.id));render();toast(`${ids.length} plage${ids.length>1?'s':''} retirée${ids.length>1?'s':''}`);return}
-  if(t.hasAttribute('data-mic')){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;const inp=$('dict-in');if(!SR){toast('Pas de micro ici : écris la phrase');inp.focus();return}try{const r=new SR();r.lang='fr-FR';r.onresult=ev=>{inp.value=ev.results[0][0].transcript;previewDictee(inp.value)};r.onerror=()=>{toast('Micro refusé : écris la phrase');inp.focus()};r.start();toast("Je t'écoute…")}catch(err){toast('Pas de micro ici : écris la phrase');inp.focus()}return}
+  if(t.hasAttribute('data-mic')){dicter($('dict-in'),previewDictee);return}
   if(t.hasAttribute('data-dictadd')){if(!dict||!dict.length)return;t.disabled=true;for(const x of dict)await addEvent({d:x.date,h:x.h,e:x.e,t:x.t,s:x.k==='perso'?'':'Dicté',k:x.k});const f=dict[0];selDay=f.date;wk=Math.floor((new Date(f.date+'T12:00:00')-monday(0))/(7*DAY));closeSheet();if(route!=='agenda')location.hash='agenda';else render();toast(dict.length>1?`${dict.length} ajouts à l'agenda`:`« ${f.t} » ajouté à l'agenda`);return}
   if(t.hasAttribute('data-pclose')){closePresent();return}
   if(t.hasAttribute('data-setpass')){formSheet('Définir un mot de passe',[{k:'p1',l:'Nouveau mot de passe (8 caractères minimum)',type:'password',req:true},{k:'p2',l:'Encore une fois',type:'password',req:true}],'Enregistrer',async g=>{if(g.p1.length<8)return toast('8 caractères minimum');if(g.p1!==g.p2)return toast('Les deux ne sont pas identiques');const {error}=await SB.auth.updateUser({password:g.p1});if(error)return toast('Refusé : '+error.message);closeSheet();toast('Mot de passe enregistré')});return}
@@ -793,6 +943,8 @@ document.addEventListener('click',async e=>{
   if(t.dataset.editoffre){const o=S.offres.find(x=>x.id===t.dataset.editoffre);formSheet('Modifier l\'offre',[{k:'nom',l:'Nom',req:true,v:o.nom},{k:'prix',l:'Prix (€)',type:'number',req:true,v:String(o.prix)},{k:'jours',l:'Durée (jours)',type:'number',v:String(o.jours)},{k:'lien',l:'Lien de paiement Stripe',type:'url',ph:'https://buy.stripe.com/…',v:o.lien_stripe||''}],'Enregistrer',async g=>{const vieux=o.lien_stripe&&g.lien===o.lien_stripe&&(+g.prix!==o.prix||g.nom!==o.nom);await upd('offres',o.id,{nom:g.nom,prix:+g.prix,jours:+g.jours||91,lien_stripe:vieux?null:(g.lien||null)},o);if(vieux)setTimeout(()=>toast('Prix ou nom changé : recrée le lien Stripe'),2500);closeSheet();render();toast('Offre modifiée')});return}
   if(t.dataset.mklien){const o=S.offres.find(x=>x.id===t.dataset.mklien);t.disabled=true;t.textContent='Création…';try{const r=await mkLien(o.nom,o.prix);await upd('offres',o.id,{lien_stripe:r.url},o);render();toast(r.test?'Lien Stripe créé (mode test)':'Lien Stripe créé')}catch(err){t.disabled=false;t.textContent='Créer le lien Stripe';toast(err.message)}return}
   if(t.dataset.deloffre){const id=t.dataset.deloffre;await del('offres',id);S.offres=S.offres.filter(x=>x.id!==id);render();toast('Offre supprimée');return}
+  if(t.hasAttribute('data-addtr')){openTransfo();return}
+  if(t.dataset.deltr){if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Supprimer ?';t.style.color='var(--red)';return}await trSave((await trLoad()).filter(x=>x.id!==t.dataset.deltr));render();toast('Transfo supprimée');return}
   if(t.hasAttribute('data-addsvc')){formSheet('Nouveau service',[{k:'s',l:'Service',req:true,ph:'Analyse vidéo de chaque PR'}],'Ajouter',async g=>{await setReg('services',[...SERVICES(),g.s]);closeSheet();render();toast('Service ajouté')});return}
   if(t.dataset.delsvc!==undefined){if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Supprimer ?';t.style.color='var(--red)';return}const i=+t.dataset.delsvc;await setReg('services',SERVICES().filter((_,k)=>k!==i));for(const p of S.prospects){const a=(p.services||[]).map(Number);if(!a.some(x=>x>=i))continue;await upd('prospects',p.id,{services:a.filter(x=>x!==i).map(x=>x>i?x-1:x)},p)}render();return}
   if(t.hasAttribute('data-addscript')){formSheet('Nouveau message type',[{k:'titre',l:'Titre',req:true},{k:'texte',l:'Texte ({prénom}, {vidéo})',type:'textarea',req:true}],'Ajouter',async g=>{const r=await ins('messages_types',{titre:g.titre,texte:g.texte,ordre:S.scripts.length+1});S.scripts.push(r);closeSheet();render();toast('Message ajouté')});return}
@@ -801,9 +953,11 @@ document.addEventListener('click',async e=>{
   // ---- actions sur la fiche ouverte ----
   const p=P();if(!p)return;
   if(t.dataset.move){await moveTo(p,t.dataset.move);return}
+  if(t.hasAttribute('data-perdu')){openPerdu(p);return}
+  if(t.dataset.raison){await moveTo(p,'perdu',null,t.dataset.raison);return}
   if(t.hasAttribute('data-paid')){if(t.dataset.sure){await addNote(p,'Paiement Stripe reçu.');await moveTo(p,'gagne','stripe')}else{t.dataset.sure='1';t.textContent='Confirmer : payé ?';t.style.color='var(--green)'}return}
-  if(t.hasAttribute('data-paysur')){const o=offreOf(p);formSheet('Lien de paiement sur mesure',[{k:'nom',l:'Intitulé',req:true,v:o.nom+' · '+prenom(p.prenom)},{k:'prix',l:'Prix (€, en une fois)',type:'number',req:true,v:String(p.montant||o.prix)}],'Créer et envoyer',async g=>{const b=sheet.querySelector('[form=gform]');b.disabled=true;b.textContent='Création…';try{const r=await mkLien(g.nom,+g.prix);await upd('prospects',p.id,{montant:+g.prix},p);const m=payMsg(p,g.nom,+g.prix,r.url);if(p.tel)window.open(wa(p.tel,m),'_blank','noopener');else navigator.clipboard&&navigator.clipboard.writeText(m);await addNote(p,`Lien Stripe sur mesure envoyé : ${g.nom} · ${eur(+g.prix)} · ${r.url}`);render();openSheet(p.id);toast(p.tel?'Lien créé · WhatsApp ouvert':'Lien créé et copié')}catch(err){b.disabled=false;b.textContent='Créer et envoyer';toast(err.message)}});return}
-  if(t.hasAttribute('data-paylink')){const o=offreOf(p);const m=payMsg(p,o.nom,o.prix,o.lien_stripe);if(p.tel)window.open(wa(p.tel,m),'_blank','noopener');else navigator.clipboard&&navigator.clipboard.writeText(m);await addNote(p,`Lien de paiement Stripe envoyé (${o.nom}).`);openSheet(p.id);toast(p.tel?'WhatsApp ouvert avec le lien':'Message + lien copiés');return}
+  if(t.hasAttribute('data-paysur')){const o=offreOf(p);formSheet('Lien de paiement sur mesure',[{k:'nom',l:'Intitulé',req:true,v:o.nom+' · '+prenom(p.prenom)},{k:'prix',l:'Prix (€, en une fois)',type:'number',req:true,v:String(p.montant||o.prix)}],'Créer et envoyer',async g=>{const b=sheet.querySelector('[form=gform]');b.disabled=true;b.textContent='Création…';try{const r=await mkLien(g.nom,+g.prix);await upd('prospects',p.id,{montant:+g.prix},p);const m=payMsg(p,g.nom,+g.prix,payUrl(r.url,'p_'+p.id));if(p.tel)window.open(wa(p.tel,m),'_blank','noopener');else navigator.clipboard&&navigator.clipboard.writeText(m).catch(()=>{});await addNote(p,`Lien Stripe sur mesure envoyé : ${g.nom} · ${eur(+g.prix)} · ${r.url}`);render();openSheet(p.id);toast(p.tel?'Lien créé · WhatsApp ouvert':'Lien créé et copié')}catch(err){b.disabled=false;b.textContent='Créer et envoyer';toast(err.message)}});return}
+  if(t.hasAttribute('data-paylink')){const o=offreOf(p);const m=payMsg(p,o.nom,o.prix,payUrl(o.lien_stripe,'p_'+p.id));if(p.tel)window.open(wa(p.tel,m),'_blank','noopener');else navigator.clipboard&&navigator.clipboard.writeText(m).catch(()=>{});await addNote(p,`Lien de paiement Stripe envoyé (${o.nom}).`);openSheet(p.id);toast(p.tel?'WhatsApp ouvert avec le lien':'Message + lien copiés');return}
   if(t.hasAttribute('data-edit')){openEdit(p);return}
   if(t.hasAttribute('data-delprospect')){if(t.dataset.sure){await del('prospects',p.id);S.prospects=S.prospects.filter(x=>x.id!==p.id);closeSheet();render();toast('Prospect supprimé')}else{t.dataset.sure='1';t.textContent='Confirmer la suppression';t.style.color='var(--red)'}return}
   if(t.dataset.push){const nd=iso(d(Math.max(0,diff(p.next_date||TODAY))+(+t.dataset.push)));await upd('prospects',p.id,{next_date:nd},p);await addNote(p,`Relance repoussée au ${fmtS(nd)}.`);render();openSheet(p.id);toast('Relance repoussée');return}
@@ -817,10 +971,121 @@ document.addEventListener('click',async e=>{
   if(t.hasAttribute('data-vid')){await upd('prospects',p.id,{vid_envoyee:true},p);await addNote(p,"Vidéo d'offre envoyée.");render();openSheet(p.id);toast("Vidéo d'offre marquée envoyée");return}
   if(t.hasAttribute('data-prep')){openPrep(p);return}
   if(t.hasAttribute('data-present')){openPresent(p);return}
+  if(t.hasAttribute('data-contrat')){await envoyerContrat(p,t);return}
+  if(t.dataset.contratre){const m=msgContrat(p,t.dataset.contratre);if(p.tel)window.open(wa(p.tel,m),'_blank','noopener');else{navigator.clipboard&&navigator.clipboard.writeText(m).catch(()=>{});toast('Message + lien copiés')}return}
   if(t.hasAttribute('data-sent')){const patch={recap_envoye:true};if(p.etape!=='r2'){patch.etape='r2';patch.chance=BASE.r2}patch.action='Relancer après le R2';patch.next_date=iso(d(2));await upd('prospects',p.id,patch,p);await addNote(p,'Récap de l’offre et contrat envoyés.');closePresent();render();openSheet(p.id);toast('Récap + contrat marqués envoyés');return}
   if(t.hasAttribute('data-note')){const i=$('note-'+p.id);if(i.value.trim()){await addNote(p,i.value.trim());openSheet(p.id);toast('Note ajoutée')}return}
   }catch(err){console.error(err)}
 });
+// Paiement du renouvellement reçu : on prolonge à partir de la fin actuelle et on note la vente
+async function renouvele(a,rn,mode){
+  const deb=a.fin&&diff(a.fin)>0?a.fin:TODAY;
+  await upd('athletes',a.id,{offre:rn.offre,prix:rn.prix,debut:deb,fin:iso(new Date(new Date(deb+'T12:00:00').getTime()+(rn.jours||91)*DAY))},a);
+  const v=await ins('ventes',{date:TODAY,prenom:a.prenom,offre:'Renouvellement · '+(rn.offre||''),montant:rn.prix,mode:mode||'stripe',facture:false});S.ventes.unshift(v);
+  const R={...RENOUV()};delete R[a.id];await setReg('renouv',R);render();toast(`${prenom(a.prenom)} renouvelé · ${eur(rn.prix)}`);
+}
+// Lien Stripe + référence (p_<prospect> ou r_<athlète>) : Stripe la renvoie à QG au paiement
+const payUrl=(u,ref)=>u?u+(u.includes('?')?'&':'?')+'client_reference_id='+encodeURIComponent(ref):u;
+// Idée de contenu en 5 secondes (écrite ou dictée)
+function openIdee(){
+  formSheet('Idée de contenu',[{k:'type',l:'C\'est pour',type:'select',v:'reel',opts:[{v:'reel',t:'Un réel Instagram'},{v:'yt',t:'Une vidéo YouTube (lien /go/ traçable)'}]},{k:'titre',l:'L\'idée',req:true,ph:'Comment je choisis le jour où je PR'},{k:'slug',l:'Nom du lien /go/… (YouTube, facultatif)',ph:'jourpr'}],'Ajouter',async g=>{
+    const reel=g.type==='reel';let slug=(reel?'r-':'')+(g.slug?g.slug.toLowerCase().replace(/[^a-z0-9_-]/g,''):slugify(g.titre));slug=slug.slice(0,40)||'idee';let n=2;const b=slug;while(S.videos.some(v=>v.slug===slug)||S.liens.some(l=>l.slug===slug))slug=b+'-'+n++;
+    const r=await ins('videos',{slug,titre:g.titre,statut:1});S.videos.push(r);if(reel)await setReg('types_contenus',{...TYPES(),[slug]:'reel'});
+    closeSheet();if(route!=='videos')location.hash='videos';else render();toast(reel?'Idée de réel ajoutée':'Idée ajoutée · lien /go/'+slug)},
+    '<button class="btn sm" data-micidee type="button" style="margin-top:6px">'+ICON.mic+' Dicter l\'idée</button>');
+}
+function openYtUrl(v){formSheet('Lien YouTube · '+v.titre,[{k:'u',l:'Adresse de la vidéo sur YouTube',type:'url',req:true,ph:'https://youtu.be/…',v:v.youtube_url||''}],'Enregistrer',async g=>{if(!ytId(g.u))return toast('Ce n\'est pas un lien YouTube');await q(T('videos').update({youtube_url:g.u}).eq('slug',v.slug));v.youtube_url=g.u;closeSheet();ytLoad(true);render();toast('Lien YouTube enregistré')})}
+// Micro du navigateur (Safari et Chrome sur Mac) → texte dans le champ
+function dicter(inp,fin){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!inp)return;if(!SR){toast('Pas de micro ici : écris-le');inp.focus();return}try{const r=new SR();r.lang='fr-FR';r.onresult=ev=>{inp.value=ev.results[0][0].transcript;fin&&fin(inp.value)};r.onerror=()=>{toast('Micro refusé : écris-le');inp.focus()};r.start();toast("Je t'écoute…")}catch(_){toast('Pas de micro ici : écris-le');inp.focus()}}
+function trListe(l){const b=$('trlist');if(!b)return;b.innerHTML=l.length?`<div class="lines">${l.map(x=>`<div class="line"><span class="l trl">${x.avant?`<img src="${x.avant}" alt="">`:''}${x.apres?`<img src="${x.apres}" alt="">`:''}<span>${esc(x.titre)}<small>${esc(x.prenom||'')}${x.mots?' · '+esc(x.mots):''}</small></span></span><span class="r"><button class="btn sm" data-deltr="${x.id}" aria-label="Supprimer">✕</button></span></div>`).join('')}</div>`:'<p class="empty">Aucune transfo. Ajoute une photo avant / après et le résultat en kilos.</p>'}
+async function photo(f){if(!f)return null;const url=URL.createObjectURL(f);try{const img=new Image();await new Promise((ok,ko)=>{img.onload=ok;img.onerror=ko;img.src=url});const k=Math.min(1,700/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.78)}finally{URL.revokeObjectURL(url)}}
+function openTransfo(){
+  sheetId=null;
+  showSheet(`<div class="sh"><div class="avb">+</div><div><h3>Nouvelle transfo</h3><span class="sub" style="color:var(--muted);font-size:12px">avec l'accord de l'athlète</span></div>${X}</div>
+  <form class="sb form" id="trform"><div class="field"><label for="tr-t">Résultat</label><input class="inp" id="tr-t" required placeholder="Dips +25 kg en 3 mois"></div>
+  <div class="field"><label for="tr-p">Athlète (prénom affiché)</label><input class="inp" id="tr-p" placeholder="Nicolas"></div>
+  <div class="field"><label for="tr-m">Mots-clés (pour la proposer aux bons prospects)</label><input class="inp" id="tr-m" placeholder="dips, compète, débutant"></div>
+  <div class="field"><label for="tr-a">Photo avant</label><input class="inp" id="tr-a" type="file" accept="image/*"></div>
+  <div class="field"><label for="tr-b">Photo après</label><input class="inp" id="tr-b" type="file" accept="image/*"></div></form>
+  <div class="sf"><button class="btn primary" form="trform" type="submit">Ajouter</button></div>`);
+  $('trform').addEventListener('submit',async e=>{e.preventDefault();const b=sheet.querySelector('[form=trform]');b.disabled=true;b.textContent='Ajout…';
+    try{const x={id:'t'+Date.now().toString(36),titre:$('tr-t').value.trim(),prenom:$('tr-p').value.trim(),mots:$('tr-m').value.trim(),avant:await photo($('tr-a').files[0]),apres:await photo($('tr-b').files[0])};
+      await trSave([...(await trLoad()),x]);closeSheet();render();toast('Transfo ajoutée')}catch(err){console.error(err);b.disabled=false;b.textContent='Ajouter';toast('Photo illisible')}});
+}
+function openAddEv(dd,h){formSheet('Ajouter à l\'agenda',[{k:'t',l:'Titre',req:true,ph:'Séance Karim, appel, tournage…'},{k:'d',l:'Date',type:'date',v:dd},{k:'h',l:'Début',type:'time',v:h},{k:'e',l:'Fin',type:'time',v:plus(h,60)},{k:'s',l:'Détail',ph:'facultatif'},{k:'k',l:'Type',type:'select',opts:[{v:'seance',t:'Séance'},{v:'meet',t:'Appel / visio (lien Meet)'},{v:'task',t:'Tâche'},{v:'perso',t:'Perso'}],v:'seance'}],'Ajouter',async g=>{await addEvent({d:g.d,h:g.h||'',e:g.e||'',t:g.t,s:g.s,k:g.k});selDay=g.d;closeSheet();render();toast(G.on?'Ajouté · aussi dans Google Agenda':'Ajouté à l\'agenda')})}
+// ---------- contrat signé en ligne : page /offre/?c=<id> (récap → signature au doigt → paiement Stripe) ----------
+const CONTRAT_DEF=`CONTRAT DE COACHING · LEGACY
+
+Entre {coach} (« le coach ») et {athlete} (« l'athlète »), le {date}.
+
+1. Ce que le coach fournit
+Accompagnement en street lifting « {offre} », pour l'objectif : {objectif}.
+Inclus :
+{services}
+
+2. Durée
+{jours} jours à partir du premier jour du programme, fixé ensemble après le paiement.
+
+3. Prix
+{prix}, payé en une fois avant le début du coaching. Pas de paiement en plusieurs fois.
+
+4. Engagements de l'athlète
+Suivre le programme, remplir ses séances dans l'appli, prévenir le coach en cas de douleur, de blessure ou d'indisponibilité.
+
+5. Santé
+L'athlète déclare être en état de pratiquer un sport intense ; en cas de doute, il consulte un médecin avant de commencer. Le coach n'est pas médecin et ne pose pas de diagnostic. Pendant les séances qu'il fait seul, l'athlète reste responsable de ses charges et de sa technique.
+
+6. Rétractation et remboursement
+L'athlète demande que le coaching commence tout de suite, avant la fin du délai légal de rétractation de 14 jours. S'il se rétracte pendant ces 14 jours, il paie la part du coaching déjà fournie et le reste lui est remboursé. Après ce délai, aucun remboursement.
+
+7. Photos et vidéos
+Les photos et vidéos de l'athlète ne sont publiées qu'avec son accord.
+
+Signé en ligne par l'athlète.`;
+const contratDe=p=>(S.contrats||[]).find(c=>c.prospect_id===p.id);
+const lienOffre=id=>`${C.site}/offre/?c=${id}`;
+function recapCell(p){
+  const c=contratDe(p);
+  if(p.etape==='gagne')return '<span class="tag up">Signé · payé</span>';
+  if(c)return `<span class="quick">${c.signe_le?`<span class="tag up">Signé ${fmtS(c.signe_le.slice(0,10))}</span>`:`<span class="tag warn">Envoyé ${fmtS(c.created_at.slice(0,10))} · pas encore signé</span>`}<a class="btn sm" href="${lienOffre(c.id)}" target="_blank" rel="noopener">Voir</a>${c.signe_le?'':`<button class="btn sm" data-contratre="${c.id}">Renvoyer</button>`}</span>`;
+  if(!p.offre_prete)return '<span style="color:var(--dim)">après le R2</span>';
+  return S.contratsOk?'<button class="btn sm primary" data-contrat>Envoyer récap + contrat</button>':(p.recap_envoye?'<span class="tag warn">Envoyés · en attente</span>':'<button class="btn sm" data-sent>Marquer envoyés</button>');
+}
+function texteContrat(p,o,prix,svc){
+  const m=S.reg.contrat_modele||CONTRAT_DEF;
+  return m.replace(/\{coach\}/g,S.reg.coach_nom||'Richard, coach LEGACY').replace(/\{athlete\}/g,p.prenom).replace(/\{date\}/g,new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}))
+    .replace(/\{offre\}/g,o.nom||'Coaching').replace(/\{objectif\}/g,p.objectif||'à préciser ensemble').replace(/\{services\}/g,svc.map(x=>'- '+x).join('\n')).replace(/\{jours\}/g,o.jours||91).replace(/\{prix\}/g,eur(prix));
+}
+const msgContrat=(p,id)=>`${prenom(p.prenom)}, comme promis voici le récap de ton offre LEGACY. Tu signes le contrat en bas de la page, et le paiement s'ouvre juste après : ${lienOffre(id)}`;
+async function envoyerContrat(p,btn){
+  if(!S.reg.contrat_modele){toast('Relis d\'abord le contrat : Réglages → Contrat');return}
+  const o=offreOf(p),prix=p.montant||o.prix,svc=selSvc(p);
+  if(btn){btn.disabled=true;btn.textContent='Préparation…'}
+  let lien=null;
+  try{lien=payUrl(o.lien_stripe&&prix===o.prix?o.lien_stripe:(await mkLien(o.nom+' · '+prenom(p.prenom),prix)).url,'p_'+p.id)}catch(err){toast('Lien Stripe pas créé : '+err.message)}
+  const c=await ins('contrats',{prospect_id:p.id,prenom:p.prenom,offre:o.nom,prix,jours:o.jours||91,services:svc,objectif:p.objectif||null,texte:texteContrat(p,o,prix,svc),lien_paiement:lien});
+  S.contrats.unshift({id:c.id,prospect_id:p.id,created_at:c.created_at,signe_le:null,prix});
+  const m=msgContrat(p,c.id);if(p.tel)window.open(wa(p.tel,m),'_blank','noopener');else navigator.clipboard&&navigator.clipboard.writeText(m).catch(()=>{});
+  const patch={recap_envoye:true,action:'Relancer après le R2',next_date:iso(d(2))};if(p.etape!=='r2'){patch.etape='r2';patch.chance=BASE.r2}
+  await upd('prospects',p.id,patch,p);await addNote(p,`Récap + contrat envoyés (${eur(prix)})${lien?' avec le lien de paiement':''}.`);
+  closePresent();render();openSheet(p.id);toast(p.tel?'WhatsApp ouvert avec le lien':'Message + lien copiés');
+}
+// paiements reçus pendant que QG était fermé (webhook Stripe) : le flash, une fois
+async function aFeter(){const L=S.reg.a_feter||[];if(!L.length)return;await setReg('a_feter',[]);for(const x of L){flash(x);await new Promise(o=>setTimeout(o,reduced?800:2000))}}
+// ---------- notifications (résumé du matin, « X a payé ») ----------
+const NOTIF={etat:'?'};
+async function notifEtat(){try{if(!('serviceWorker' in navigator)||!('PushManager' in window)){NOTIF.etat='non';return}const r=await navigator.serviceWorker.getRegistration();const s=r&&await r.pushManager.getSubscription();NOTIF.etat=s&&Notification.permission==='granted'?'on':'off'}catch(_){NOTIF.etat='non'}}
+const b64u=s=>{const p='='.repeat((4-s.length%4)%4),b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0))};
+async function notifOn(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return toast('Ce navigateur ne reçoit pas de notifications');
+  if(await Notification.requestPermission()!=='granted')return toast('Notifications refusées dans le navigateur');
+  const {data,error}=await SB.functions.invoke('notif',{body:{cle:true}});if(error||!data||!data.cle)return toast('Notifications pas encore branchées');
+  const r=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
+  const sub=await r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(data.cle)});
+  const j=sub.toJSON(),L=(await q(T('reglages').select('valeur').eq('cle','push_abos')))[0]?.valeur||[];
+  await setReg('push_abos',[...L.filter(x=>x.endpoint!==j.endpoint),j]);NOTIF.etat='on';render();toast('Notifications activées sur cet appareil');
+}
+const stripeAutoOk=()=>{const w=S.reg.stripe_whsec;return !!(w&&w.mode&&(STRIPE.ok===null||w.mode===(STRIPE.test?'test':'live')))};
 async function lmSent(p){const patch={lm_envoye:TODAY};if(['nouveau','contacte'].includes(p.etape)){patch.etape='contacte';patch.chance=BASE.contacte;patch.action=NEXT.contacte;patch.next_date=iso(d(2))}await upd('prospects',p.id,patch,p);await addNote(p,'Lead magnet envoyé.');render();openSheet(p.id);toast('Lead magnet noté · prochaine étape : caler le R1')}
 async function calerMeet(p,dd,hh){
   const r=p.etape==='r1'?'r2':'r1';
@@ -854,6 +1119,7 @@ async function start(){
   try{await loadAll()}catch(e){$('loading').innerHTML='<div style="text-align:center;color:var(--red)">Impossible de charger la base.<br><small>'+esc(e.message||'')+'</small><br><br><button class="btn" onclick="location.reload()">Réessayer</button></div>';return}
   $('loading').hidden=true;$('login').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;
   fromHash();
+  aFeter();notifEtat().then(()=>{if(route==='reglages')render()});
   osSync();
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }

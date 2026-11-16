@@ -6,6 +6,8 @@ window.LEGACY_CFG = {
   site: "https://rifanfano04-alt.github.io/legacy-coaching",
   // LEGACY OS : serveur Apps Script de l'appli séances (lecture seule ici : liste des athlètes + fiche, réservé au code coach)
   osUrl: "https://script.google.com/macros/s/AKfycbzWNM8ExWtsNQLhPpsaxJePhaVwyKcLCtcx5O3aBFbO_bC5RgEb76IYgLVRgWzOzZll/exec",
+  // YouTube : clé publique (vues des vidéos), limitée au site github.io et à l'API YouTube Data dans Google Cloud « Legacy QG »
+  ytKey: "AIzaSyBgPf8yLADQa_0FDZPR-5tl5Le31a6C0U0",
   // Google Agenda : ID client OAuth (public, pas un secret)
   gcalClientId: "446274565803-glp643rhplif7qvnpkm6c99rse8m2teg.apps.googleusercontent.com"
 };

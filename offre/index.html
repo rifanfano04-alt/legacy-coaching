@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ton offre LEGACY</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0c0c0e">
+<link rel="icon" type="image/png" href="../qg/favicon-64.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Unbounded:wght@800&display=swap">
+<style>
+:root{--bg:#0c0c0e;--fg:#ececf1;--muted:#8e8e99;--dim:#5a5a66;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);--red:#ff3b3b;--green:#4ade80;--raise:#15151a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Inter",system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;padding:max(20px,env(safe-area-inset-top,0px)) max(18px,env(safe-area-inset-right,0px)) max(30px,env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+.w{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+.top{display:flex;align-items:center;gap:12px}
+.top img{height:38px;width:auto}
+.k{font-family:"Unbounded",sans-serif;font-weight:800;font-size:11px;letter-spacing:.28em;color:var(--red)}
+.top small{display:block;color:var(--muted);font-size:12px}
+h1{font-size:clamp(28px,7vw,40px);line-height:1.05;letter-spacing:-.02em;margin:0;font-weight:600;text-wrap:balance}
+.obj{color:var(--muted);margin-top:8px}
+h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+.svc div{padding:10px 0;border-top:1px solid var(--line)}
+.svc div:first-child{border-top:0}
+.price{border-top:2px solid var(--red);padding-top:14px}
+.price b{display:block;font-size:44px;font-weight:600;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.price small{color:var(--muted)}
+details{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0}
+summary{cursor:pointer;font-weight:500}
+.ct{white-space:pre-wrap;color:#cfcfd6;font-size:13.5px;margin-top:12px}
+label.f{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+input[type=text]{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;padding:12px;color:var(--fg);font:inherit;font-size:16px}
+.pad{position:relative;border:1px solid var(--line2);border-radius:8px;background:#111115;touch-action:none}
+.pad canvas{display:block;width:100%;height:180px}
+.pad span{position:absolute;left:12px;bottom:10px;color:var(--dim);font-size:12px;pointer-events:none}
+.pad button{position:absolute;right:8px;top:8px;background:none;border:1px solid var(--line2);color:var(--muted);border-radius:6px;padding:4px 8px;font:inherit;font-size:12px;cursor:pointer}
+.ok{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:#cfcfd6;cursor:pointer}
+.ok input{accent-color:var(--red);width:18px;height:18px;flex:none;margin-top:2px}
+.btn{display:block;width:100%;text-align:center;background:var(--red);color:#fff;border:0;border-radius:10px;padding:15px;font:inherit;font-weight:600;font-size:16px;text-decoration:none;cursor:pointer}
+.btn[disabled]{opacity:.45;cursor:default}
+.signed{color:var(--green);font-weight:500}
+.err{color:var(--red);font-size:13px;min-height:1em}
+.foot{color:var(--dim);font-size:12px;text-align:center}
+.load{color:var(--muted);text-align:center;padding:60px 0}
+</style>
+</head>
+<body>
+<div class="w" id="w"><p class="load">Chargement de ton offre…</p></div>
+<script src="../qg/config.js"></script>
+<script>
+(function(){
+const C=window.LEGACY_CFG,$=id=>document.getElementById(id),W=$('w');
+const t=(new URLSearchParams(location.search).get('c')||'').trim();
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const eur=n=>(+n||0).toLocaleString('fr-FR')+' €';
+const rpc=(f,b)=>fetch(C.url+'/rest/v1/rpc/'+f,{method:'POST',headers:{apikey:C.key,Authorization:'Bearer '+C.key,'Content-Type':'application/json'},body:JSON.stringify(b)}).then(async r=>{const j=await r.json().catch(()=>null);if(!r.ok)throw new Error((j&&j.message)||'Erreur');return j});
+const head=x=>`<div class="top"><img src="../qg/logo.png" alt="LEGACY"><div><div class="k">OFFRE LEGACY</div><small>préparée pour ${esc(x.prenom.split(' ')[0])}</small></div></div>`;
+function payer(x,lien){return `<div><p class="signed">✓ Contrat signé${x.signe_nom?' par '+esc(x.signe_nom):''}${x.signe_le?' le '+new Date(x.signe_le).toLocaleDateString('fr-FR'):''}.</p>${lien?`<a class="btn" href="${esc(lien)}">Payer ${eur(x.prix)} en une fois</a><p class="foot" style="margin-top:10px">Paiement sécurisé par Stripe. Dès que c'est fait, on démarre.</p>`:'<p class="foot">Le lien de paiement t\'est envoyé sur WhatsApp.</p>'}</div>`}
+if(!/^[0-9a-f-]{36}$/i.test(t)){W.innerHTML='<p class="load">Lien incomplet. Redemande-le à ton coach.</p>';return}
+rpc('contrat_lire',{t}).then(x=>{
+  if(!x){W.innerHTML='<p class="load">Cette offre n\'existe plus. Redemande le lien à ton coach.</p>';return}
+  W.innerHTML=`${head(x)}
+  <div><h1>${esc(x.prenom.split(' ')[0])}, on construit ta legacy.</h1>${x.objectif?`<div class="obj">Objectif : ${esc(x.objectif)}</div>`:''}</div>
+  <div><h2>Ce qu'on fait ensemble · ${esc(x.offre||'')}</h2><div class="svc">${(x.services||[]).map(s=>`<div>${esc(s)}</div>`).join('')}</div></div>
+  <div class="price"><small>${x.jours} jours · paiement en une fois</small><b>${eur(x.prix)}</b></div>
+  <details ${x.signe_le?'':'open'}><summary>Le contrat</summary><div class="ct">${esc(x.texte)}</div></details>
+  <div id="zone">${x.signe_le?payer(x,x.lien):`
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div><label class="f" for="nom">Ton prénom et ton nom</label><input type="text" id="nom" autocomplete="name" value="${esc(x.prenom)}"></div>
+      <div><label class="f">Ta signature (avec le doigt ou la souris)</label><div class="pad"><canvas id="cv"></canvas><span id="ph">Signe ici</span><button type="button" id="clr">Effacer</button></div></div>
+      <label class="ok"><input type="checkbox" id="acc"><span>J'ai lu le contrat et je l'accepte. Je demande que le coaching commence avant la fin du délai de rétractation de 14 jours.</span></label>
+      <button class="btn" id="sig" disabled>Signer le contrat</button><p class="err" id="err"></p>
+    </div>`}</div>
+  <p class="foot">LEGACY · Build your own legacy</p>`;
+  if(x.signe_le)return;
+  // signature au doigt
+  const cv=$('cv'),g=cv.getContext('2d');let drawn=0,down=false,last=null;
+  const fit=()=>{const r=cv.getBoundingClientRect(),k=window.devicePixelRatio||1;cv.width=r.width*k;cv.height=r.height*k;g.scale(k,k);g.lineWidth=2.4;g.lineCap='round';g.lineJoin='round';g.strokeStyle='#ececf1';drawn=0;$('ph').hidden=false;maj()};
+  const pos=e=>{const r=cv.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}};
+  cv.addEventListener('pointerdown',e=>{down=true;last=pos(e);cv.setPointerCapture(e.pointerId);$('ph').hidden=true});
+  cv.addEventListener('pointermove',e=>{if(!down)return;const p=pos(e);g.beginPath();g.moveTo(last.x,last.y);g.lineTo(p.x,p.y);g.stroke();drawn+=Math.hypot(p.x-last.x,p.y-last.y);last=p;maj()});
+  ['pointerup','pointercancel','pointerleave'].forEach(k=>cv.addEventListener(k,()=>{down=false}));
+  $('clr').onclick=fit;
+  const maj=()=>{$('sig').disabled=!(drawn>40&&$('acc').checked&&$('nom').value.trim().length>1)};
+  $('acc').onchange=maj;$('nom').oninput=maj;fit();addEventListener('resize',()=>{if(!drawn)fit()});
+  $('sig').onclick=async()=>{
+    const b=$('sig');b.disabled=true;b.textContent='Signature…';$('err').textContent='';
+    try{const r=await rpc('contrat_signer',{t,nom:$('nom').value.trim(),sig:cv.toDataURL('image/png')});
+      x.signe_le=new Date().toISOString();x.signe_nom=$('nom').value.trim();$('zone').innerHTML=payer(x,r&&r.lien);document.querySelector('details').open=false;
+    }catch(e){$('err').textContent=e.message||'Petit souci, réessaie.';b.textContent='Signer le contrat';maj()}
+  };
+}).catch(()=>{W.innerHTML='<p class="load">Petit souci de connexion. Recharge la page.</p>'});
+})();
+</script>
+</body>
+</html>

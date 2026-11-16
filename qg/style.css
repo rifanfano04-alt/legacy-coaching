@@ -364,3 +364,56 @@ button.evc.meet:hover{background:var(--hover)}
 .asdot{width:8px;height:8px;border-radius:99px;background:var(--red);animation:asp 1s ease-in-out infinite}
 @keyframes asp{50%{opacity:.25;transform:scale(.7)}}
 @media (max-width:860px){#as .bh .sub{display:none}#as .inp,.asr .m{font-size:16px}.asg{grid-template-columns:minmax(0,1fr)}.asout{border-top:1px solid var(--line);margin-top:16px;padding-top:4px}.asout>.empty:first-child,.asout>.aswait{padding-top:12px}}
+/* ---- 16/11 : plan d'améliorations ---- */
+button.line{width:100%;text-align:left}
+button.raison{padding:12px 0;font-size:14px}
+button.raison:hover .l{color:var(--red)}
+.meter.loss i{background:var(--red-dim)}.meter.loss i.hot{background:var(--red)}
+td.recs{white-space:normal}
+.rec{display:inline-block;margin-right:12px;color:var(--muted);font-size:12px;white-space:nowrap}
+.rec b{color:var(--fg);font-weight:500}
+.rec i{font-style:normal;color:var(--green)}
+/* transfos */
+.trl{display:flex;gap:8px;align-items:center}
+.trl img{height:44px;width:36px;object-fit:cover;border-radius:4px;border:1px solid var(--line2)}
+.present .trf{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.present .trf figure{margin:0;display:flex;flex-direction:column;gap:8px}
+.present .trf .ph2{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.present .trf img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.present .trf figcaption{font-size:12px;color:var(--muted)}
+.present .trf figcaption b{display:block;color:var(--fg);font-size:14px;font-weight:600}
+/* agenda : semaine avec les heures */
+.seg2{display:inline-flex;border:1px solid var(--line2);border-radius:7px;overflow:hidden}
+.seg2 button{padding:4px 10px;font-size:12px;color:var(--muted);background:var(--raise)}
+.seg2 button.on{background:var(--fg);color:var(--bg)}
+.week{display:none}
+.wg{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.wgh,.wga{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.wgh span{padding:8px 7px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;border-left:1px solid var(--line)}
+.wgh span:first-child,.wga>span{border-left:0}
+.wgh b{font-family:var(--num);font-size:14px;color:var(--fg);margin-left:4px;letter-spacing:0}
+.wgh .auj b{color:var(--red)}
+.wga>div{border-left:1px solid var(--line);padding:3px;display:flex;flex-direction:column;gap:3px;min-height:8px;min-width:0}
+.wgb{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));position:relative;background:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px 44px)}
+.wgt{position:relative}
+.wgt span{position:absolute;right:6px;transform:translateY(-1px);font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums;padding-top:2px}
+.wcol{position:relative;border-left:1px solid var(--line);cursor:copy;min-width:0}
+.wcol.auj{background:rgba(255,59,59,.035)}
+.wcol .evc{position:absolute;margin:0 2px;z-index:1;cursor:pointer}
+.wcol .now{position:absolute;left:0;right:0;height:2px;background:var(--red);pointer-events:none;z-index:2}
+/* agenda : mois */
+.mg{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.mgh{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.mgh span{padding:7px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.mgb{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.mday{min-height:96px;border-top:1px solid var(--line);border-left:1px solid var(--line);padding:6px;text-align:left;display:flex;flex-direction:column;gap:2px;min-width:0}
+.mday:nth-child(7n+1){border-left:0}
+.mday:nth-child(-n+7){border-top:0}
+.mday:hover{background:var(--raise)}
+.mday b{font-family:var(--num);font-size:12.5px;font-weight:600;margin-bottom:2px}
+.mday.out b{color:var(--dim)}
+.mday.auj b{color:var(--red)}
+.mday span{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);border-left:2px solid var(--dim);padding-left:5px}
+.mday span.meet{border-color:var(--blue)}.mday span.seance{border-color:var(--green)}.mday span.task{border-color:var(--amber)}.mday span.perso{border-color:#c9a6ff}.mday span.gg{border-color:var(--line2)}
+.mday small{font-size:10.5px;color:var(--dim)}
+@media (max-width:860px){.wg{display:none}.mday{min-height:58px}.mday span{display:none}}
