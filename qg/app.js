@@ -156,6 +156,8 @@ const srcPill=p=>SRC[p.source]?`<span class="pill ${SRC[p.source].c}">${SRC[p.so
 const stPill=k=>`<span class="pill st-${k}">${etapeT(k)}</span>`;
 const tempTag=p=>(p.lm_envoye||p.source==='prepa'?'<span class="tag neutral">LM envoyé</span>':'')+(p.vid_envoyee?'<span class="tag neutral">vidéo d\'offre</span>':'')+(p.offre_prete?'<span class="tag up">offre prête</span>':p.etape==='r2'?'<span class="tag warn">offre à préparer</span>':'')+(p.recap_envoye&&p.etape!=='gagne'?'<span class="tag warn">récap envoyé</span>':'');
 const lastC=p=>{const n=notesOf(p)[0];return n?rel(n.d):'—'};
+// dernière chose faite, lisible dans la liste : « hier · Vocal envoyé pour caler le R1 »
+const lastFait=p=>{const n=notesOf(p).find(x=>/^(Fait :|Lead magnet envoyé|DM envoyé :|Vidéo d'offre|Récap)/i.test(x.t));if(!n)return '';const t=n.t.replace(/^Fait : /,'').split(/\. Prochaine étape/)[0].replace(/\.$/,'');return rel(n.d)+' · '+t};
 const offreCell=p=>p.offre_prete||p.etape==='gagne'?eur(p.montant):'<span style="color:var(--dim)">à définir</span>';
 const avc=p=>({prepa:'g',ig:'n',yt:'a',bao:'b'})[p.source]||'n';
 const num=(v,suf='')=>`<span class="big num" data-count="${v}" data-suf="${suf}">${(+v||0).toLocaleString('fr-FR')}${suf}</span>`;
@@ -232,8 +234,8 @@ function vDash(){
 }
 function tableHTML(list){
   return `<div class="tw"><table><thead><tr><th>Prospect</th><th>Source et étape</th><th>Objectif</th><th class="r">Offre</th><th>Chances de signer</th><th>Dernier contact</th><th>Prochaine action</th></tr></thead><tbody>
-  ${list.map(p=>`<tr class="row" data-open="${p.id}"><td><span class="who"><span class="av ${avc(p)}">${ini(p.prenom)}</span><span class="name">${esc(p.prenom)}</span></span></td><td><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}</span></td><td style="color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis">${esc(p.objectif||'')}</td><td class="r num">${offreCell(p)}</td><td>${chanceHTML(chance(p))}</td><td style="color:var(--muted)">${lastC(p)}</td><td class="date">${p.next_date&&!['gagne','perdu'].includes(p.etape)?`<b>${fmtS(p.next_date)}</b> · ${esc(p.action||'')}${diff(p.next_date)<0?' <span class="tag bad">retard</span>':diff(p.next_date)===0?' <span class="tag warn">aujourd\'hui</span>':''}`:p.etape==='gagne'?'<span class="tag up">Signé</span>':`<span style="color:var(--dim)">${esc(p.etape==='perdu'&&p.action||'—')}</span>`}</td></tr>`).join('')}</tbody></table></div>
-  <div class="mlist">${list.map(p=>`<button class="mrow" data-open="${p.id}"><span class="t">${esc(p.prenom)}</span><span class="e num">${offreCell(p)}</span><span class="s">${SRC[p.source]?SRC[p.source].t+' · ':''}${p.next_date&&!['gagne','perdu'].includes(p.etape)?fmtS(p.next_date)+' · '+esc(p.action||''):etapeT(p.etape)}</span><span class="p">${stPill(p.etape)}</span></button>`).join('')}</div>`;
+  ${list.map(p=>`<tr class="row" data-open="${p.id}"><td><span class="who"><span class="av ${avc(p)}">${ini(p.prenom)}</span><span class="name">${esc(p.prenom)}</span></span></td><td><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}</span></td><td style="color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis">${esc(p.objectif||'')}</td><td class="r num">${offreCell(p)}</td><td>${chanceHTML(chance(p))}</td><td style="color:var(--muted);max-width:220px">${lastFait(p)?`<span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(lastFait(p))}</span>`:lastC(p)}</td><td class="date">${p.next_date&&!['gagne','perdu'].includes(p.etape)?`<b>${fmtS(p.next_date)}</b> · ${esc(p.action||'')}${diff(p.next_date)<0?' <span class="tag bad">retard</span>':diff(p.next_date)===0?' <span class="tag warn">aujourd\'hui</span>':''}`:p.etape==='gagne'?'<span class="tag up">Signé</span>':`<span style="color:var(--dim)">${esc(p.etape==='perdu'&&p.action||'—')}</span>`}</td></tr>`).join('')}</tbody></table></div>
+  <div class="mlist">${list.map(p=>`<button class="mrow" data-open="${p.id}"><span class="t">${esc(p.prenom)}</span><span class="e num">${offreCell(p)}</span><span class="s">${p.next_date&&!['gagne','perdu'].includes(p.etape)?`<b style="color:${diff(p.next_date)<=0?'var(--red)':'var(--fg)'};font-weight:500">${diff(p.next_date)<0?'En retard · ':''}${rel(p.next_date)}</b> · `+esc(p.action||''):etapeT(p.etape)}</span><span class="p">${stPill(p.etape)}</span>${lastFait(p)?`<span class="s f">Fait ${esc(lastFait(p))}</span>`:''}${tempTag(p)?`<span class="s tg">${tempTag(p)}</span>`:''}</button>`).join('')}</div>`;
 }
 function vCRM(){
   const list=filtre==='all'?[...S.prospects].sort((a,b)=>{const A=['gagne','perdu'].includes(a.etape),B=['gagne','perdu'].includes(b.etape);if(A!==B)return A?1:-1;return (a.next_date||'9').localeCompare(b.next_date||'9')}):S.prospects.filter(p=>p.etape===filtre);
@@ -482,7 +484,7 @@ function openSheet(pid){
   <div class="sh"><div class="avb">${ini(p.prenom)}</div><div style="min-width:0"><h3>${esc(p.prenom)}</h3><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}</span></div>${X}</div>
   <div class="sb">
     <div class="g"><div class="quick">${p.tel?`<a class="btn sm" href="${wa(p.tel,msg)}" target="_blank" rel="noopener">${ICON.wa} WhatsApp</a>`:''}${p.insta?`<a class="btn sm" href="${igUrl(p.insta)}" target="_blank" rel="noopener">${ICON.ig} Instagram</a>`:''}<button class="btn sm" data-copy="${esc(msg)}">Copier « ${esc(scr.titre)} »</button><button class="btn sm" data-asfor="${p.id}">Assistant de réponse</button><button class="btn sm" data-edit>Modifier la fiche</button></div></div>
-    ${ouvert?`<div class="g"><div class="nextact"><div class="a"><span>${esc(p.action||NEXT[p.etape]||'')}</span><span class="tag ${p.next_date&&diff(p.next_date)<0?'bad':p.next_date&&diff(p.next_date)===0?'warn':'neutral'}">${p.next_date?rel(p.next_date):'—'}</span></div><div class="acts"><button class="btn sm" data-done>Fait</button><button class="btn sm" data-push="2">+2 j</button><button class="btn sm" data-push="7">+1 sem.</button>${['nouveau','contacte','r1'].includes(p.etape)?`<button class="btn sm" data-slots>Caler le ${p.etape==='r1'?'R2':'R1'}</button>`:''}</div><div class="slots" id="slots" hidden>${SL.map((s,k)=>`<button class="btn sm" data-meet="${s.d}|${s.h}">${fmtJ(s.d)} · ${s.h}</button>`).join('')}<button class="btn sm" data-meetcustom>Autre créneau…</button></div></div></div>`:''}
+    ${ouvert?`<div class="g"><div class="nextact"><div class="a"><span>${esc(p.action||NEXT[p.etape]||'')}</span><span class="tag ${p.next_date&&diff(p.next_date)<0?'bad':p.next_date&&diff(p.next_date)===0?'warn':'neutral'}">${p.next_date?rel(p.next_date):'—'}</span></div><div class="acts"><button class="btn sm" data-done>Fait</button><button class="btn sm" data-push="2">+2 j</button><button class="btn sm" data-push="7">+1 sem.</button><button class="btn sm" data-chg>Changer…</button>${['nouveau','contacte','r1'].includes(p.etape)?`<button class="btn sm" data-slots>Caler le ${p.etape==='r1'?'R2':'R1'}</button>`:''}</div><div class="slots" id="slots" hidden>${SL.map((s,k)=>`<button class="btn sm" data-meet="${s.d}|${s.h}">${fmtJ(s.d)} · ${s.h}</button>`).join('')}<button class="btn sm" data-meetcustom>Autre créneau…</button></div></div></div>`:''}
     <div class="g"><h4>Chances de signer</h4><div class="slider"><input type="range" id="ch-${p.id}" min="5" max="95" step="5" value="${chance(p)}" data-chance ${ouvert?'':'disabled'}><span id="chv-${p.id}">${chanceHTML(chance(p))}</span></div></div>
     <div class="g"><h4>Contact</h4><dl class="kv"><dt>Instagram</dt><dd>${p.insta?'@'+esc(p.insta):'<span style="color:var(--dim)">—</span>'}</dd><dt>Téléphone</dt><dd>${p.tel?`<code>${esc(p.tel)}</code> <button class="btn sm" data-copy="${esc(p.tel)}" style="margin-left:6px">Copier</button>`:'<span style="color:var(--dim)">—</span>'}</dd><dt>Email</dt><dd>${esc(p.email||'—')}</dd><dt>Objectif</dt><dd>${esc(p.objectif||'—')}</dd><dt>Source</dt><dd>${SRC[p.source]?SRC[p.source].t:'—'}${p.video_slug?' · « '+esc(videoT(p.video_slug))+' »':''}</dd></dl></div>
     <div class="g"><h4>Offre · du R1 au R2</h4><dl class="kv"><dt>Formule</dt><dd><select id="of-${p.id}" class="inp" data-offre>${S.offres.map(o=>`<option value="${o.id}" ${o.nom===p.offre||(!p.offre&&o.prix===p.montant)?'selected':''}>${esc(o.nom)} · ${eur(o.prix)}</option>`).join('')}</select></dd>
@@ -966,7 +968,8 @@ document.addEventListener('click',async e=>{
   if(t.hasAttribute('data-edit')){openEdit(p);return}
   if(t.hasAttribute('data-delprospect')){if(t.dataset.sure){await del('prospects',p.id);S.prospects=S.prospects.filter(x=>x.id!==p.id);closeSheet();render();toast('Prospect supprimé')}else{t.dataset.sure='1';t.textContent='Confirmer la suppression';t.style.color='var(--red)'}return}
   if(t.dataset.push){const nd=iso(d(Math.max(0,diff(p.next_date||TODAY))+(+t.dataset.push)));await upd('prospects',p.id,{next_date:nd},p);await addNote(p,`Relance repoussée au ${fmtS(nd)}.`);render();openSheet(p.id);toast('Relance repoussée');return}
-  if(t.hasAttribute('data-done')){const patch={next_date:iso(d(2))};patch.action=p.etape==='r2'?'Relancer après le R2':p.etape==='r1'?'Caler le R2':'Relancer';if(p.etape==='nouveau'){patch.etape='contacte';patch.chance=BASE.contacte;patch.action=p.lm_envoye?NEXT.contacte:NEXT.lm}if(p.action===NEXT.lm){await lmSent(p);return}await addNote(p,`Fait : ${p.action||''}.`);await upd('prospects',p.id,patch,p);render();openSheet(p.id);toast('Noté · relance dans 2 jours');return}
+  if(t.hasAttribute('data-done')){openFait(p,'fait');return}
+  if(t.hasAttribute('data-chg')){openFait(p,'chg');return}
   if(t.hasAttribute('data-slots')){const s=$('slots');s.hidden=!s.hidden;return}
   if(t.hasAttribute('data-meetcustom')){formSheet('Caler l\'appel',[{k:'d',l:'Date',type:'date',v:iso(d(1))},{k:'h',l:'Heure',type:'time',v:'18:00'}],'Caler',async g=>{await calerMeet(p,g.d,g.h)});return}
   if(t.dataset.meet!==undefined){const [dd,hh]=t.dataset.meet.split('|');await calerMeet(p,dd,hh);return}
@@ -1091,6 +1094,47 @@ async function notifOn(){
   await setReg('push_abos',[...L.filter(x=>x.endpoint!==j.endpoint),j]);NOTIF.etat='on';render();toast('Notifications activées sur cet appareil');
 }
 const stripeAutoOk=()=>{const w=S.reg.stripe_whsec;return !!(w&&w.mode&&(STRIPE.ok===null||w.mode===(STRIPE.test?'test':'live')))};
+// « Fait » : il note ce qu'il a fait (vocal, lead magnet, message…), choisit la prochaine étape et QUAND la faire
+const dowNext=k=>{let n=1;while(d(n).getDay()!==k)n++;return iso(d(n))};
+function openFait(p,mode){
+  const lm=p.action===NEXT.lm;
+  const defFait=p.action||NEXT[p.etape]||'';
+  const defNext=lm?NEXT.contacte:mode==='chg'?(p.action||NEXT[p.etape]||'Relancer'):p.etape==='r2'?'Relancer après le R2':p.etape==='r1'?'Caler le R2':p.etape==='nouveau'?(p.lm_envoye?NEXT.contacte:NEXT.lm):'Relancer';
+  const defDate=mode==='chg'&&p.next_date?p.next_date:iso(d(2));
+  const FAITS=['Lead magnet envoyé','Vocal envoyé pour caler le R1','Message envoyé','Relance envoyée','Appel fait'];
+  const NEXTS=["Relancer","Vérifier s'il a vu mon message","Relancer pour caler le R1",NEXT.lm,NEXT.contacte,'Caler le R2','Relancer après le R2'];
+  const DATES=[['Demain',iso(d(1))],['Dans 2 j',iso(d(2))],['Vendredi',dowNext(5)],['Samedi',dowNext(6)],['Lundi',dowNext(1)],['Dans 1 sem.',iso(d(7))]];
+  const chip=(attr,v,t)=>`<button type="button" class="btn sm" ${attr}="${esc(v)}">${esc(t||v)}</button>`;
+  sheetId=null;
+  showSheet(`<div class="sh"><div class="avb">✓</div><div><h3>${mode==='fait'?"C'est fait":'Prochaine étape'} · ${esc(p.prenom)}</h3><small style="color:var(--muted)">${etapeT(p.etape)}</small></div>${X}</div>
+  <form class="sb form" id="fform">
+    ${mode==='fait'?`<div class="field"><label for="f-fait">Ce que tu as fait</label><input class="inp" id="f-fait" value="${esc(lm?'Lead magnet envoyé':defFait)}" placeholder="Vocal envoyé pour caler le R1"><div class="quick fchips">${FAITS.map(v=>chip('data-ffait',v)).join('')}</div></div>`:''}
+    <div class="field"><label for="f-next">Prochaine étape</label><input class="inp" id="f-next" value="${esc(defNext)}" placeholder="Relancer"><div class="quick fchips">${NEXTS.map(v=>chip('data-fnext',v)).join('')}</div></div>
+    <div class="field"><label for="f-date">Quand</label><input class="inp" id="f-date" type="date" value="${defDate}"><div class="quick fchips">${DATES.map(([t,v])=>`<button type="button" class="btn sm ${v===defDate?'on':''}" data-fdate="${v}">${t} <small style="color:var(--muted)">${fmtJ(v)}</small></button>`).join('')}</div></div>
+  </form>
+  <div class="sf"><button class="btn" type="button" data-fback>Retour</button><button class="btn primary" form="fform" type="submit">Enregistrer</button></div>`);
+  const F=$('fform');
+  sheet.querySelectorAll('[data-ffait]').forEach(b=>b.onclick=()=>{$('f-fait').value=b.dataset.ffait;if(/lead magnet/i.test(b.dataset.ffait)&&/lead magnet/i.test($('f-next').value))$('f-next').value=NEXT.contacte});
+  sheet.querySelectorAll('[data-fnext]').forEach(b=>b.onclick=()=>{$('f-next').value=b.dataset.fnext});
+  sheet.querySelectorAll('[data-fdate]').forEach(b=>b.onclick=()=>{$('f-date').value=b.dataset.fdate;sheet.querySelectorAll('[data-fdate]').forEach(x=>x.classList.toggle('on',x===b))});
+  $('f-date').addEventListener('input',()=>sheet.querySelectorAll('[data-fdate]').forEach(x=>x.classList.toggle('on',x.dataset.fdate===$('f-date').value)));
+  sheet.querySelector('[data-fback]').onclick=()=>openSheet(p.id);
+  F.addEventListener('submit',async e=>{e.preventDefault();
+    const fait=mode==='fait'?$('f-fait').value.trim():'';const next=$('f-next').value.trim()||'Relancer';const dd=$('f-date').value||null;
+    const patch={action:next,next_date:dd};
+    if(mode==='fait'){
+      const estLM=/lead magnet/i.test(fait)&&!/vid[ée]o d'offre/i.test(fait);
+      if(estLM&&!p.lm_envoye)patch.lm_envoye=TODAY;
+      if(p.etape==='nouveau'){patch.etape='contacte';patch.chance=BASE.contacte}
+    }
+    const quand=dd?` (${fmtJ(dd)})`:'';
+    try{
+      await addNote(p,mode==='fait'?`Fait : ${fait||defFait}. Prochaine étape : ${next}${quand}.`:`Prochaine étape : ${next}${quand}.`);
+      await upd('prospects',p.id,patch,p);
+    }catch(err){console.error(err);toast('Pas enregistré, réessaie');return}
+    render();openSheet(p.id);toast(dd?`Noté · ${next} ${rel(dd)}`:'Noté');
+  });
+}
 async function lmSent(p){const patch={lm_envoye:TODAY};if(['nouveau','contacte'].includes(p.etape)){patch.etape='contacte';patch.chance=BASE.contacte;patch.action=NEXT.contacte;patch.next_date=iso(d(2))}await upd('prospects',p.id,patch,p);await addNote(p,'Lead magnet envoyé.');render();openSheet(p.id);toast('Lead magnet noté · prochaine étape : caler le R1')}
 async function calerMeet(p,dd,hh){
   const r=p.etape==='r1'?'r2':'r1';

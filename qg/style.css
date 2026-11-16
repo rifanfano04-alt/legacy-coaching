@@ -420,3 +420,8 @@ td.recs{white-space:normal}
 
 /* bloc « Contactés · en attente » : boutons sous le nom, même sur ordinateur (colonne étroite) */
 .todo.stack{grid-template-columns:auto minmax(0,1fr)}.todo.stack .quick{grid-column:2;flex-wrap:wrap}
+
+/* écran « C est fait » : choix rapides ; liste téléphone : dernière chose faite + étiquettes */
+.fchips{margin-top:8px}
+.mrow .s.f,.mrow .s.tg{grid-column:1/-1}
+.mrow .s.tg{display:flex;gap:4px;flex-wrap:wrap;white-space:normal}
