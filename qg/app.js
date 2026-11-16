@@ -274,9 +274,6 @@ function vProsp(){
     <section class="block"><div class="bh"><h2>Contactés · en attente</h2><span class="badge plain">${wait.length}</span></div>
       <div class="lines">${wait.length?wait.map(x=>{const j=-diff(x.fait_le);return `<div class="todo done stack"><span class="cb" aria-hidden="true"></span><span style="min-width:0"><span class="t" style="text-decoration:none">@${esc(x.handle)}</span><br><span class="s">contacté ${rel(x.fait_le)}${x.provenance?' · '+esc(x.provenance):''}</span></span><span class="quick">${x.repondu?'<span class="tag up">a répondu</span>':j>=3?'<span class="tag bad">à relancer</span>':''}<button class="btn sm ${x.repondu?'on':''}" data-rep="${x.id}">${x.repondu?'A répondu':'Répondu ?'}</button><a class="btn sm" href="${igUrl(x.handle)}" target="_blank" rel="noopener" aria-label="Ouvrir sur Instagram">${ICON.ig}</a><button class="btn sm" data-igprospect="${x.id}" title="En faire un prospect">→ CRM</button><button class="btn sm" data-igdel="${x.id}" aria-label="Retirer de la liste" title="Retirer de la liste">✕</button></span></div>`}).join(''):'<p class="empty">Les comptes que tu coches arrivent ici le lendemain, jusqu\'à ce que tu les passes au CRM ou que tu les retires.</p>'}</div>
     </section>
-    <section class="block"><div class="bh"><h2>À relancer sur Instagram</h2></div>
-      <div class="lines">${open_().filter(p=>p.source==='ig').map(p=>`<div class="line"><span class="l"><button data-open="${p.id}" style="font-weight:500">${p.insta?'@'+esc(p.insta):esc(p.prenom)}</button><small>${esc(p.prenom)} · ${etapeT(p.etape)}</small></span><span class="r">${p.next_date?`<span class="tag ${diff(p.next_date)<=0?'bad':'neutral'}">${rel(p.next_date)}</span>`:''}</span></div>`).join('')||'<p class="empty">Personne pour l\'instant.</p>'}</div>
-    </section>
   </div>`;
 }
 // Contenus : vidéos YouTube (lien /go/ traçable) et réels Instagram (les @ récoltés sont reliés au réel d'où ils viennent)
@@ -490,7 +487,7 @@ function openSheet(pid){
     ${ouvert?`<div class="g"><div class="nextact"><div class="a"><span>${esc(p.action||NEXT[p.etape]||'')}</span><span class="tag ${p.next_date&&diff(p.next_date)<0?'bad':p.next_date&&diff(p.next_date)===0?'warn':'neutral'}">${p.next_date?rel(p.next_date):'—'}</span></div><div class="acts"><button class="btn sm" data-done>Fait</button><button class="btn sm" data-push="2">+2 j</button><button class="btn sm" data-push="7">+1 sem.</button><button class="btn sm" data-chg>Changer…</button>${['nouveau','contacte','r1'].includes(p.etape)?`<button class="btn sm" data-slots>Caler le ${p.etape==='r1'?'R2':'R1'}</button>`:''}</div><div class="slots" id="slots" hidden>${SL.map((s,k)=>`<button class="btn sm" data-meet="${s.d}|${s.h}">${fmtJ(s.d)} · ${s.h}</button>`).join('')}<button class="btn sm" data-meetcustom>Autre créneau…</button></div></div></div>`:''}
     <div class="g"><h4>Chances de signer</h4><div class="slider"><input type="range" id="ch-${p.id}" min="5" max="95" step="5" value="${chance(p)}" data-chance ${ouvert?'':'disabled'}><span id="chv-${p.id}">${chanceHTML(chance(p))}</span></div></div>
     <div class="g"><h4>Contact</h4><dl class="kv"><dt>Instagram</dt><dd>${p.insta?'@'+esc(p.insta):'<span style="color:var(--dim)">—</span>'}</dd><dt>Téléphone</dt><dd>${p.tel?`<code>${esc(p.tel)}</code> <button class="btn sm" data-copy="${esc(p.tel)}" style="margin-left:6px">Copier</button>`:'<span style="color:var(--dim)">—</span>'}</dd><dt>Email</dt><dd>${esc(p.email||'—')}</dd><dt>Objectif</dt><dd>${esc(p.objectif||'—')}</dd><dt>Source</dt><dd>${SRC[p.source]?SRC[p.source].t:'—'}${p.video_slug?' · « '+esc(videoT(p.video_slug))+' »':''}</dd></dl></div>
-    <div class="g"><h4>Offre · du R1 au R2</h4><dl class="kv"><dt>Formule</dt><dd><select id="of-${p.id}" class="inp" data-offre>${S.offres.map(o=>`<option value="${o.id}" ${o.nom===p.offre||(!p.offre&&o.prix===p.montant)?'selected':''}>${esc(o.nom)} · ${eur(o.prix)}</option>`).join('')}</select></dd>
+    <div class="g"><h4>Offre · du R1 au R2</h4><dl class="kv"><dt>Formule</dt><dd><select id="of-${p.id}" class="inp" data-offre><option value="" ${!p.offre?'selected':''}>À définir</option>${S.offres.map(o=>`<option value="${o.id}" ${o.nom===p.offre?'selected':''}>${esc(o.nom)} · ${eur(o.prix)}</option>`).join('')}</select></dd>
       <dt>Lead magnet</dt><dd>${p.lm_envoye||p.source==='prepa'?`<span class="quick"><span class="tag up">Envoyé${p.lm_envoye?' · '+fmtS(p.lm_envoye):''}</span>${p.lm_envoye?'<button class="btn sm" data-unlm title="Annuler">Annuler</button>':''}</span>`:ouvert?'<button class="btn sm" data-lm>Marquer envoyé</button>':'<span style="color:var(--dim)">—</span>'}</dd>
       ${['r1','r2','gagne'].includes(p.etape)||p.vid_envoyee?`<dt>Vidéo d'offre</dt><dd>${p.vid_envoyee?`<span class="quick"><span class="tag up">Envoyée${p.vid_vue?' · regardée':''}</span><button class="btn sm" data-unvid title="Annuler">Annuler</button></span>`:ouvert?`<button class="btn sm" data-vid>Marquer envoyée</button>`:'<span style="color:var(--dim)">—</span>'}</dd>
       `:''}
@@ -518,11 +515,11 @@ function openAdd(pre){
     {k:'tel',l:'Téléphone',type:'tel',ph:'06 …',v:pre?.tel||''},
     {k:'source',l:'Source',type:'select',opts:Object.keys(SRC).map(k=>({v:k,t:SRC[k].t})),v:pre?.source||'ig'},
     {k:'objectif',l:'Objectif',ph:'1re compète de street lifting'},
-    {k:'offre',l:'Offre visée',type:'select',opts:S.offres.map(o=>({v:o.id,t:o.nom+' · '+eur(o.prix)}))},
+    {k:'offre',l:'Offre visée',type:'select',v:'',opts:[{v:'',t:'À définir (après le R1)'}].concat(S.offres.map(o=>({v:o.id,t:o.nom+' · '+eur(o.prix)})))},
     {k:'note',l:'Première note',type:'textarea',ph:"Ce qu'il a dit, d'où il vient…"},
   ],'Ajouter au CRM',async g=>{
-    const o=S.offres.find(x=>x.id===g.offre)||S.offres[0]||{nom:'',prix:700};
-    const p=await ins('prospects',{prenom:g.prenom,insta:g.insta.replace('@',''),tel:g.tel,source:g.source,video_slug:pre?.video_slug||null,objectif:g.objectif,etape:'nouveau',montant:o.prix,offre:o.nom,chance:BASE.nouveau,action:NEXT.nouveau,next_date:TODAY});
+    const o=S.offres.find(x=>x.id===g.offre);/* pas d'offre choisie = « à définir » (le montant reste une estimation interne) */
+    const p=await ins('prospects',{prenom:g.prenom,insta:g.insta.replace('@',''),tel:g.tel,source:g.source,video_slug:pre?.video_slug||null,objectif:g.objectif,etape:'nouveau',montant:o?o.prix:(S.offres[0]?.prix||700),offre:o?o.nom:null,chance:BASE.nouveau,action:NEXT.nouveau,next_date:TODAY});
     S.prospects.unshift(p);S.notes[p.id]=[];await addNote(p,g.note||'Ajouté au CRM.');
     if(pre?.igId){const x=S.ig.find(y=>y.id===pre.igId);if(x)await upd('ig_comptes',x.id,{prospect_id:p.id},x)}
     closeSheet();filtre='all';if(location.hash!=='#crm')location.hash='crm';else render();toast("Prospect ajouté · premier message aujourd'hui")});
@@ -1156,6 +1153,7 @@ document.addEventListener('change',async e=>{
   const p=P();
   if(e.target.matches('[data-svc]')&&p){const i=+e.target.dataset.svc;const s=e.target.checked?[...new Set([...(p.services||[]),i])]:(p.services||[]).filter(x=>x!==i);await upd('prospects',p.id,{services:s},p);e.target.closest('label').classList.toggle('off',!e.target.checked);return}
   if(e.target.matches('[data-chance]')&&p){await upd('prospects',p.id,{chance:+e.target.value},p);render();return}
+  if(e.target.matches('[data-offre]')&&p&&e.target.value===''){await upd('prospects',p.id,{offre:null},p);render();toast('Offre : à définir');return}
   if(e.target.matches('[data-offre]')&&p){const o=S.offres.find(x=>x.id===e.target.value);if(o){await upd('prospects',p.id,{offre:o.nom,montant:o.prix},p);render();toast('Offre mise à jour')}}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closePresent()}if(e.key==='Enter'&&e.target.id&&e.target.id.startsWith('note-')){e.preventDefault();sheet.querySelector('[data-note]').click()}});
