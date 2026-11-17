@@ -425,3 +425,8 @@ td.recs{white-space:normal}
 .fchips{margin-top:8px}
 .mrow .s.f,.mrow .s.tg{grid-column:1/-1}
 .mrow .s.tg{display:flex;gap:4px;flex-wrap:wrap;white-space:normal}
+
+/* transfos en vidéo (clips des réels) : affichées en entier, une seule vidéo prend toute la largeur */
+.present .trf video{width:100%;aspect-ratio:9/16;object-fit:contain;background:#000;border-radius:6px;border:1px solid var(--line)}
+.present .trf .ph2>:only-child{grid-column:1/-1;aspect-ratio:4/5}
+.trl video{height:44px;width:36px;object-fit:cover;border-radius:4px;border:1px solid var(--line2);background:#000}

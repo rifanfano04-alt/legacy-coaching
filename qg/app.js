@@ -553,6 +553,7 @@ async function moveTo(p,k,mode,raison){
 }
 // Transfos (photos avant/après + résultat), gardées dans reglages « transfos », chargées seulement quand on en a besoin
 const TR={l:null};
+const trMed=(src,alt)=>/\.mp4($|\?)/i.test(src)?`<video src="${src}" muted loop autoplay playsinline preload="metadata" aria-label="${alt}"></video>`:`<img src="${src}" alt="${alt}">`;
 async function trLoad(){if(TR.l)return TR.l;const r=await q(T('reglages').select('valeur').eq('cle','transfos'));TR.l=(r[0]&&r[0].valeur)||[];return TR.l}
 async function trSave(l){await q(T('reglages').upsert({cle:'transfos',valeur:l}));TR.l=l}
 const motsDe=t=>norm(t).split(/[^a-z0-9]+/).filter(w=>w.length>2);
@@ -567,7 +568,7 @@ async function openPresent(p){
     <div class="ph"><img src="logo.png" alt=""><div><div class="k">OFFRE LEGACY</div><div class="sub" style="color:var(--muted);font-size:12px">préparée pour ${esc(prenom(p.prenom))} · ${fmtS(TODAY)}</div></div><span class="spacer"></span><button class="ic" data-pclose aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div><h2>${esc(prenom(p.prenom))}, on construit ta legacy.</h2><div class="obj" style="margin-top:8px">Objectif : ${esc(p.objectif||'—')}</div></div>
     <div class="cols"><div><h3>Ce qu'on fait ensemble · ${esc(o.nom)}</h3><div class="svc">${choix.map(s=>`<div class="it">${esc(s)}</div>`).join('')}</div></div>
-      <div>${g.length?`<h3>Des athlètes partis du même point</h3><div class="trf">${g.map(x=>`<figure><div class="ph2">${x.avant?`<img src="${x.avant}" alt="Avant">`:''}${x.apres?`<img src="${x.apres}" alt="Après">`:''}</div><figcaption><b>${esc(x.titre)}</b>${esc(x.prenom||'')}</figcaption></figure>`).join('')}</div>`:''}
+      <div>${g.length?`<h3>Des athlètes partis du même point</h3><div class="trf">${g.map(x=>`<figure><div class="ph2">${x.avant?trMed(x.avant,'Avant'):''}${x.apres?trMed(x.apres,'Après'):''}</div><figcaption><b>${esc(x.titre)}</b>${esc(x.prenom||'')}</figcaption></figure>`).join('')}</div>`:''}
       <div class="price" style="margin-top:22px"><small>${o.jours||''} jours · paiement en une fois</small><b class="num">${eur(p.montant||o.prix)}</b><small>contrat et lien de paiement envoyés après notre appel</small></div></div></div>
     </div>`;
   sheetId=p.id;
@@ -1006,7 +1007,7 @@ function openIdee(){
 function openYtUrl(v){formSheet('Lien YouTube · '+v.titre,[{k:'u',l:'Adresse de la vidéo sur YouTube',type:'url',req:true,ph:'https://youtu.be/…',v:v.youtube_url||''}],'Enregistrer',async g=>{if(!ytId(g.u))return toast('Ce n\'est pas un lien YouTube');await q(T('videos').update({youtube_url:g.u}).eq('slug',v.slug));v.youtube_url=g.u;closeSheet();ytLoad(true);render();toast('Lien YouTube enregistré')})}
 // Micro du navigateur (Safari et Chrome sur Mac) → texte dans le champ
 function dicter(inp,fin){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!inp)return;if(!SR){toast('Pas de micro ici : écris-le');inp.focus();return}try{const r=new SR();r.lang='fr-FR';r.onresult=ev=>{inp.value=ev.results[0][0].transcript;fin&&fin(inp.value)};r.onerror=()=>{toast('Micro refusé : écris-le');inp.focus()};r.start();toast("Je t'écoute…")}catch(_){toast('Pas de micro ici : écris-le');inp.focus()}}
-function trListe(l){const b=$('trlist');if(!b)return;b.innerHTML=l.length?`<div class="lines">${l.map(x=>`<div class="line"><span class="l trl">${x.avant?`<img src="${x.avant}" alt="">`:''}${x.apres?`<img src="${x.apres}" alt="">`:''}<span>${esc(x.titre)}<small>${esc(x.prenom||'')}${x.mots?' · '+esc(x.mots):''}</small></span></span><span class="r"><button class="btn sm" data-deltr="${x.id}" aria-label="Supprimer">✕</button></span></div>`).join('')}</div>`:'<p class="empty">Aucune transfo. Ajoute une photo avant / après et le résultat en kilos.</p>'}
+function trListe(l){const b=$('trlist');if(!b)return;b.innerHTML=l.length?`<div class="lines">${l.map(x=>`<div class="line"><span class="l trl">${x.avant?trMed(x.avant,''):''}${x.apres?trMed(x.apres,''):''}<span>${esc(x.titre)}<small>${esc(x.prenom||'')}${x.mots?' · '+esc(x.mots):''}</small></span></span><span class="r"><button class="btn sm" data-deltr="${x.id}" aria-label="Supprimer">✕</button></span></div>`).join('')}</div>`:'<p class="empty">Aucune transfo. Ajoute une photo avant / après et le résultat en kilos.</p>'}
 async function photo(f){if(!f)return null;const url=URL.createObjectURL(f);try{const img=new Image();await new Promise((ok,ko)=>{img.onload=ok;img.onerror=ko;img.src=url});const k=Math.min(1,700/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.78)}finally{URL.revokeObjectURL(url)}}
 function openTransfo(){
   sheetId=null;
