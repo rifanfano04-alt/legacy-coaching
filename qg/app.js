@@ -567,10 +567,12 @@ async function openPresent(p){
   el.innerHTML=`<div class="pin">
     <div class="ph"><img src="logo.png" alt=""><div><div class="k">OFFRE LEGACY</div><div class="sub" style="color:var(--muted);font-size:12px">préparée pour ${esc(prenom(p.prenom))} · ${fmtS(TODAY)}</div></div><span class="spacer"></span><button class="ic" data-pclose aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div><h2>${esc(prenom(p.prenom))}, on construit ta legacy.</h2><div class="obj" style="margin-top:8px">Objectif : ${esc(p.objectif||'—')}</div></div>
-    <div class="cols"><div><h3>Ce qu'on fait ensemble</h3><div class="svc">${choix.map(s=>`<div class="it">${esc(s)}</div>`).join('')}</div></div>
-      <div><div class="price"><small>${o.jours||91} jours · paiement en une fois</small><b class="num">${eur(p.montant||o.prix)}</b><small>contrat et lien de paiement envoyés pendant notre appel</small></div></div></div>
     ${g.length?`<div><h3>Des athlètes partis du même point</h3><div class="trf">${g.map(x=>`<figure><div class="ph2">${x.avant?trMed(x.avant,'Avant'):''}${x.apres?trMed(x.apres,'Après'):''}</div><figcaption><b>${esc(x.titre)}</b>${esc(x.prenom||'')}</figcaption></figure>`).join('')}</div><p class="tzh">Touche une vidéo ou une photo pour l'agrandir</p></div>`:''}
+    <div><h3>Ce à quoi tu vas avoir accès</h3><div class="svc">${choix.map(s=>`<div class="it">${esc(s)}</div>`).join('')}</div></div>
+    <div class="pend"><button class="btn primary" data-pprix>Voir l'offre</button><div class="price" id="pprix" hidden><small>${o.jours||91} jours · paiement en une fois</small><b class="num">${eur(p.montant||o.prix)}</b><small>contrat et lien de paiement envoyés pendant notre appel</small></div></div>
     </div>`;
+  // le prix n'apparaît qu'à la fin, quand il clique sur « Voir l'offre » (ordre du R2 : transfos → accès → démo en direct → prix)
+  el.querySelector('[data-pprix]').addEventListener('click',e=>{e.currentTarget.hidden=true;const pr=$('pprix');pr.hidden=false;pr.scrollIntoView({behavior:'smooth',block:'center'})});
   // zoom plein écran sur une transfo (clic = agrandir, clic / Échap = fermer)
   el.querySelectorAll('.trf img,.trf video').forEach(m=>m.addEventListener('click',()=>{const z=document.createElement('div');z.className='tz';const c=m.cloneNode();if(c.tagName==='VIDEO'){c.muted=true;c.loop=true;c.autoplay=true;c.playsInline=true;c.controls=true}z.appendChild(c);const fin=()=>{z.remove();document.removeEventListener('keydown',k)};const k=e=>{if(e.key==='Escape')fin()};z.addEventListener('click',e=>{if(e.target===z)fin()});document.addEventListener('keydown',k);document.body.appendChild(z);c.play&&c.play().catch(()=>{})}));
   sheetId=p.id;

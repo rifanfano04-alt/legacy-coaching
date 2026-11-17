@@ -440,3 +440,8 @@ td.recs{white-space:normal}
 .present .tzh{margin:12px 0 0;font-size:12px;color:var(--dim)}
 .tz{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.92);display:grid;place-items:center;padding:24px;cursor:zoom-out}
 .tz img,.tz video{max-width:min(96vw,1100px);max-height:92vh;width:auto;height:auto;border-radius:8px;cursor:default;background:#000}
+
+/* présentation dans l'ordre du R2 : prix caché jusqu'au bouton « Voir l'offre » */
+.present .pend{border-top:1px solid var(--line);padding-top:22px;display:flex;flex-direction:column;align-items:flex-start;gap:16px}
+.present .pend .btn{font-size:15px;padding:12px 22px}
+.present .pend .price{width:100%;max-width:420px}
