@@ -437,7 +437,7 @@ function vReglages(){
     <div class="setrow"><span>Plages proposées dans l'agenda<small>${pl.map(p=>`${esc(p.t)} ${p.h} → ${p.e}`).join(' · ')||'—'} · jamais le dimanche</small></span><span class="quick">${pl.map((p,i)=>`<button class="btn sm" data-plage="${i}">${esc(p.kind)} ${p.h}</button>`).join('')}</span></div>
     <div class="setrow"><span>Objectif d'encaissement du mois</span><span class="stepper"><button data-obj="-250" aria-label="Moins">−</button><span class="num">${eur(OBJ())}</span><button data-obj="250" aria-label="Plus">+</button></span></div></section>
   <section class="block"><div class="bh"><h2 class="t">Offres et prix</h2><span class="sub">prix en une fois, jamais de mensualité</span><span class="right"><button class="btn sm" data-addoffre>+ Offre</button></span></div>
-    <div class="lines">${S.offres.map(o=>`<div class="line"><span class="l">${esc(o.nom)}<small>${o.jours} jours · ${o.lien_stripe?'<span style="color:var(--green)">lien Stripe ✓</span>':'pas encore de lien Stripe'}</small></span><span class="r quick"><span class="num" style="color:var(--fg)">${eur(o.prix)}</span>${o.lien_stripe?'':`<button class="btn sm primary" data-mklien="${o.id}">Créer le lien Stripe</button>`}<button class="btn sm" data-editoffre="${o.id}">Modifier</button><button class="btn sm" data-deloffre="${o.id}" aria-label="Supprimer">✕</button></span></div>`).join('')||'<p class="empty">Aucune offre.</p>'}</div></section>
+    <div class="lines">${S.offres.map(o=>`<div class="line"><span class="l">${esc(o.nom)}<small>${o.jours} jours · ${o.lien_stripe?'<span style="color:var(--green)">lien Stripe ✓</span>':o.lien_test?'<span style="color:var(--amber)">ancien lien de test : à recréer en vrai</span>':'pas encore de lien Stripe'}</small></span><span class="r quick"><span class="num" style="color:var(--fg)">${eur(o.prix)}</span>${o.lien_stripe?'':`<button class="btn sm primary" data-mklien="${o.id}">Créer le lien Stripe</button>`}<button class="btn sm" data-editoffre="${o.id}">Modifier</button><button class="btn sm" data-deloffre="${o.id}" aria-label="Supprimer">✕</button></span></div>`).join('')||'<p class="empty">Aucune offre.</p>'}</div></section>
   <section class="block"><div class="bh"><h2 class="t">Services dans l'offre</h2><span class="right"><button class="btn sm" data-addsvc>+ Service</button></span></div>
     <div class="lines">${SERVICES().map((s,i)=>`<div class="line"><span class="l">${esc(s)}</span><span class="r"><button class="btn sm" data-delsvc="${i}" aria-label="Supprimer">✕</button></span></div>`).join('')}</div></section>
   <section class="block"><div class="bh"><h2 class="t">Transfos</h2><span class="sub">montrées en visio, jamais envoyées</span><span class="right"><button class="btn sm" data-addtr>+ Transfo</button></span></div><div id="trlist"><p class="empty">Chargement…</p></div></section>
@@ -563,32 +563,42 @@ async function openPresent(p){
   const o=S.offres.find(x=>x.nom===p.offre)||S.offres.find(x=>x.prix===p.montant)||{nom:p.offre||'',prix:p.montant,jours:91};
   const choix=selSvc(p);
   let g=[];try{g=trPour(p,await trLoad())}catch(_){}
+  const o2=offre2De(p),opts=o2?[{nom:o.nom,prix:p.montant||o.prix,jours:o.jours||91},o2].sort((a,b)=>a.jours-b.jours):[];
   const el=$('present');el.hidden=false;
   el.innerHTML=`<div class="pin">
     <div class="ph"><img src="logo.png" alt=""><div><div class="k">OFFRE LEGACY</div><div class="sub" style="color:var(--muted);font-size:12px">préparée pour ${esc(prenom(p.prenom))} · ${fmtS(TODAY)}</div></div><span class="spacer"></span><button class="ic" data-pclose aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div><h2>${esc(prenom(p.prenom))}, on construit ta legacy.</h2><div class="obj" style="margin-top:8px">Objectif : ${esc(p.objectif||'—')}</div></div>
     ${g.length?`<div><h3>Des athlètes partis du même point</h3><div class="trf">${g.map(x=>`<figure><div class="ph2">${x.avant?trMed(x.avant,'Avant'):''}${x.apres?trMed(x.apres,'Après'):''}</div><figcaption><b>${esc(x.titre)}</b>${esc(x.prenom||'')}</figcaption></figure>`).join('')}</div><p class="tzh">Touche une vidéo ou une photo pour l'agrandir</p></div>`:''}
     <div><h3>Ce à quoi tu vas avoir accès</h3><div class="svc">${choix.map(s=>`<div class="it">${esc(s)}</div>`).join('')}</div></div>
-    <div class="pend"><button class="btn primary" data-pprix>Voir l'offre</button><div class="price" id="pprix" hidden><small>${o.jours||91} jours · paiement en une fois</small><b class="num">${eur(p.montant||o.prix)}</b><small>contrat et lien de paiement envoyés pendant notre appel</small></div></div>
+    <div class="pend"><button class="btn primary" data-pprix>Voir l'offre</button>${o2?`<div id="pprix" hidden><div class="prices">${opts.map((x,i)=>`<button class="price opt" data-pchoix="${i}"><small>${esc(x.nom)}</small><b class="num">${eur(x.prix)}</b><small>soit ${eur(parMois(x.prix,x.jours))} par mois${i===opts.length-1&&parMois(x.prix,x.jours)<parMois(opts[0].prix,opts[0].jours)?' · <span style="color:var(--green)">le meilleur prix par mois</span>':''}</small><span class="choix">✓ Ton choix</span></button>`).join('')}</div><p class="sub" style="color:var(--muted);font-size:12px;margin-top:12px">paiement en une fois, ou en plusieurs fois avec Klarna · contrat et lien de paiement envoyés pendant notre appel</p></div>`:`<div class="price" id="pprix" hidden><small>${o.jours||91} jours · paiement en une fois</small><b class="num">${eur(p.montant||o.prix)}</b><small>contrat et lien de paiement envoyés pendant notre appel</small></div>`}</div>
     </div>`;
   // le prix n'apparaît qu'à la fin, quand il clique sur « Voir l'offre » (ordre du R2 : transfos → accès → démo en direct → prix)
   el.querySelector('[data-pprix]').addEventListener('click',e=>{e.currentTarget.hidden=true;const pr=$('pprix');pr.hidden=false;pr.scrollIntoView({behavior:'smooth',block:'center'})});
+  // 2 formules : le prospect choisit en direct → elle devient l'offre de sa fiche (lien de paiement, contrat, vente), l'autre reste en 2e choix
+  el.querySelectorAll('[data-pchoix]').forEach(b=>b.addEventListener('click',async()=>{const x=opts[+b.dataset.pchoix];el.querySelectorAll('[data-pchoix]').forEach(y=>y.classList.toggle('on',y===b));
+    if(x.nom===p.offre&&x.prix===p.montant)return;const autre=opts.find(y=>y!==x);await upd('prospects',p.id,{offre:x.nom,montant:x.prix},p);await setReg('offre2',{...(S.reg.offre2||{}),[p.id]:autre});await addNote(p,`Formule choisie au R2 : ${x.nom} · ${eur(x.prix)}.`);render()}));
   // zoom plein écran sur une transfo (clic = agrandir, clic / Échap = fermer)
   el.querySelectorAll('.trf img,.trf video').forEach(m=>m.addEventListener('click',()=>{const z=document.createElement('div');z.className='tz';const c=m.cloneNode();if(c.tagName==='VIDEO'){c.muted=true;c.loop=true;c.autoplay=true;c.playsInline=true;c.controls=true}z.appendChild(c);const fin=()=>{z.remove();document.removeEventListener('keydown',k)};const k=e=>{if(e.key==='Escape')fin()};z.addEventListener('click',e=>{if(e.target===z)fin()});document.addEventListener('keydown',k);document.body.appendChild(z);c.play&&c.play().catch(()=>{})}));
   sheetId=p.id;
 }
 const selSvc=p=>{const all=SERVICES();const v=(p.services||[]).map(x=>typeof x==='number'?all[x]:x).filter(Boolean);return p.offre_prete?v:all};
+// 2e formule proposée au R2 (ex. 3 mois ou 6 mois) : reglages.offre2 = { id prospect : { nom, prix, jours } }
+const offre2De=p=>{const x=(S.reg.offre2||{})[p.id];return x&&x.nom&&+x.prix>0?x:null};
+const parMois=(prix,jours)=>Math.round(prix/Math.max(1,Math.round((jours||91)/30.4)));
 function openPrep(p){
-  sheetId=p.id;const o=offreOf(p),choix=selSvc(p);
+  sheetId=p.id;const o=offreOf(p),choix=selSvc(p),o2=offre2De(p);
   showSheet(`<div class="sh"><div class="avb">${ini(p.prenom)}</div><div><h3>Offre de ${esc(prenom(p.prenom))}</h3><span class="sub" style="color:var(--muted);font-size:12px">préparée avant l'appel · lui ne voit que le résultat</span></div>${X}</div>
   <form class="sb form" id="pform"><div class="field"><label for="pf-of">Formule</label><select class="inp" id="pf-of">${S.offres.map(x=>`<option value="${x.id}" ${x.nom===o.nom?'selected':''}>${esc(x.nom)} · ${eur(x.prix)}</option>`).join('')}</select></div>
   <div class="field"><label for="pf-px">Prix pour ${esc(prenom(p.prenom))} (€, en une fois)</label><input class="inp" id="pf-px" type="number" required value="${p.montant||o.prix}"></div>
+  <div class="field"><label for="pf-of2">2e formule au choix (optionnel)</label><select class="inp" id="pf-of2"><option value="">Une seule formule</option>${S.offres.map(x=>`<option value="${x.id}" ${o2&&x.nom===o2.nom?'selected':''}>${esc(x.nom)} · ${eur(x.prix)}</option>`).join('')}</select></div>
+  <div class="field" id="pf-px2w" ${o2?'':'hidden'}><label for="pf-px2">Prix de la 2e formule (€, en une fois)</label><input class="inp" id="pf-px2" type="number" value="${o2?o2.prix:''}"></div>
   <div class="field"><label>Ce que tu lui proposes</label><div class="prepsvc">${SERVICES().map((x,i)=>`<label><input type="checkbox" value="${i}" ${choix.includes(x)?'checked':''}>${esc(x)}</label>`).join('')}</div></div><div class="field" id="pf-tr"></div></form>
   <div class="sf"><button class="btn primary" form="pform" type="submit" data-then="present">Enregistrer et présenter</button><button class="btn" form="pform" type="submit">Enregistrer</button></div>`);
   trLoad().then(l=>{const box=$('pf-tr');if(!box||!l.length)return;const sel=trPour(p,l).map(x=>x.id);box.innerHTML=`<label>Transfos à montrer</label><div class="prepsvc">${l.map(x=>`<label><input type="checkbox" data-tr value="${x.id}" ${sel.includes(x.id)?'checked':''}>${esc(x.titre)}${x.prenom?' · '+esc(x.prenom):''}</label>`).join('')}</div>`}).catch(()=>{});
   $('pf-of').addEventListener('change',e=>{const x=S.offres.find(y=>y.id===e.target.value);if(x)$('pf-px').value=x.prix});
+  $('pf-of2').addEventListener('change',e=>{const x=S.offres.find(y=>y.id===e.target.value);$('pf-px2w').hidden=!x;if(x)$('pf-px2').value=x.prix});
   $('pform').addEventListener('submit',async e=>{e.preventDefault();const x=S.offres.find(y=>y.id===$('pf-of').value)||o;const svc=[...sheet.querySelectorAll('.prepsvc input:checked:not([data-tr])')].map(c=>+c.value);const prix=+$('pf-px').value||x.prix;
-    await upd('prospects',p.id,{offre:x.nom,montant:prix,services:svc,offre_prete:true},p);const trc=[...sheet.querySelectorAll('[data-tr]')];if(trc.length)await setReg('transfos_choix',{...(S.reg.transfos_choix||{}),[p.id]:trc.filter(c=>c.checked).map(c=>c.value)});await addNote(p,`Offre perso préparée : ${x.nom} · ${eur(prix)} · ${svc.length} services.`);
+    await upd('prospects',p.id,{offre:x.nom,montant:prix,services:svc,offre_prete:true},p);const x2=S.offres.find(y=>y.id===$('pf-of2').value),px2=+$('pf-px2').value||(x2&&x2.prix);const O2={...(S.reg.offre2||{})};if(x2&&px2)O2[p.id]={nom:x2.nom,prix:px2,jours:x2.jours||91};else delete O2[p.id];if(JSON.stringify(O2)!==JSON.stringify(S.reg.offre2||{}))await setReg('offre2',O2);const trc=[...sheet.querySelectorAll('[data-tr]')];if(trc.length)await setReg('transfos_choix',{...(S.reg.transfos_choix||{}),[p.id]:trc.filter(c=>c.checked).map(c=>c.value)});await addNote(p,`Offre perso préparée : ${x.nom} · ${eur(prix)}${offre2De(p)?' ou '+offre2De(p).nom+' · '+eur(offre2De(p).prix):''} · ${svc.length} services.`);
     if(e.submitter&&e.submitter.dataset.then==='present'){closeSheet();render();openPresent(p)}else{render();openSheet(p.id);toast('Offre enregistrée')}});
 }
 function closePresent(){const el=$('present');el.hidden=true;el.innerHTML=''}
@@ -723,7 +733,7 @@ function asClick(t){
 // ---------- Stripe (liens de paiement) ----------
 const offreOf=p=>S.offres.find(x=>x.nom===p.offre)||S.offres.find(x=>x.prix===p.montant)||{nom:p.offre||'Coaching',prix:p.montant,jours:91};
 const STRIPE={ok:null,test:false,vu:false};
-function stripePing(){if(STRIPE.vu)return;STRIPE.vu=true;SB.functions.invoke('stripe-lien',{body:{ping:true}}).then(({data,error})=>{if(error||!data){STRIPE.err=true;return}STRIPE.ok=!!data.ok;STRIPE.test=!!data.test}).catch(()=>{STRIPE.err=true}).finally(()=>{if(route==='reglages')render()})}
+function stripePing(){if(STRIPE.vu)return;STRIPE.vu=true;SB.functions.invoke('stripe-lien',{body:{ping:true}}).then(({data,error})=>{if(error||!data){STRIPE.err=true;return}STRIPE.ok=!!data.ok;STRIPE.test=!!data.test;if(STRIPE.ok&&!STRIPE.test)S.offres.forEach(o=>{if(o.lien_stripe&&/\/test_/.test(o.lien_stripe)){o.lien_test=o.lien_stripe;o.lien_stripe=null}})}).catch(()=>{STRIPE.err=true}).finally(()=>{if(route==='reglages')render()})}
 const stripeEtat=()=>STRIPE.ok===false?'clé secrète à coller dans Supabase (Edge Functions → Secrets)':STRIPE.test?'paiements de test, pas de vrai argent':'liens de paiement créés depuis l\'appli';
 async function mkLien(nom,prix){
   const {data,error}=await SB.functions.invoke('stripe-lien',{body:{nom,prix}});
@@ -1177,6 +1187,7 @@ async function start(){
   fromHash();
   aFeter();notifEtat().then(()=>{if(route==='reglages')render()});
   osSync();
+  stripePing();
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 }
 let loginEmail='',passMode=false;

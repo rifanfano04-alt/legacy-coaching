@@ -445,3 +445,12 @@ td.recs{white-space:normal}
 .present .pend{border-top:1px solid var(--line);padding-top:22px;display:flex;flex-direction:column;align-items:flex-start;gap:16px}
 .present .pend .btn{font-size:15px;padding:12px 22px}
 .present .pend .price{width:100%;max-width:420px}
+/* R2 : deux formules au choix */
+.present .prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:640px}
+.present .price.opt{text-align:left;border:0;border-top:2px solid var(--line2);background:none;padding:14px 0 0;cursor:pointer;transition:border-color .2s}
+.present .price.opt:hover{border-top-color:var(--muted)}
+.present .price.opt.on{border-top-color:var(--red)}
+.present .price.opt b{font-size:38px}
+.present .price.opt .choix{display:none;color:var(--red);font-size:12px;font-weight:600;margin-top:4px}
+.present .price.opt.on .choix{display:block}
+@media (max-width:520px){.present .prices{grid-template-columns:1fr}}
