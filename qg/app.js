@@ -563,14 +563,14 @@ async function openPresent(p){
   const o=S.offres.find(x=>x.nom===p.offre)||S.offres.find(x=>x.prix===p.montant)||{nom:p.offre||'',prix:p.montant,jours:91};
   const choix=selSvc(p);
   let g=[];try{g=trPour(p,await trLoad())}catch(_){}
-  const o2=offre2De(p),opts=o2?[{nom:o.nom,prix:p.montant||o.prix,jours:o.jours||91},o2].sort((a,b)=>a.jours-b.jours):[];
+  const o2=offre2De(p),opts=o2?[{nom:o.nom,prix:p.montant||o.prix,jours:o.jours||91},o2].sort((a,b)=>moisDe(a)-moisDe(b)):[];
   const el=$('present');el.hidden=false;
   el.innerHTML=`<div class="pin">
     <div class="ph"><img src="logo.png" alt=""><div><div class="k">OFFRE LEGACY</div><div class="sub" style="color:var(--muted);font-size:12px">préparée pour ${esc(prenom(p.prenom))} · ${fmtS(TODAY)}</div></div><span class="spacer"></span><button class="ic" data-pclose aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div><h2>${esc(prenom(p.prenom))}, on construit ta legacy.</h2><div class="obj" style="margin-top:8px">Objectif : ${esc(p.objectif||'—')}</div></div>
     ${g.length?`<div><h3>Des athlètes partis du même point</h3><div class="trf">${g.map(x=>`<figure><div class="ph2">${x.avant?trMed(x.avant,'Avant'):''}${x.apres?trMed(x.apres,'Après'):''}</div><figcaption><b>${esc(x.titre)}</b>${esc(x.prenom||'')}</figcaption></figure>`).join('')}</div><p class="tzh">Touche une vidéo ou une photo pour l'agrandir</p></div>`:''}
     <div><h3>Ce à quoi tu vas avoir accès</h3><div class="svc">${choix.map(s=>`<div class="it">${esc(s)}</div>`).join('')}</div></div>
-    <div class="pend"><button class="btn primary" data-pprix>Voir l'offre</button>${o2?`<div id="pprix" hidden><div class="prices">${opts.map((x,i)=>`<button class="price opt" data-pchoix="${i}"><small>${esc(x.nom)}</small><b class="num">${eur(x.prix)}</b><small>pour ${Math.round(x.jours/30.4)} mois</small><span class="choix">✓ Ton choix</span></button>`).join('')}</div><p class="sub" style="color:var(--muted);font-size:12px;margin-top:12px">paiement en une fois, ou en plusieurs fois avec Klarna · contrat et lien de paiement envoyés pendant notre appel</p></div>`:`<div class="price" id="pprix" hidden><small>${o.jours||91} jours · paiement en une fois</small><b class="num">${eur(p.montant||o.prix)}</b><small>contrat et lien de paiement envoyés pendant notre appel</small></div>`}</div>
+    <div class="pend"><button class="btn primary" data-pprix>Voir l'offre</button>${o2?`<div id="pprix" hidden><div class="prices">${opts.map((x,i)=>`<button class="price opt" data-pchoix="${i}"><small>${esc(x.nom)}</small><b class="num">${eur(x.prix)}</b><small>pour ${moisDe(x)} mois</small><span class="choix">✓ Ton choix</span></button>`).join('')}</div><p class="sub" style="color:var(--muted);font-size:12px;margin-top:12px">paiement en une fois, ou en plusieurs fois avec Klarna · contrat et lien de paiement envoyés pendant notre appel</p></div>`:`<div class="price" id="pprix" hidden><small>${o.jours||91} jours · paiement en une fois</small><b class="num">${eur(p.montant||o.prix)}</b><small>contrat et lien de paiement envoyés pendant notre appel</small></div>`}</div>
     </div>`;
   // le prix n'apparaît qu'à la fin, quand il clique sur « Voir l'offre » (ordre du R2 : transfos → accès → démo en direct → prix)
   el.querySelector('[data-pprix]').addEventListener('click',e=>{e.currentTarget.hidden=true;const pr=$('pprix');pr.hidden=false;pr.scrollIntoView({behavior:'smooth',block:'center'})});
@@ -583,6 +583,8 @@ async function openPresent(p){
 }
 const selSvc=p=>{const all=SERVICES();const v=(p.services||[]).map(x=>typeof x==='number'?all[x]:x).filter(Boolean);return p.offre_prete?v:all};
 // 2e formule proposée au R2 (ex. 3 mois ou 6 mois) : reglages.offre2 = { id prospect : { nom, prix, jours } }
+// durée affichée : « 6 mois » écrit dans le nom de l'offre fait foi, sinon les jours
+const moisDe=x=>{const m=String(x.nom||'').match(/(\d+)\s*mois/i);return m?+m[1]:Math.max(1,Math.round((x.jours||91)/30.4))};
 const offre2De=p=>{const x=(S.reg.offre2||{})[p.id];return x&&x.nom&&+x.prix>0?x:null};
 function openPrep(p){
   sheetId=p.id;const o=offreOf(p),choix=selSvc(p),o2=offre2De(p);
