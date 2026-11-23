@@ -240,13 +240,38 @@ function tableHTML(list){
   ${list.map(p=>`<tr class="row" data-open="${p.id}"><td><span class="who"><span class="av ${avc(p)}">${ini(p.prenom)}</span><span class="name">${esc(p.prenom)}</span></span></td><td><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}</span></td><td style="color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis">${esc(p.objectif||'')}</td><td class="r num">${offreCell(p)}</td><td>${chanceHTML(chance(p))}</td><td style="color:var(--muted);max-width:220px">${lastFait(p)?`<span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(lastFait(p))}</span>`:lastC(p)}</td><td class="date">${p.next_date&&!['gagne','perdu'].includes(p.etape)?`<b>${fmtS(p.next_date)}</b> · ${esc(p.action||'')}${diff(p.next_date)<0?' <span class="tag bad">retard</span>':diff(p.next_date)===0?' <span class="tag warn">aujourd\'hui</span>':''}`:p.etape==='gagne'?'<span class="tag up">Signé</span>':`<span style="color:var(--dim)">${esc(p.etape==='perdu'&&p.action||'—')}</span>`}</td></tr>`).join('')}</tbody></table></div>
   <div class="mlist">${list.map(p=>`<button class="mrow" data-open="${p.id}"><span class="t">${esc(p.prenom)}</span><span class="e num">${offreCell(p)}</span><span class="s">${p.next_date&&!['gagne','perdu'].includes(p.etape)?`<b style="color:${diff(p.next_date)<=0?'var(--red)':'var(--fg)'};font-weight:500">${diff(p.next_date)<0?'En retard · ':''}${rel(p.next_date)}</b> · `+esc(p.action||''):etapeT(p.etape)}</span><span class="p">${stPill(p.etape)}</span>${lastFait(p)?`<span class="s f">Fait ${esc(lastFait(p))}</span>`:''}${tempTag(p)?`<span class="s tg">${tempTag(p)}</span>`:''}</button>`).join('')}</div>`;
 }
+// Recherche par nom (ou @Instagram) : sans accents ni majuscules, la liste se met à jour à chaque lettre
+let rech='';
+const sansAcc=t=>(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+function crmList(){
+  let list=filtre==='all'?[...S.prospects].sort((a,b)=>{const A=['gagne','perdu'].includes(a.etape),B=['gagne','perdu'].includes(b.etape);if(A!==B)return A?1:-1;return (a.next_date||'9').localeCompare(b.next_date||'9')}):S.prospects.filter(p=>p.etape===filtre);
+  const q=sansAcc(rech).replace(/^@/,'');
+  if(q)list=list.filter(p=>sansAcc(p.prenom).includes(q)||sansAcc(p.insta).includes(q));
+  return list;
+}
+function crmListHTML(list){return list.length?tableHTML(list):rech.trim()?`<p class="empty">Personne ne correspond à « ${esc(rech.trim())} ».</p>`:'<p class="empty">Personne ici pour l\'instant.</p>'}
+const ICON_LOUPE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
 function vCRM(){
-  const list=filtre==='all'?[...S.prospects].sort((a,b)=>{const A=['gagne','perdu'].includes(a.etape),B=['gagne','perdu'].includes(b.etape);if(A!==B)return A?1:-1;return (a.next_date||'9').localeCompare(b.next_date||'9')}):S.prospects.filter(p=>p.etape===filtre);
-  return `<section class="block"><div class="bh"><h2 class="t">Prospects</h2><span class="badge plain">${list.length}</span><span class="right"><button class="btn sm primary" data-add>+ Nouveau prospect</button></span></div>
+  const list=crmList();
+  return `<section class="block"><div class="bh"><h2 class="t">Prospects</h2><span class="badge plain" id="crm-n">${list.length}</span><span class="right"><label class="srch${rech?' on':''}">${ICON_LOUPE}<input id="crm-q" type="search" placeholder="Rechercher un nom" aria-label="Rechercher un prospect par nom" autocomplete="off" spellcheck="false" value="${esc(rech)}"><button type="button" class="x" data-rechx aria-label="Effacer la recherche"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></label><button class="btn sm primary" data-add>+ Nouveau prospect</button></span></div>
   <div class="pills" style="gap:6px;margin-bottom:14px"><button class="btn sm ${filtre==='all'?'on':''}" data-filtre="all">Tous</button>${ETAPES.map(e=>`<button class="btn sm ${filtre===e.k?'on':''}" data-filtre="${e.k}">${e.t} <span class="num" style="opacity:.6">${S.prospects.filter(p=>p.etape===e.k).length}</span></button>`).join('')}</div>
   ${filtre==='perdu'?raisonsHTML():''}
-  ${list.length?tableHTML(list):'<p class="empty">Personne ici pour l\'instant.</p>'}</section>`;
+  <div id="crm-list">${crmListHTML(list)}</div></section>`;
 }
+function majRech(){
+  const L=crmList();$('crm-list').innerHTML=crmListHTML(L);$('crm-n').textContent=L.length;
+  const lab=$('crm-q').closest('.srch');lab.classList.toggle('on',!!rech);
+}
+document.addEventListener('input',e=>{if(e.target.id!=='crm-q')return;
+  // on cherche dans tout le monde : si une étape était choisie, on repasse sur « Tous »
+  if(!rech&&filtre!=='all'){filtre='all';document.querySelectorAll('[data-filtre]').forEach(b=>b.classList.toggle('on',b.dataset.filtre==='all'))}
+  rech=e.target.value;majRech()});
+document.addEventListener('keydown',e=>{
+  if(e.target.id==='crm-q'&&e.key==='Escape'){rech='';e.target.value='';majRech();e.target.blur();return}
+  // « / » ou Cmd+K ouvre la recherche sur la page Prospects
+  if(route==='crm'&&$('crm-q')&&((e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))||(e.key==='k'&&(e.metaKey||e.ctrlKey)))){e.preventDefault();$('crm-q').focus();$('crm-q').select()}
+});
+document.addEventListener('click',e=>{if(e.target.closest('[data-rechx]')){e.preventDefault();rech='';const i=$('crm-q');i.value='';majRech();i.focus()}});
 // Pourquoi on perd des ventes : une ligne par raison, la plus fréquente en premier
 function raisonsHTML(){
   const L=S.prospects.filter(p=>p.etape==='perdu');if(!L.length)return '';
@@ -1189,7 +1214,7 @@ document.addEventListener('change',async e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closePresent()}if(e.key==='Enter'&&e.target.id&&e.target.id.startsWith('note-')){e.preventDefault();sheet.querySelector('[data-note]').click()}});
 scrim.addEventListener('click',closeSheet);
-function fromHash(){const h=location.hash.slice(1);route=TITLES[h]?h:'dashboard';if(h!=='crm')filtre='all';closeSheet();closePresent();render();countUp();window.scrollTo(0,0)}
+function fromHash(){const h=location.hash.slice(1);route=TITLES[h]?h:'dashboard';if(h!=='crm'){filtre='all';rech=''}closeSheet();closePresent();render();countUp();window.scrollTo(0,0)}
 window.addEventListener('hashchange',fromHash);
 window.QG={S,SB,render,loadAll};
 

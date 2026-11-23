@@ -464,3 +464,21 @@ details.plus>summary:hover{color:var(--fg)}
 details.plus>summary:focus-visible{outline:2px solid var(--red);outline-offset:2px;border-radius:4px}
 details.plus .c,details.plus[open] .o{display:none}
 details.plus[open] .c{display:inline}
+
+/* recherche par nom (page Prospects) */
+.srch{position:relative;display:flex;align-items:center;width:220px;height:30px;border:1px solid var(--line2);border-radius:7px;background:var(--bg);transition:border-color .15s,width .2s cubic-bezier(.2,.8,.2,1);cursor:text}
+.srch:focus-within{border-color:rgba(255,255,255,.32);width:260px}
+.srch>svg{width:15px;height:15px;margin-left:9px;flex:none;color:var(--muted)}
+.srch input{flex:1;min-width:0;height:100%;background:none;border:0;outline:0;padding:0 6px 0 7px;font-size:12.5px}
+.srch input::placeholder{color:var(--dim)}
+.srch input::-webkit-search-cancel-button{display:none}
+.srch .x{display:none;flex:none;width:26px;height:26px;margin-right:2px;border:0;background:none;color:var(--muted);border-radius:5px;place-items:center;cursor:pointer}
+.srch .x svg{width:13px;height:13px}
+.srch .x:hover{color:var(--fg);background:var(--raise)}
+.srch.on .x{display:grid}
+@media (max-width:760px){
+  .bh .right:has(.srch){width:100%}
+  .srch,.srch:focus-within{flex:1;width:auto;height:40px}
+  .srch input{font-size:16px}
+}
+@media (prefers-reduced-motion:reduce){.srch{transition:none}}
