@@ -184,6 +184,9 @@ function todayBlock(){
 }
 
 // ---------- vues ----------
+// « À relancer » : les 3 plus urgents visibles, le reste dans un déroulant (sinon un grand vide à gauche)
+const REL_N=3;let REL_OPEN=false;
+document.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('details[data-rel]'))REL_OPEN=e.target.open},true);
 function vDash(){
   const enc=encMois(), pct=Math.min(100,Math.round(enc/OBJ()*100));
   const pipe=S.prospects.filter(p=>['r1','r2'].includes(p.etape)), pipeV=pipe.reduce((s,p)=>s+p.montant,0);
@@ -211,7 +214,7 @@ function vDash(){
       <div class="agenda" style="margin-top:14px">${dayEv(TODAY).slice(0,6).map(e=>`<div class="ev ${e.k}"><span class="h">${e.h||'—'}</span><span class="bar"></span><span style="min-width:0"><span class="t">${esc(e.t)}</span><br><span class="s">${esc(e.s)}</span></span>${e.k==='meet'&&e.pid?`<button class="btn sm" data-open="${e.pid}">Fiche</button>`:''}</div>`).join('')||'<p class="empty">Rien dans l\'agenda aujourd\'hui.</p>'}</div>
     </section>
     <section class="block"><div class="bh"><h2>À relancer</h2><span class="right"><a class="btn sm" href="#crm">Tout le CRM</a></span></div>
-      <div class="lines">${todo.length?todo.map(relLine).join(''):'<p class="empty">Rien en retard.</p>'}</div>
+      <div class="lines">${todo.length?todo.slice(0,REL_N).map(relLine).join('')+(todo.length>REL_N?`<details class="plus" data-rel ${REL_OPEN?'open':''}><summary><span class="o">Voir les ${todo.length-REL_N} autres</span><span class="c">Réduire</span></summary>${todo.slice(REL_N).map(relLine).join('')}</details>`:''):'<p class="empty">Rien en retard.</p>'}</div>
       <div class="bh" style="margin-top:18px"><h2>Renouvellements</h2><span class="right"><a class="btn sm" href="#athletes">Athlètes</a></span></div>
       <div class="lines">${renouv.length?renouv.map(a=>`<div class="line"><span class="l">${esc(a.prenom)}<small>${esc(a.offre||'')} · fin le ${fmtS(a.fin)}</small></span><span class="r quick">${RENOUV()[a.id]?'<span class="tag neutral">lien envoyé</span>':''}<span class="tag ${diff(a.fin)<=7?'bad':'warn'}">J-${diff(a.fin)}</span></span></div>`).join(''):'<p class="empty">Rien dans les 14 jours.</p>'}</div>${(()=>{const h=mensuelsBlock(true);return h?`<div class="bh" style="margin-top:18px"><h2>Mensualités à encaisser</h2><span class="right"><a class="btn sm" href="#ventes">Ventes</a></span></div>`+h:''})()}
     </section>
