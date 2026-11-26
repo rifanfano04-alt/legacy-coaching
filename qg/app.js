@@ -509,7 +509,7 @@ function openSheet(pid){
   const msg=fill(scr.texte,p);
   const SL=slots();
   showSheet(`
-  <div class="sh"><div class="avb">${ini(p.prenom)}</div><div style="min-width:0"><h3>${esc(p.prenom)}</h3><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}</span></div>${X}</div>
+  <div class="sh"><div class="avb">${ini(p.prenom)}</div><div style="min-width:0"><h3>${esc(p.prenom)}</h3><span class="pills">${srcPill(p)}${stPill(p.etape)}${tempTag(p)}${ouvert&&i>0?`<button class="back" data-back title="Revenir à « ${esc(ETAPES[i-1].t)} »">← revenir à « ${esc(ETAPES[i-1].t.split(' · ')[0])} »</button>`:''}</span></div>${X}</div>
   <div class="sb">
     <div class="g"><div class="quick">${p.tel?`<a class="btn sm" href="${wa(p.tel,msg)}" target="_blank" rel="noopener">${ICON.wa} WhatsApp</a>`:''}${p.insta?`<a class="btn sm" href="${igUrl(p.insta)}" target="_blank" rel="noopener">${ICON.ig} Instagram</a>`:''}<button class="btn sm" data-copy="${esc(msg)}">Copier « ${esc(scr.titre)} »</button><button class="btn sm" data-asfor="${p.id}">Assistant de réponse</button><button class="btn sm" data-edit>Modifier la fiche</button></div></div>
     ${ouvert?`<div class="g"><div class="nextact"><div class="a"><span>${esc(p.action||NEXT[p.etape]||'')}</span><span class="tag ${p.next_date&&diff(p.next_date)<0?'bad':p.next_date&&diff(p.next_date)===0?'warn':'neutral'}">${p.next_date?rel(p.next_date):'—'}</span></div><div class="acts"><button class="btn sm" data-done>Fait</button><button class="btn sm" data-push="2">+2 j</button><button class="btn sm" data-push="7">+1 sem.</button><button class="btn sm" data-chg>Changer…</button>${['nouveau','contacte','r1'].includes(p.etape)?`<button class="btn sm" data-slots>Caler le ${p.etape==='r1'?'R2':'R1'}</button>`:''}</div><div class="slots" id="slots" hidden>${SL.map((s,k)=>`<button class="btn sm" data-meet="${s.d}|${s.h}">${fmtJ(s.d)} · ${s.h}</button>`).join('')}<button class="btn sm" data-meetcustom>Autre créneau…</button></div></div></div>`:''}
@@ -578,6 +578,16 @@ async function moveTo(p,k,mode,raison){
     closeSheet();flash(p);render();countUp();setTimeout(()=>toast(mode==='stripe'?`${p.prenom} signé · ${eur(p.montant)} payé par Stripe`:`${p.prenom} signé · ${eur(p.montant)} · note le mode de paiement dans Ventes`),reduced?700:1800);return;
   }
   toast(k==='perdu'?`${p.prenom} classé perdu`:`${p.prenom} → ${etapeT(k)}`);render();openSheet(p.id);
+}
+// retour à l'étape d'avant (clic par erreur) : si la dernière note est ce passage, on l'efface ; sinon on note le retour
+async function moveBack(p){
+  const i=ETAPES.findIndex(e=>e.k===p.etape);if(i<1||['gagne','perdu'].includes(p.etape))return;
+  const k=ETAPES[i-1].k,cur=p.etape;
+  const patch={etape:k,chance:BASE[k],action:NEXT[k]||'',next_date:p.next_date&&diff(p.next_date)>=0?p.next_date:iso(d(2))};
+  await upd('prospects',p.id,patch,p);
+  const ns=notesOf(p),der=ns[0],pas=`« ${etapeT(k)} » → « ${etapeT(cur)} »`;
+  if(der&&der.t===pas){await del('notes',der.id);ns.shift()}else await addNote(p,`Retour de « ${etapeT(cur)} » à « ${etapeT(k)} »`);
+  toast(`${p.prenom} revenu à « ${etapeT(k)} »`);render();openSheet(p.id);
 }
 // Transfos (photos avant/après + résultat), gardées dans reglages « transfos », chargées seulement quand on en a besoin
 const TR={l:null};
@@ -1010,6 +1020,7 @@ document.addEventListener('click',async e=>{
   // ---- actions sur la fiche ouverte ----
   const p=P();if(!p)return;
   if(t.dataset.move){await moveTo(p,t.dataset.move);return}
+  if(t.hasAttribute('data-back')){await moveBack(p);return}
   if(t.hasAttribute('data-perdu')){openPerdu(p);return}
   if(t.dataset.raison){await moveTo(p,'perdu',null,t.dataset.raison);return}
   if(t.hasAttribute('data-paid')){if(t.dataset.sure){await addNote(p,'Paiement Stripe reçu.');await moveTo(p,'gagne','stripe')}else{t.dataset.sure='1';t.textContent='Confirmer : payé ?';t.style.color='var(--green)'}return}
