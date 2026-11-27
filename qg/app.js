@@ -95,9 +95,9 @@ const videoT=slug=>(S.videos.find(v=>v.slug===slug)||{}).titre||slug||'la vidéo
 const notesOf=p=>S.notes[p.id]||[];
 const chance=p=>p.etape==='gagne'?100:p.etape==='perdu'?0:p.chance;
 const open_=()=>S.prospects.filter(p=>!['gagne','perdu'].includes(p.etape));
-// Relances : date de relance passée, OU contacté / R2 sans aucune nouvelle depuis 3 jours (remonte tout seul)
+// Relances : date de relance passée, OU contacté / R2 sans aucune nouvelle depuis 3 jours et SANS date de relance prévue (remonte tout seul)
 const dernierJ=p=>{const n=notesOf(p)[0];return n?n.d:(p.created_at||'').slice(0,10)};
-const muet=p=>['contacte','r2'].includes(p.etape)&&diff(dernierJ(p))<=-3&&!(p.next_date&&diff(p.next_date)<=0);
+const muet=p=>['contacte','r2'].includes(p.etape)&&diff(dernierJ(p))<=-3&&!p.next_date;
 const cleRel=p=>p.next_date&&diff(p.next_date)<=0?p.next_date:dernierJ(p);
 const late=()=>open_().filter(p=>(p.next_date&&diff(p.next_date)<=0)||muet(p)).sort((a,b)=>cleRel(a).localeCompare(cleRel(b)));
 const relLine=p=>{const m=muet(p);return `<div class="line"><span class="l"><button class="name" data-open="${p.id}" style="font-weight:500">${esc(p.prenom)}</button><small>${esc(p.action||etapeT(p.etape))}</small></span><span class="r quick">${m?`<span class="tag warn">sans nouvelle · ${-diff(dernierJ(p))} j</span><button class="btn sm" data-asfor="${p.id}">Assistant</button>`:`<span class="tag ${diff(p.next_date)<0?'bad':'warn'}">${rel(p.next_date)}</span>`}</span></div>`};
